@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Playfair+Display:ital,wght@0,800;1,800&family=Amita:wght@400;700&family=Mukta:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-amita: "Amita", serif;
+  --font-mukta: "Mukta", sans-serif;
+  --font-sans: "Mukta", ui-sans-serif, system-ui, sans-serif;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.ai-message-content p,
+.ai-message-content ul,
+.ai-message-content ol,
+.ai-message-content li,
+.ai-message-content h1,
+.ai-message-content h2,
+.ai-message-content h3,
+.ai-message-content h4,
+.ai-message-content h5,
+.ai-message-content h6 {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.ai-message-content p:last-child,
+.ai-message-content ul:last-child,
+.ai-message-content ol:last-child,
+.ai-message-content li:last-child,
+.ai-message-content h1:last-child,
+.ai-message-content h2:last-child,
+.ai-message-content h3:last-child,
+.ai-message-content h4:last-child,
+.ai-message-content h5:last-child,
+.ai-message-content h6:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
