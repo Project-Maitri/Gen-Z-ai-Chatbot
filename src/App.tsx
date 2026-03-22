@@ -1,9 +1,78 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
+
+// Global error suppression for Google/SDK errors to prevent platform toasts
+// We define this at the top level to catch errors as early as possible
+let globalSetError: ((msg: string | null) => void) | null = null;
+
+const isQuotaError = (msg: string) => {
+  const lowerMsg = String(msg).toLowerCase();
+  return lowerMsg.includes('quota') || 
+         lowerMsg.includes('429') || 
+         lowerMsg.includes('resource_exhausted') ||
+         lowerMsg.includes('limit') ||
+         lowerMsg.includes('exceeded') ||
+         lowerMsg.includes('safety') ||
+         lowerMsg.includes('blocked') ||
+         lowerMsg.includes('gemini') ||
+         lowerMsg.includes('google') ||
+         lowerMsg.includes('model output error') ||
+         lowerMsg.includes('token limit') ||
+         lowerMsg.includes('traffic') ||
+         lowerMsg.includes('busy');
+};
+
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  const msg = args.map(arg => {
+    try {
+      if (arg instanceof Error) return arg.message;
+      return typeof arg === 'string' ? arg : JSON.stringify(arg);
+    } catch {
+      return String(arg);
+    }
+  }).join(' ');
+
+  if (isQuotaError(msg)) {
+    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+    return; // Suppress the actual console output
+  }
+  originalConsoleError.apply(console, args);
+};
+
+const originalOnError = window.onerror;
+window.onerror = (msg, url, line, col, error) => {
+  const errorMsg = String(msg);
+  if (isQuotaError(errorMsg)) {
+    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+    return true; // Suppress
+  }
+  if (originalOnError) {
+    return originalOnError(msg, url, line, col, error);
+  }
+  return false;
+};
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = (event.reason?.message || String(event.reason));
+  if (isQuotaError(reason)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+  }
+}, true);
+
+window.addEventListener('error', (event) => {
+  if (isQuotaError(event.message)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+  }
+}, true);
 
 // Helper to convert raw PCM16 base64 to WAV base64
 const createWavFromPcmBase64 = (base64Pcm: string, sampleRate: number = 24000): string => {
@@ -56,7 +125,7 @@ const createWavFromPcmBase64 = (base64Pcm: string, sampleRate: number = 24000): 
     }
     return btoa(wavBinaryString);
   } catch (e) {
-    console.error("Error converting PCM to WAV:", e);
+    console.warn("Error converting PCM to WAV:", e);
     return base64Pcm; // Fallback
   }
 };
@@ -202,6 +271,14 @@ type Message = {
   text: string;
 };
 
+type SavedChat = {
+  id: string;
+  name: string;
+  messages: Message[];
+  timestamp: number;
+  isPinned?: boolean;
+};
+
 const translations: Record<string, any> = {
   en: {
     title: "Gen-Z",
@@ -223,7 +300,7 @@ const translations: Record<string, any> = {
     speechNotSupported: "Speech recognition is not supported in this browser.",
     liveChat: "Live Chat",
     typeMessage: "Type a message...",
-    poweredBy: "Powered by Digital Governance System",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "Settings",
     language: "Language",
     speechRate: "Speech Rate",
@@ -259,7 +336,7 @@ const translations: Record<string, any> = {
     speechNotSupported: "आपके ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नहीं है।",
     liveChat: "लाइव चैट",
     typeMessage: "संदेश टाइप करें...",
-    poweredBy: "डिजिटल गवर्नेंस सिस्टम द्वारा संचालित",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "सेटिंग्स",
     language: "भाषा (Language)",
     speechRate: "भाषण दर",
@@ -274,6 +351,42 @@ const translations: Record<string, any> = {
     errorTraffic: "क्षमा करें, अभी अधिक ट्रैफिक है या कोटा समाप्त हो गया है। कृपया कुछ समय बाद पुनः प्रयास करें।",
     errorTech: "क्षमा करें, एक तकनीकी त्रुटि हुई। कृपया पुनः प्रयास करें।",
     premiumQuotaExceeded: "प्रीमियम वॉइस कोटा समाप्त हो गया है। मानक वॉइस पर स्विच किया जा रहा है।"
+  },
+  bho: {
+    title: "जेन-जी",
+    subtitle: "एआई मैसेंजर, ई-मैत्री.",
+    you: "रउआ",
+    copy: "कॉपी करीं",
+    copied: "कॉपी हो गइल",
+    listen: "सुनीं",
+    stop: "रोकीं",
+    listenAgain: "फेरु से सुनीं",
+    speaking: "जेन-जी बोल रहल बाड़े...",
+    listening: "जेन-जी सुन रहल बाड़े...",
+    thinking: "सोच रहल बाड़े...",
+    liveChatOn: "लाइव वॉइस चैट चालू बा: कृपया बोलीं",
+    stopVoiceChat: "वॉइस चैट बंद करीं",
+    startVoiceChat: "लाइव वॉइस चैट शुरू करीं",
+    voiceTyping: "बोल के टाइप करीं",
+    stopVoiceTyping: "बोलल बंद करीं",
+    speechNotSupported: "रउआ ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नइखे।",
+    liveChat: "लाइव चैट",
+    typeMessage: "संदेश टाइप करीं...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "सेटिंग्स",
+    language: "भाषा (Language)",
+    speechRate: "बोले के रफ्तार",
+    adjustRate: "आवाज के रफ्तार सेट करीं",
+    speechPitch: "बोले के पिच",
+    adjustPitch: "आवाज के पिच सेट करीं",
+    q1: "डिजिटल गवर्नेंस का ह?",
+    q2: "त्रि-स्तरीय संरचना के समझाईं।",
+    q3: "बूथ मैनेजमेंट कइसे काम करेला?",
+    q4: "पारिवारिक गठबंधन आंदोलन का ह?",
+    initialMessage: "हम जेन-जी हईं! ई-मैत्री पोर्टल में रउआ सभे के स्वागत बा! बताईं दोस्त, हम रउआ के कइसे मदद कर सकीले? रउआ के का जानकारी चाहीं?",
+    errorTraffic: "माफ करीं, अभी बहुत ट्रैफिक बा या कोटा खतम हो गइल बा। कृपया कुछ देर बाद फेरु से कोशिश करीं।",
+    errorTech: "माफ करीं, एगो तकनीकी दिक्कत आ गइल बा। कृपया फेरु से कोशिश करीं।",
+    premiumQuotaExceeded: "प्रीमियम वॉइस कोटा खतम हो गइल बा। स्टैंडर्ड वॉइस पर स्विच हो रहल बा।"
   },
   bn: {
     title: "জেন-জি",
@@ -292,7 +405,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "লাইভ ভয়েস চ্যাট শুরু করুন",
     liveChat: "লাইভ চ্যাট",
     typeMessage: "একটি বার্তা লিখুন...",
-    poweredBy: "ডিজিটাল গভর্নেন্স সিস্টেম দ্বারা চালিত",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "সেটিংস",
     language: "ভাষা (Language)",
     speechRate: "কথা বলার গতি",
@@ -325,7 +438,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "நேரலை குரல் அரட்டையைத் தொடங்கு",
     liveChat: "நேரலை அரட்டை",
     typeMessage: "ஒரு செய்தியை தட்டச்சு செய்யவும்...",
-    poweredBy: "டிஜிட்டல் ஆளுமை அமைப்பால் இயக்கப்படுகிறது",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "அமைப்புகள்",
     language: "மொழி (Language)",
     speechRate: "பேச்சு வேகம்",
@@ -358,7 +471,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "లైవ్ వాయిస్ చాట్ ప్రారంభించండి",
     liveChat: "లైవ్ చాట్",
     typeMessage: "సందేశాన్ని టైప్ చేయండి...",
-    poweredBy: "డిజిటల్ గవర్నెన్స్ సిస్టమ్ ద్వారా ఆధారితం",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "సెట్టింగ్‌లు",
     language: "భాష (Language)",
     speechRate: "మాట్లాడే వేగం",
@@ -391,7 +504,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "लाइव्ह व्हॉइस चॅट सुरू करा",
     liveChat: "लाइव्ह चॅट",
     typeMessage: "संदेश टाइप करा...",
-    poweredBy: "डिजिटल गव्हर्नन्स सिस्टम द्वारा समर्थित",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "सेटिंग्ज",
     language: "भाषा (Language)",
     speechRate: "बोलण्याचा वेग",
@@ -424,7 +537,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "લાઇવ વૉઇસ ચેટ શરૂ કરો",
     liveChat: "લાઇવ ચેટ",
     typeMessage: "સંદેશ લખો...",
-    poweredBy: "ડિજિટલ ગવર્નન્સ સિસ્ટમ દ્વારા સંચાલિત",
+    poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "સેટિંગ્સ",
     language: "ભાષા (Language)",
     speechRate: "બોલવાની ઝડપ",
@@ -439,14 +552,230 @@ const translations: Record<string, any> = {
     errorTraffic: "માફ કરશો, અત્યારે ઘણો ટ્રાફિક છે અથવા ક્વોટા પૂરો થઈ ગયો છે. કૃપા કરીને થોડા સમય પછી ફરી પ્રયાસ કરો.",
     errorTech: "માફ કરશો, એક તકનીકી સમસ્યા આવી. કૃપા કરીને ફરી પ્રયાસ કરો.",
     premiumQuotaExceeded: "પ્રીમિયમ વૉઇસ ક્વોટા પૂરો થઈ ગયો છે. સ્ટાન્ડર્ડ વૉઇસ પર સ્વિચ કરી રહ્યાં છીએ."
+  },
+  kn: {
+    title: "ಜೆನ್-ಜಿ",
+    subtitle: "ಎಐ ಮೆಸೆಂಜರ್, ಇ-ಮೈತ್ರಿ.",
+    you: "ನೀವು",
+    copy: "ನಕಲಿಸಿ",
+    copied: "ನಕಲಿಸಲಾಗಿದೆ",
+    listen: "ಆಲಿಸಿ",
+    stop: "ನಿಲ್ಲಿಸಿ",
+    listenAgain: "ಮತ್ತೆ ಆಲಿಸಿ",
+    speaking: "ಜೆನ್-ಜಿ ಮಾತನಾಡುತ್ತಿದ್ದಾರೆ...",
+    listening: "ಜೆನ್-ಜಿ ಆಲಿಸುತ್ತಿದ್ದಾರೆ...",
+    thinking: "ಯೋಚಿಸುತ್ತಿದ್ದಾರೆ...",
+    liveChatOn: "ಲೈವ್ ವಾಯ್ಸ್ ಚಾಟ್ ಆನ್ ಆಗಿದೆ: ದಯವಿಟ್ಟು ಮಾತನಾಡಿ",
+    stopVoiceChat: "ವಾಯ್ಸ್ ಚಾಟ್ ನಿಲ್ಲಿಸಿ",
+    startVoiceChat: "ಲೈವ್ ವಾಯ್ಸ್ ಚಾಟ್ ಪ್ರಾರಂಭಿಸಿ",
+    voiceTyping: "ಧ್ವನಿ ಟೈಪಿಂಗ್",
+    stopVoiceTyping: "ಧ್ವನಿ ಟೈಪಿಂಗ್ ನಿಲ್ಲಿಸಿ",
+    speechNotSupported: "ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.",
+    liveChat: "ಲೈವ್ ಚಾಟ್",
+    typeMessage: "ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+    language: "ಭಾಷೆ (Language)",
+    speechRate: "ಮಾತಿನ ವೇಗ",
+    adjustRate: "ಧ್ವನಿ ವೇಗವನ್ನು ಹೊಂದಿಸಿ",
+    speechPitch: "ಮಾತಿನ ಪಿಚ್",
+    adjustPitch: "ಧ್ವನಿ ಪಿಚ್ ಅನ್ನು ಹೊಂದಿಸಿ",
+    q1: "ಡಿಜಿಟಲ್ ಆಡಳಿತ ಎಂದರೇನು?",
+    q2: "ಮೂರು ಹಂತದ ರಚನೆಯನ್ನು ವಿವರಿಸಿ.",
+    q3: "ಬೂತ್ ನಿರ್ವಹಣೆ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ?",
+    q4: "ಕುಟುಂಬ ಒಕ್ಕೂಟ ಚಳುವಳಿ ಎಂದರೇನು?",
+    initialMessage: "ನಾನು ಜೆನ್-ಜಿ! ಇ-ಮೈತ್ರಿ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ! ಹೇಳಿ ಸ್ನೇಹಿತರೆ, ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು? ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+    errorTraffic: "ಕ್ಷಮಿಸಿ, ಪ್ರಸ್ತುತ ಹೆಚ್ಚಿನ ಟ್ರಾಫಿಕ್ ಇದೆ ಅಥವಾ ಕೋಟಾ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    errorTech: "ಕ್ಷಮಿಸಿ, ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಉಂಟಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    premiumQuotaExceeded: "ಪ್ರೀಮಿಯಂ ಧ್ವನಿ ಕೋಟಾ ಮುಗಿದಿದೆ. ಪ್ರಮಾಣಿತ ಧ್ವನಿಗೆ ಬದಲಾಯಿಸಲಾಗುತ್ತಿದೆ."
+  },
+  ml: {
+    title: "ജെൻ-ജി",
+    subtitle: "എഐ മെസഞ്ചർ, ഇ-മൈത്രി.",
+    you: "നിങ്ങൾ",
+    copy: "പകർത്തുക",
+    copied: "പകർത്തി",
+    listen: "കേൾക്കുക",
+    stop: "നിർത്തുക",
+    listenAgain: "വീണ്ടും കേൾക്കുക",
+    speaking: "ജെൻ-ജി സംസാരിക്കുന്നു...",
+    listening: "ജെൻ-ജി കേൾക്കുന്നു...",
+    thinking: "ചിന്തിക്കുന്നു...",
+    liveChatOn: "ലൈവ് വോയ്‌സ് ചാറ്റ് ഓണാണ്: ദയവായി സംസാരിക്കുക",
+    stopVoiceChat: "വോയ്‌സ് ചാറ്റ് നിർത്തുക",
+    startVoiceChat: "ലൈവ് വോയ്‌സ് ചാറ്റ് ആരംഭിക്കുക",
+    voiceTyping: "വോയ്‌സ് ടൈപ്പിംഗ്",
+    stopVoiceTyping: "വോയ്‌സ് ടൈപ്പിംഗ് നിർത്തുക",
+    speechNotSupported: "നിങ്ങളുടെ ബ്രൗസറിൽ സ്പീച്ച് റെക്കഗ്നിഷൻ പിന്തുണയ്ക്കുന്നില്ല.",
+    liveChat: "ലൈവ് ചാറ്റ്",
+    typeMessage: "ഒരു സന്ദേശം ടൈപ്പ് ചെയ്യുക...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ക്രമീകരണങ്ങൾ",
+    language: "ഭാഷ (Language)",
+    speechRate: "സംസാര വേഗത",
+    adjustRate: "ശബ്ദ വേഗത ക്രമീകരിക്കുക",
+    speechPitch: "സംസാര പിച്ച്",
+    adjustPitch: "ശബ്ദ പിച്ച് ക്രമീകരിക്കുക",
+    q1: "ഡിജിറ്റൽ ഗവേണൻസ് എന്നാൽ എന്ത്?",
+    q2: "ത്രിതല ഘടന വിശദീകരിക്കുക.",
+    q3: "ബൂത്ത് മാനേജ്മെന്റ് എങ്ങനെ പ്രവർത്തിക്കുന്നു?",
+    q4: "കുടുംബ സഖ്യ പ്രസ്ഥാനം എന്നാൽ എന്ത്?",
+    initialMessage: "ഞാൻ ജെൻ-ജി! ഇ-മൈത്രി പോർട്ടലിലേക്ക് സ്വാഗതം! പറയൂ സുഹൃത്തേ, ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം? നിങ്ങൾക്ക് എന്ത് വിവരമാണ് വേണ്ടത്?",
+    errorTraffic: "ക്ഷമിക്കണം, ഇപ്പോൾ തിരക്ക് കൂടുതലാണ് അല്ലെങ്കിൽ ക്വാട്ട കഴിഞ്ഞു. ദയവായി കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.",
+    errorTech: "ക്ഷമിക്കണം, ഒരു സാങ്കേതിക പ്രശ്നം ഉണ്ടായി. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+    premiumQuotaExceeded: "പ്രീമിയം വോയ്‌സ് ക്വാട്ട കഴിഞ്ഞു. സ്റ്റാൻഡേർഡ് വോയ്‌സിലേക്ക് മാറുന്നു."
+  },
+  or: {
+    title: "ଜେନ୍-ଜି",
+    subtitle: "ଏଆଇ ମେସେଞ୍ଜର, ଇ-ମୈତ୍ରୀ.",
+    you: "ଆପଣ",
+    copy: "କପି କରନ୍ତୁ",
+    copied: "କପି ହୋଇଛି",
+    listen: "ଶୁଣନ୍ତୁ",
+    stop: "ବନ୍ଦ କରନ୍ତୁ",
+    listenAgain: "ପୁଣି ଶୁଣନ୍ତୁ",
+    speaking: "ଜେନ୍-ଜି କହୁଛନ୍ତି...",
+    listening: "ଜେନ୍-ଜି ଶୁଣୁଛନ୍ତି...",
+    thinking: "ଭାବୁଛନ୍ତି...",
+    liveChatOn: "ଲାଇଭ୍ ଭଏସ୍ ଚାଟ୍ ଅନ୍ ଅଛି: ଦୟାକରି କୁହନ୍ତୁ",
+    stopVoiceChat: "ଭଏସ୍ ଚାଟ୍ ବନ୍ଦ କରନ୍ତୁ",
+    startVoiceChat: "ଲାଇଭ୍ ଭଏସ୍ ଚାଟ୍ ଆରମ୍ଭ କରନ୍ତୁ",
+    voiceTyping: "ଭଏସ୍ ଟାଇପିଂ",
+    stopVoiceTyping: "ଭଏସ୍ ଟାଇପିଂ ବନ୍ଦ କରନ୍ତୁ",
+    speechNotSupported: "ଆପଣଙ୍କ ବ୍ରାଉଜରରେ ସ୍ପିଚ୍ ରେକଗ୍ନିସନ୍ ସପୋର୍ଟ କରେ ନାହିଁ।",
+    liveChat: "ଲାଇଭ୍ ଚାଟ୍",
+    typeMessage: "ଏକ ମେସେଜ୍ ଟାଇପ୍ କରନ୍ତୁ...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ସେଟିଂସ୍",
+    language: "ଭାଷା (Language)",
+    speechRate: "କଥାବାର୍ତ୍ତା ବେଗ",
+    adjustRate: "ସ୍ୱରର ବେଗ ଆଡଜଷ୍ଟ କରନ୍ତୁ",
+    speechPitch: "କଥାବାର୍ତ୍ତା ପିଚ୍",
+    adjustPitch: "ସ୍ୱରର ପିଚ୍ ଆଡଜଷ୍ଟ କରନ୍ତୁ",
+    q1: "ଡିଜିଟାଲ୍ ଗଭର୍ଣ୍ଣାନ୍ସ କ'ଣ?",
+    q2: "ତ୍ରିସ୍ତରୀୟ ସଂରଚନା ବର୍ଣ୍ଣନା କରନ୍ତୁ।",
+    q3: "ବୁଥ୍ ମ୍ୟାନେଜମେଣ୍ଟ କିପରି କାମ କରେ?",
+    q4: "ପାରିବାରିକ ମେଣ୍ଟ ଆନ୍ଦୋଳନ କ'ଣ?",
+    initialMessage: "ମୁଁ ଜେନ୍-ଜି! ଇ-ମୈତ୍ରୀ ପୋର୍ଟାଲକୁ ସ୍ୱାଗତ! କୁହନ୍ତୁ ବନ୍ଧୁ, ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି? ଆପଣଙ୍କୁ କେଉଁ ସୂଚନା ଦରକାର?",
+    errorTraffic: "କ୍ଷମା କରିବେ, ବର୍ତ୍ତମାନ ବହୁତ ଟ୍ରାଫିକ୍ ଅଛି କିମ୍ବା କୋଟା ସରିଯାଇଛି। ଦୟାକରି କିଛି ସମୟ ପରେ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+    errorTech: "କ୍ଷମା କରିବେ, ଏକ ବୈଷୟିକ ସମସ୍ୟା ଦେଖାଦେଇଛି। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+    premiumQuotaExceeded: "ପ୍ରିମିୟମ୍ ଭଏସ୍ କୋଟା ସରିଯାଇଛି। ଷ୍ଟାଣ୍ଡାର୍ଡ ଭଏସକୁ ଫେରୁଛି।"
+  },
+  pa: {
+    title: "ਜੇਨ-ਜੀ",
+    subtitle: "ਏਆਈ ਮੈਸੇਂਜਰ, ਈ-ਮੈਤਰੀ.",
+    you: "ਤੁਸੀਂ",
+    copy: "ਕਾਪੀ ਕਰੋ",
+    copied: "ਕਾਪੀ ਕੀਤਾ ਗਿਆ",
+    listen: "ਸੁਣੋ",
+    stop: "ਰੋਕੋ",
+    listenAgain: "ਦੁਬਾਰਾ ਸੁਣੋ",
+    speaking: "ਜੇਨ-ਜੀ ਬੋਲ ਰਹੇ ਹਨ...",
+    listening: "ਜੇਨ-ਜੀ ਸੁਣ ਰਹੇ ਹਨ...",
+    thinking: "ਸੋਚ ਰਹੇ ਹਨ...",
+    liveChatOn: "ਲਾਈਵ ਵੌਇਸ ਚੈਟ ਚਾਲੂ ਹੈ: ਕਿਰਪਾ ਕਰਕੇ ਬੋਲੋ",
+    stopVoiceChat: "ਵੌਇਸ ਚੈਟ ਬੰਦ ਕਰੋ",
+    startVoiceChat: "ਲਾਈਵ ਵੌਇਸ ਚੈਟ ਸ਼ੁਰੂ ਕਰੋ",
+    voiceTyping: "ਬੋਲ ਕੇ ਟਾਈਪ ਕਰੋ",
+    stopVoiceTyping: "ਬੋਲਣਾ ਬੰਦ ਕਰੋ",
+    speechNotSupported: "ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਸਪੀਚ ਰਿਕੋਗਨੀਸ਼ਨ ਸਪੋਰਟ ਨਹੀਂ ਹੈ।",
+    liveChat: "ਲਾਈਵ ਚੈਟ",
+    typeMessage: "ਸੁਨੇਹਾ ਟਾਈਪ ਕਰੋ...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ਸੈਟਿੰਗਾਂ",
+    language: "ਭਾਸ਼ਾ (Language)",
+    speechRate: "ਬੋਲਣ ਦੀ ਗਤੀ",
+    adjustRate: "ਆਵਾਜ਼ ਦੀ ਗਤੀ ਸੈੱਟ ਕਰੋ",
+    speechPitch: "ਬੋਲਣ ਦੀ ਪਿੱਚ",
+    adjustPitch: "ਆਵਾਜ਼ ਦੀ ਪਿੱਚ ਸੈੱਟ ਕਰੋ",
+    q1: "ਡਿਜੀਟਲ ਗਵਰਨੈਂਸ ਕੀ ਹੈ?",
+    q2: "ਤਿੰਨ-ਪੱਧਰੀ ਢਾਂਚੇ ਦੀ ਵਿਆਖਿਆ ਕਰੋ।",
+    q3: "ਬੂਥ ਪ੍ਰਬੰਧਨ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ?",
+    q4: "ਪਰਿਵਾਰਕ ਗਠਜੋੜ ਅੰਦੋਲਨ ਕੀ ਹੈ?",
+    initialMessage: "ਮੈਂ ਜੇਨ-ਜੀ ਹਾਂ! ਈ-ਮੈਤਰੀ ਪੋਰਟਲ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ! ਦੱਸੋ ਦੋਸਤ, ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ? ਤੁਹਾਨੂੰ ਕਿਹੜੀ ਜਾਣਕਾਰੀ ਚਾਹੀਦੀ ਹੈ?",
+    errorTraffic: "ਮੁਆਫ ਕਰਨਾ, ਇਸ ਸਮੇਂ ਬਹੁਤ ਟ੍ਰੈਫਿਕ ਹੈ ਜਾਂ ਕੋਟਾ ਖਤਮ ਹੋ ਗਿਆ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਕੁਝ ਸਮੇਂ ਬਾਅਦ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+    errorTech: "ਮੁਆਫ ਕਰਨਾ, ਇੱਕ ਤਕਨੀਕੀ ਸਮੱਸਿਆ ਆਈ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+    premiumQuotaExceeded: "ਪ੍ਰੀਮੀਅਮ ਵੌਇਸ ਕੋਟਾ ਖਤਮ ਹੋ ਗਿਆ ਹੈ। ਸਟੈਂਡਰਡ ਵੌਇਸ 'ਤੇ ਸਵਿਚ ਕਰ ਰਿਹਾ ਹੈ।"
+  },
+  ur: {
+    title: "جین-جی",
+    subtitle: "اے آئی میسنجر، ای-میتری.",
+    you: "آپ",
+    copy: "کاپی کریں",
+    copied: "کاپی ہو گیا",
+    listen: "سنیں",
+    stop: "روکیں",
+    listenAgain: "دوبارہ سنیں",
+    speaking: "جین-جی بول رہے ہیں...",
+    listening: "جین-جی سن رہے ہیں...",
+    thinking: "سوچ رہے ہیں...",
+    liveChatOn: "لائیو وائس چیٹ آن ہے: براہ کرم بولیں",
+    stopVoiceChat: "وائس چیٹ بند کریں",
+    startVoiceChat: "لائیو وائس چیٹ شروع کریں",
+    voiceTyping: "وائس ٹائپنگ",
+    stopVoiceTyping: "وائس ٹائپنگ بند کریں",
+    speechNotSupported: "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
+    liveChat: "لائیو چیٹ",
+    typeMessage: "پیغام ٹائپ کریں...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ترتیبات",
+    language: "زبان (Language)",
+    speechRate: "بولنے کی رفتار",
+    adjustRate: "آواز کی رفتار سیٹ کریں",
+    speechPitch: "بولنے کی پچ",
+    adjustPitch: "آواز کی پچ سیٹ کریں",
+    q1: "ڈیجیٹل گورننس کیا ہے؟",
+    q2: "تین درجاتی ڈھانچے کی وضاحت کریں۔",
+    q3: "بوتھ مینجمنٹ کیسے کام کرتا ہے؟",
+    q4: "خاندانی اتحاد کی تحریک کیا ہے؟",
+    initialMessage: "میں جین-جی ہوں! ای-میتری پورٹل میں خوش آمدید! بتائیں دوست، میں آپ کی کیسے مدد کر سکتا ہوں؟ آپ کو کیا معلومات چاہیے؟",
+    errorTraffic: "معذرت، اس وقت بہت ٹریفک ہے یا کوٹہ ختم ہو گیا ہے۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔",
+    errorTech: "معذرت، ایک تکنیکی مسئلہ پیش آیا ہے۔ براہ کرم دوبارہ کوشش کریں۔",
+    premiumQuotaExceeded: "پریمیم وائس کوٹہ ختم ہو گیا ہے۔ معیاری وائس پر سوئچ کر رہا ہے۔"
+  },
+  as: {
+    title: "জেন-জি",
+    subtitle: "এআই মেছেঞ্জাৰ, ই-মৈত্ৰী.",
+    you: "আপুনি",
+    copy: "কপি কৰক",
+    copied: "কপি কৰা হৈছে",
+    listen: "শুনক",
+    stop: "বন্ধ কৰক",
+    listenAgain: "আকৌ শুনক",
+    speaking: "জেন-জিয়ে কথা পাতি আছে...",
+    listening: "জেন-জিয়ে শুনি আছে...",
+    thinking: "ভাবি আছে...",
+    liveChatOn: "লাইভ ভইচ চেট অন আছে: অনুগ্ৰহ কৰি কওক",
+    stopVoiceChat: "ভইচ চেট বন্ধ কৰক",
+    startVoiceChat: "লাইভ ভইচ চেট আৰম্ভ কৰক",
+    voiceTyping: "ভইচ টাইপিং",
+    stopVoiceTyping: "ভইচ টাইপিং বন্ধ কৰক",
+    speechNotSupported: "আপোনাৰ ব্ৰাউজাৰত স্পীচ ৰিকগনিচন চাপোৰ্ট নকৰে।",
+    liveChat: "লাইভ চেট",
+    typeMessage: "এটা মেছেজ টাইপ কৰক...",
+    poweredBy: "Powered by E-MAITRI digital platform.",
+    settings: "ছেটিংছ",
+    language: "ভাষা (Language)",
+    speechRate: "কথা কোৱাৰ হাৰ",
+    adjustRate: "ভইচৰ হাৰ মিলাওক",
+    speechPitch: "কথা কোৱাৰ পিটচ",
+    adjustPitch: "ভইচৰ পিটচ মিলাওক",
+    q1: "ডিজিটেল গৱৰ্নেন্স কি?",
+    q2: "ত্ৰি-স্তৰীয় গাঁথনি বৰ্ণনা কৰক।",
+    q3: "বুথ পৰিচালনা কেনেকৈ কাম কৰে?",
+    q4: "পাৰিবাৰিক মিত্ৰতা আন্দোলন কি?",
+    initialMessage: "মই জেন-জি! ই-মৈত্ৰী পোৰ্টেললৈ স্বাগতম! কওক বন্ধু, মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ? আপোনাক কি তথ্য লাগে?",
+    errorTraffic: "ক্ষমা কৰিব, বৰ্তমান বহুত ট্ৰেফিক আছে বা কোটা শেষ হৈ গৈছে। অনুগ্ৰহ কৰি কিছু সময় পিছত পুনৰ চেষ্টা কৰক।",
+    errorTech: "ক্ষমা কৰিব, এটা কাৰিকৰী সমস্যা হৈছে। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।",
+    premiumQuotaExceeded: "প্ৰিমিয়াম ভইচ কোটা শেষ হৈছে। ষ্টেণ্ডাৰ্ড ভইচলৈ সলনি কৰা হৈছে।"
   }
 };
 
 export default function App() {
-  const [uiLang, setUiLang] = useState(() => localStorage.getItem('uiLang') || 'en');
+  const [uiLang, setUiLang] = useState(() => localStorage.getItem('uiLang_v2') || 'en');
   
   useEffect(() => {
-    localStorage.setItem('uiLang', uiLang);
+    localStorage.setItem('uiLang_v2', uiLang);
   }, [uiLang]);
 
   const t = translations[uiLang] || translations['en'];
@@ -469,7 +798,34 @@ export default function App() {
     });
   }, [uiLang, t.initialMessage]);
   const [input, setInput] = useState('');
+  const [editMsgId, setEditMsgId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Chat History States
+  const [savedChats, setSavedChats] = useState<SavedChat[]>(() => {
+    const saved = localStorage.getItem('savedChats_v1');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [chatNameInput, setChatNameInput] = useState('');
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingChatName, setEditingChatName] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('savedChats_v1', JSON.stringify(savedChats));
+  }, [savedChats]);
+
+  // Sync messages to the current saved chat
+  useEffect(() => {
+    if (currentChatId && messages.length > 0) {
+      setSavedChats(prev => prev.map(chat => 
+        chat.id === currentChatId ? { ...chat, messages, timestamp: Date.now() } : chat
+      ));
+    }
+  }, [messages, currentChatId]);
+
   const [isLive, setIsLive] = useState(false);
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -483,17 +839,75 @@ export default function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState<string | null>(null);
   
-  // Settings
+  // Close more menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const [useFastModel, setUseFastModel] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Handle back button to close settings
+  useEffect(() => {
+    if (showSettings) {
+      window.history.pushState({ settingsOpen: true }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (showSettings) {
+        setShowSettings(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showSettings]);
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('speechRate_v2') || '0.9'));
-  const [speechPitch, setSpeechPitch] = useState(() => parseFloat(localStorage.getItem('speechPitch_v2') || '0.7'));
+  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('speechRate_v4') || '0.8'));
+  const [speechPitch, setSpeechPitch] = useState(() => parseFloat(localStorage.getItem('speechPitch_v4') || '1.0'));
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => localStorage.getItem('selectedVoiceURI') || '');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (localStorage.getItem('voiceEngine') as 'standard' | 'premium') || 'standard');
-  const [premiumVoice, setPremiumVoice] = useState(() => localStorage.getItem('premiumVoice') || 'Zephyr');
+  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (localStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
+  const [premiumVoice, setPremiumVoice] = useState(() => {
+    const saved = localStorage.getItem('premiumVoice');
+    const femaleVoices = ['Kore', 'Zephyr'];
+    return (saved && !femaleVoices.includes(saved)) ? saved : 'Fenrir';
+  });
+
+  // Link global setError to the component state
+  useEffect(() => {
+    globalSetError = (msg: string | null) => {
+      if (msg === "Traffic limit exceeded. Please try again later.") {
+        setError(t.errorTraffic);
+      } else {
+        setError(msg);
+      }
+    };
+    return () => {
+      globalSetError = null;
+    };
+  }, [t.errorTraffic]);
+
+  // Auto-clear error notification after 10 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   
   const speechRateRef = useRef(speechRate);
   const speechPitchRef = useRef(speechPitch);
@@ -504,6 +918,96 @@ export default function App() {
   const premiumAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const audioCacheRef = useRef<Record<string, string>>({});
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
+  
+  // Avatar Animation values
+  const PATH_CLOSED = "M 75 135 Q 100 155 125 135 Q 100 155 75 135";
+  // 12 Hindi Vowels
+  const PATH_A_SHORT = "M 75 135 Q 100 160 125 135 Q 100 137 75 135"; // अ
+  const PATH_AA = "M 75 135 Q 100 200 125 135 Q 100 133 75 135"; // आ
+  const PATH_I = "M 70 135 Q 100 155 130 135 Q 100 136 70 135"; // इ
+  const PATH_II = "M 65 135 Q 100 150 135 135 Q 100 133 65 135"; // ई
+  const PATH_U = "M 85 135 Q 100 160 115 135 Q 100 133 85 135"; // उ
+  const PATH_UU = "M 90 135 Q 100 155 110 135 Q 100 133 90 135"; // ऊ
+  const PATH_E = "M 70 135 Q 100 165 130 135 Q 100 133 70 135"; // ए
+  const PATH_AI = "M 65 135 Q 100 185 135 135 Q 100 133 65 135"; // ऐ
+  const PATH_O = "M 80 135 Q 100 185 120 135 Q 100 133 80 135"; // ओ
+  const PATH_AU = "M 75 135 Q 100 195 125 135 Q 100 133 75 135"; // औ
+  const PATH_AM = "M 75 135 Q 100 150 125 135 Q 100 136 75 135"; // अं
+  const PATH_AH = "M 75 135 Q 100 170 125 135 Q 100 133 75 135"; // अः
+  const mouthPath = useMotionValue(PATH_CLOSED);
+
+  // Chat History Functions
+  const handleSaveChat = () => {
+    if (!chatNameInput.trim()) return;
+    
+    if (savedChats.length >= 10) {
+      setError("आप केवल 10 चैट ही सेव कर सकते हैं। कृपया नई चैट सेव करने के लिए पुरानी चैट डिलीट करें।");
+      setIsSaveModalOpen(false);
+      return;
+    }
+
+    const newChat: SavedChat = {
+      id: Date.now().toString(),
+      name: chatNameInput.trim(),
+      messages: [...messages],
+      timestamp: Date.now()
+    };
+    setSavedChats(prev => [newChat, ...prev]);
+    setCurrentChatId(newChat.id);
+    setIsSaveModalOpen(false);
+    setChatNameInput('');
+  };
+
+  const handleLoadChat = (chat: SavedChat) => {
+    setMessages(chat.messages);
+    setCurrentChatId(chat.id);
+    setIsHistoryOpen(false);
+  };
+
+  const handleDeleteChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSavedChats(prev => prev.filter(c => c.id !== id));
+    if (currentChatId === id) {
+      handleNewChat();
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([{ id: '1', role: 'model', text: t.initialMessage }]);
+    setCurrentChatId(null);
+    setIsHistoryOpen(false);
+  };
+
+  const handleTogglePin = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSavedChats(prev => prev.map(chat => 
+      chat.id === id ? { ...chat, isPinned: !chat.isPinned } : chat
+    ));
+  };
+
+  const handleStartRename = (e: React.MouseEvent, chat: SavedChat) => {
+    e.stopPropagation();
+    setEditingChatId(chat.id);
+    setEditingChatName(chat.name);
+  };
+
+  const handleSaveRename = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!editingChatName.trim() || !editingChatId) {
+      setEditingChatId(null);
+      return;
+    }
+    setSavedChats(prev => prev.map(chat => 
+      chat.id === editingChatId ? { ...chat, name: editingChatName.trim() } : chat
+    ));
+    setEditingChatId(null);
+  };
+
+  const handleCancelRename = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingChatId(null);
+    setEditingChatName('');
+  };
 
   // Initialize premium audio element
   useEffect(() => {
@@ -520,7 +1024,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('voiceEngine', voiceEngine);
+    localStorage.setItem('voiceEngine_v3', voiceEngine);
     voiceEngineRef.current = voiceEngine;
     
     if (playingMessageIdRef.current && !isPaused) {
@@ -556,7 +1060,13 @@ export default function App() {
   // Load available voices
   useEffect(() => {
     const loadVoices = () => {
-      setAvailableVoices(window.speechSynthesis.getVoices());
+      const allVoices = window.speechSynthesis.getVoices();
+      // Filter out voices that are explicitly labeled as female
+      const maleVoices = allVoices.filter(v => {
+        const name = v.name.toLowerCase();
+        return !name.includes('female') && !name.includes('woman') && !name.includes('girl');
+      });
+      setAvailableVoices(maleVoices);
     };
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -584,7 +1094,7 @@ export default function App() {
 
   // Save speech settings and restart audio if playing
   useEffect(() => {
-    localStorage.setItem('speechRate_v2', speechRate.toString());
+    localStorage.setItem('speechRate_v4', speechRate.toString());
     speechRateRef.current = speechRate;
     
     // If audio is currently playing, restart it with the new rate
@@ -603,7 +1113,7 @@ export default function App() {
   }, [speechRate]);
 
   useEffect(() => {
-    localStorage.setItem('speechPitch_v2', speechPitch.toString());
+    localStorage.setItem('speechPitch_v4', speechPitch.toString());
     speechPitchRef.current = speechPitch;
     
     // If audio is currently playing, restart it with the new pitch
@@ -630,10 +1140,19 @@ export default function App() {
       if (voices.length > 0 && !initialized) {
         initialized = true;
         // Just fetching the voices ensures they are loaded and ready for zero-delay playback
-        // We look for the preferred Hindi male voice to ensure it's available
-        const preferredVoice = voices.find(v => v.name.includes('hi-in-x-hie-local') || v.name.includes('hi-in-x-hie'));
+        // We look for the preferred Charon-like male voice to ensure it's available
+        const preferredVoice = voices.find(v => {
+          const name = v.name.toLowerCase();
+          return name.includes('google uk english male') ||
+                 name.includes('daniel') ||
+                 name.includes('arthur') ||
+                 name.includes('hi-in-x-hie-local') ||
+                 name.includes('hi-in-x-hie') ||
+                 name.includes('-wavenet-b') ||
+                 name.includes('-neural2-b');
+        });
         if (preferredVoice) {
-          console.log("Zero-Delay Voice Setup: Best Hindi Male Voice loaded:", preferredVoice.name);
+          console.log("Zero-Delay Voice Setup: Best Charon-like Male Voice loaded:", preferredVoice.name);
         }
         
         // Create a silent utterance to initialize the TTS engine in the background
@@ -648,7 +1167,7 @@ export default function App() {
           }
           window.speechSynthesis.speak(silentUtterance);
         } catch (e) {
-          console.error("Failed to initialize silent TTS", e);
+          console.warn("Failed to initialize silent TTS", e);
         }
       }
     };
@@ -678,12 +1197,12 @@ export default function App() {
           text: cleanText,
         });
       } catch (error) {
-        console.error('Error sharing:', error);
+        console.warn('Error sharing:', error);
       }
     } else {
       // Fallback to copy if share is not supported
       navigator.clipboard.writeText(cleanText);
-      alert('Text copied to clipboard!');
+      setError('Text copied to clipboard!');
     }
   };
   
@@ -983,8 +1502,7 @@ export default function App() {
         
         // Check if premium voice is temporarily disabled due to quota
         if (Date.now() < premiumVoiceDisabledUntilRef.current) {
-          voiceEngineRef.current = 'standard';
-          setVoiceEngine('standard');
+          // Fall through to standard TTS without changing the user's setting
         } else {
           const cacheKey = `${messageId}_${premiumVoiceRef.current}`;
           base64Audio = audioCacheRef.current[cacheKey];
@@ -1012,21 +1530,22 @@ export default function App() {
               }
             } catch (e: any) {
               const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-              const isQuotaError = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED');
+              const isQuotaError = errStr.toLowerCase().includes('429') || 
+                                   errStr.toLowerCase().includes('quota') || 
+                                   errStr.includes('RESOURCE_EXHAUSTED') ||
+                                   errStr.toLowerCase().includes('limit') ||
+                                   errStr.toLowerCase().includes('exceeded');
               
               if (isQuotaError) {
                 console.warn("Premium voice quota exceeded, falling back to standard TTS.");
                 setError(t.premiumQuotaExceeded);
-                setTimeout(() => setError(null), 5000);
                 // Disable premium voice for 5 minutes
                 premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
               } else {
-                console.error("Failed to generate premium audio", e);
+                console.warn("Failed to generate premium audio", e);
               }
               
-              // Fallback to standard
-              voiceEngineRef.current = 'standard';
-              setVoiceEngine('standard');
+              // Fallback to standard for this message only
               base64Audio = null;
             } finally {
               setIsGeneratingAudio(null);
@@ -1043,7 +1562,7 @@ export default function App() {
           // If paused, we just resume from where we left off
           if (actualStartIndex > 0 && premiumAudioRef.current.src.includes(base64Audio.substring(0, 100))) {
             premiumAudioRef.current.playbackRate = speechRateRef.current;
-            premiumAudioRef.current.play().catch(e => console.error(e));
+            premiumAudioRef.current.play().catch(e => console.warn(e));
             return;
           }
 
@@ -1098,7 +1617,7 @@ export default function App() {
               premiumAudioSourceRef.current.connect(analyserRef.current);
               analyserRef.current.connect(audioContextRef.current.destination);
             } catch (e) {
-              console.error("Failed to connect audio source", e);
+              console.warn("Failed to connect audio source", e);
             }
           }
           
@@ -1107,7 +1626,7 @@ export default function App() {
           }
 
           premiumAudioRef.current.play().catch(e => {
-            console.error("Failed to play premium audio", e);
+            console.warn("Failed to play premium audio", e);
             stopMessageAudio();
           });
           
@@ -1119,8 +1638,12 @@ export default function App() {
       
       // Detect language based on text content
       let detectedLang = 'hi-IN'; // Default to Hindi
-      if (/[\u0980-\u09FF]/.test(textToSpeak)) {
-        detectedLang = 'bn-IN'; // Bengali
+      if (/[\u0900-\u097F]/.test(textToSpeak)) {
+        if (uiLang === 'mr') detectedLang = 'mr-IN';
+        else if (uiLang === 'bho') detectedLang = 'bho-IN';
+        else detectedLang = 'hi-IN';
+      } else if (/[\u0980-\u09FF]/.test(textToSpeak)) {
+        detectedLang = uiLang === 'as' ? 'as-IN' : 'bn-IN'; // Bengali/Assamese
       } else if (/[\u0B80-\u0BFF]/.test(textToSpeak)) {
         detectedLang = 'ta-IN'; // Tamil
       } else if (/[\u0C00-\u0C7F]/.test(textToSpeak)) {
@@ -1133,6 +1656,10 @@ export default function App() {
         detectedLang = 'ml-IN'; // Malayalam
       } else if (/[\u0A00-\u0A7F]/.test(textToSpeak)) {
         detectedLang = 'pa-IN'; // Punjabi
+      } else if (/[\u0B00-\u0B7F]/.test(textToSpeak)) {
+        detectedLang = 'or-IN'; // Odia
+      } else if (/[\u0600-\u06FF]/.test(textToSpeak)) {
+        detectedLang = 'ur-IN'; // Urdu
       } else if (/^[a-zA-Z0-9\s.,!?'"-]+$/.test(textToSpeak.trim())) {
         detectedLang = 'en-IN'; // English (Indian accent)
       }
@@ -1205,21 +1732,40 @@ export default function App() {
         const langPrefix = detectedLang.split('-')[0];
         const matchingVoices = voices.filter(v => v.lang.toLowerCase().includes(langPrefix) || v.lang.toLowerCase().includes(detectedLang.toLowerCase()));
         
-        // 1. Look for known male voices in the detected language
+        // 1. Look for Charon-like calm, measured male voices first
         selectedVoice = matchingVoices.find(v => {
           const name = v.name.toLowerCase();
-          return name.includes('hemant') || 
-                 name.includes('rishi') || 
-                 name.includes('male') ||
-                 name.includes('-standard-b') || 
-                 name.includes('-standard-c') || 
+          return name.includes('google uk english male') ||
+                 name.includes('daniel') ||
+                 name.includes('arthur') ||
+                 name.includes('hi-in-x-hie-local') ||
+                 name.includes('hi-in-x-hie') ||
                  name.includes('-wavenet-b') ||
-                 name.includes('-wavenet-c');
+                 name.includes('-neural2-b');
         }) || null;
+
+        // 1.5. Look for other known male voices
+        if (!selectedVoice) {
+          selectedVoice = matchingVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('hemant') || 
+                   name.includes('rishi') || 
+                   name.includes('male') ||
+                   name.includes('-standard-b') || 
+                   name.includes('-standard-c') || 
+                   name.includes('-wavenet-c');
+          }) || null;
+        }
 
         // 2. If no explicit male voice found, try to avoid known female voices
         if (!selectedVoice) {
-          const femaleNames = ['kalpana', 'lekha', 'aditi', 'female', '-standard-a', '-standard-d', '-wavenet-a', '-wavenet-d'];
+          const femaleNames = [
+            'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
+            'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
+            '-standard-a', '-standard-d', '-standard-e', '-standard-f',
+            '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
+            '-neural-a', '-neural-d', '-neural-e', '-neural-f'
+          ];
           selectedVoice = matchingVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f))) || null;
         }
 
@@ -1233,10 +1779,16 @@ export default function App() {
           selectedVoice = voices[0];
         }
 
-        // 5. Try to find the specific Hindi male voice requested by user if we are speaking Hindi or as a strong fallback
-        const preferredHindiMaleVoice = voices.find(v => v.name.includes('hi-in-x-hie-local') || v.name.includes('hi-in-x-hie'));
-        if (detectedLang.includes('hi') && preferredHindiMaleVoice) {
-          selectedVoice = preferredHindiMaleVoice;
+        // 5. Try to find the specific Charon-like male voice requested by user if we are speaking Hindi or as a strong fallback
+        const preferredCharonVoice = voices.find(v => {
+          const name = v.name.toLowerCase();
+          return name.includes('google uk english male') ||
+                 name.includes('daniel') ||
+                 name.includes('hi-in-x-hie-local') ||
+                 name.includes('hi-in-x-hie');
+        });
+        if (preferredCharonVoice) {
+          selectedVoice = preferredCharonVoice;
         }
       }
 
@@ -1278,7 +1830,7 @@ export default function App() {
 
       window.speechSynthesis.speak(utterance);
     } catch (e: any) {
-      console.error("TTS Error", e);
+      console.warn("TTS Error", e);
       setError("An error occurred while playing the audio.");
       if (playingMessageIdRef.current === messageId) {
         setPlayingMessageId(null);
@@ -1288,14 +1840,6 @@ export default function App() {
     }
   };
 
-  // Clear error after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -1304,7 +1848,7 @@ export default function App() {
     setIsLoading(false);
   };
 
-  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false) => {
+  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
     if (isVoiceTyping && recognitionRef.current) {
       // Clear the transcript ref so onend doesn't send it again
       voiceTypingTranscriptRef.current = '';
@@ -1315,10 +1859,34 @@ export default function App() {
     const userText = typeof textToSend === 'string' ? textToSend : input.trim();
     if (!userText || isLoading) return;
     
-    setInput('');
-    const newMsgId = Date.now().toString();
+    if (!editMsgId) {
+      setInput('');
+    }
+    const newMsgId = editMsgId || Date.now().toString();
     
-    setMessages(prev => [...prev, { id: newMsgId, role: 'user', text: userText }]);
+    // Update messages state first
+    let currentMessages: any[] = [];
+    setMessages(prev => {
+      if (editMsgId) {
+        currentMessages = prev.map(m => m.id === editMsgId ? { ...m, text: userText } : m);
+      } else {
+        currentMessages = [...prev, { id: newMsgId, role: 'user', text: userText }];
+      }
+      return currentMessages;
+    });
+
+    if (editMsgId) {
+      // Re-initialize chat
+      const modelName = useFastModel ? "gemini-3.1-flash-lite-preview" : "gemini-3.1-pro-preview";
+      chatRef.current = ai.chats.create({ model: modelName, config: { systemInstruction: SYSTEM_INSTRUCTION } });
+      
+      // Re-send all messages up to the edited message
+      const msgIndex = currentMessages.findIndex(m => m.id === editMsgId);
+      for (let i = 0; i < msgIndex; i++) {
+        await chatRef.current.sendMessage({ message: currentMessages[i].text });
+      }
+    }
+
     setIsLoading(true);
     
     const abortController = new AbortController();
@@ -1333,12 +1901,23 @@ export default function App() {
       
       const modelText = response.text;
       
-      setMessages(prev => [...prev, { id: newMsgId + '-model', role: 'model', text: modelText }]);
+      const newModelMsgId = newMsgId + '-model-' + Date.now();
+      setMessages(prev => {
+        if (editMsgId) {
+          const msgIndex = prev.findIndex(m => m.id === editMsgId);
+          if (msgIndex !== -1 && msgIndex + 1 < prev.length) {
+            const nextMessages = [...prev];
+            nextMessages[msgIndex + 1] = { ...nextMessages[msgIndex + 1], text: modelText, id: newModelMsgId };
+            return nextMessages;
+          }
+        }
+        return [...prev, { id: newModelMsgId, role: 'model', text: modelText }];
+      });
       
       if (autoPlayResponse) {
         const { mainText } = parseMessage(modelText);
         setTimeout(() => {
-          playMessageAudio(mainText, newMsgId + '-model');
+          playMessageAudio(mainText, newModelMsgId);
         }, 100);
       }
       
@@ -1346,17 +1925,41 @@ export default function App() {
       if (abortController.signal.aborted) {
         return;
       }
-      console.error("Chat error:", error);
-      const errStr = typeof error === 'string' ? error : JSON.stringify(error);
-      if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
-        setMessages(prev => [...prev, { id: newMsgId + '-error', role: 'model', text: "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later." }]);
+      const errStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
+      const isQuotaError = errStr.toLowerCase().includes('429') || 
+                           errStr.toLowerCase().includes('quota') || 
+                           errStr.includes('RESOURCE_EXHAUSTED') ||
+                           errStr.toLowerCase().includes('limit') ||
+                           errStr.toLowerCase().includes('exceeded') ||
+                           errStr.toLowerCase().includes('safety') ||
+                           errStr.toLowerCase().includes('blocked');
+      
+      if (isQuotaError) {
+        const quotaMsg = t.errorTraffic || "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later.";
+        const errorId = newMsgId + '-error';
+        setMessages(prev => [...prev, { id: errorId, role: 'model', text: quotaMsg }]);
+        setError(quotaMsg);
+        
+        // Auto-remove the error message from chat after 1 second
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => m.id !== errorId));
+        }, 1000);
       } else {
-        setMessages(prev => [...prev, { id: newMsgId + '-error', role: 'model', text: "Sorry, a technical issue occurred. Please try again." }]);
+        const techMsg = t.errorTech || "Sorry, a technical issue occurred. Please try again.";
+        const errorId = newMsgId + '-error';
+        setMessages(prev => [...prev, { id: errorId, role: 'model', text: techMsg }]);
+        setError(techMsg);
+        
+        // Auto-remove tech error from chat after 1 second as well
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => m.id !== errorId));
+        }, 1000);
       }
     } finally {
       if (abortControllerRef.current === abortController) {
         setIsLoading(false);
         abortControllerRef.current = null;
+        setEditMsgId(null);
       }
     }
   };
@@ -1364,7 +1967,7 @@ export default function App() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      handleSend(undefined, false, editMsgId || undefined);
     }
   };
 
@@ -1380,14 +1983,30 @@ export default function App() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert(t.speechNotSupported || "Speech recognition is not supported in this browser.");
+      setError(t.speechNotSupported || "Speech recognition is not supported in this browser.");
       return;
     }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = uiLang === 'hi' ? 'hi-IN' : 'en-US';
+    const langMap: Record<string, string> = {
+      en: 'en-IN',
+      hi: 'hi-IN',
+      bho: 'bho-IN',
+      bn: 'bn-IN',
+      ta: 'ta-IN',
+      te: 'te-IN',
+      mr: 'mr-IN',
+      gu: 'gu-IN',
+      kn: 'kn-IN',
+      ml: 'ml-IN',
+      or: 'or-IN',
+      pa: 'pa-IN',
+      as: 'as-IN',
+      ur: 'ur-IN'
+    };
+    recognition.lang = langMap[uiLang] || 'en-IN';
     
     recognitionRef.current = recognition;
     
@@ -1410,7 +2029,7 @@ export default function App() {
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error);
+      console.warn("Speech recognition error", event.error);
       setIsVoiceTyping(false);
     };
 
@@ -1426,7 +2045,7 @@ export default function App() {
     try {
       recognition.start();
     } catch (e) {
-      console.error("Failed to start speech recognition", e);
+      console.warn("Failed to start speech recognition", e);
       setIsVoiceTyping(false);
     }
   };
@@ -1608,9 +2227,14 @@ export default function App() {
       sessionPromiseRef.current = sessionPromise;
       setIsLive(true);
     } catch (e: any) {
-      console.error("Live Audio Error:", e);
+      console.warn("Live Audio Error:", e);
       const errStr = typeof e === 'string' ? e : JSON.stringify(e);
-      if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      const isQuotaError = errStr.toLowerCase().includes('429') || 
+                           errStr.toLowerCase().includes('quota') || 
+                           errStr.includes('RESOURCE_EXHAUSTED') ||
+                           errStr.toLowerCase().includes('limit') ||
+                           errStr.toLowerCase().includes('exceeded');
+      if (isQuotaError) {
         setError("Live voice feature is currently unavailable due to high traffic/quota limits. Please try again later.");
       } else {
         setError("माइक्रोफोन की अनुमति नहीं मिली या कोई अन्य त्रुटि हुई।");
@@ -1669,7 +2293,7 @@ export default function App() {
       }, Math.max(0, timeUntilEnd));
       
     } catch (e) {
-      console.error("Error playing live audio:", e);
+      console.warn("Error playing live audio:", e);
     }
   };
 
@@ -1745,8 +2369,73 @@ export default function App() {
       if (avatarContainerRef.current) {
         avatarContainerRef.current.style.filter = 'drop-shadow(0 0 15px rgba(56,189,248,0.4))';
       }
+      animate(mouthPath, PATH_CLOSED, { duration: 0.2, ease: "easeOut" });
     }
-  }, [isModelSpeaking, isLive]);
+
+    let animationId: number;
+    let lastPath = PATH_CLOSED;
+    
+    const updateAvatar = () => {
+      let nextPath = PATH_CLOSED;
+      
+      if (isModelSpeaking && analyserRef.current) {
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Vowel Formant Approximation
+        // Bins (approx 172Hz each for 44.1kHz / 256)
+        let low = 0, mid = 0, high = 0;
+        for (let i = 1; i < 3; i++) low += dataArray[i];   // ~172 - 516 Hz
+        for (let i = 3; i < 8; i++) mid += dataArray[i];   // ~516 - 1376 Hz
+        for (let i = 8; i < 18; i++) high += dataArray[i]; // ~1376 - 3096 Hz
+        
+        low /= 2;
+        mid /= 5;
+        high /= 10;
+        
+        const totalEnergy = low + mid + high;
+        
+        if (totalEnergy > 15) { // Speaking threshold
+          // Calculate ratios to determine vowel characteristics
+          const hmRatio = high / (mid + 1);
+          const mlRatio = mid / (low + 1);
+          
+          if (totalEnergy < 30) {
+            // Low energy sounds (nasals, breathy, short)
+            if (hmRatio > 1.2) nextPath = PATH_I; // इ
+            else if (mlRatio > 1.2) nextPath = PATH_A_SHORT; // अ
+            else if (hmRatio < 0.5) nextPath = PATH_U; // उ
+            else nextPath = PATH_AM; // अं
+          } else if (totalEnergy < 60) {
+            // Medium energy
+            if (hmRatio > 1.5) nextPath = PATH_II; // ई
+            else if (hmRatio > 1.0) nextPath = PATH_E; // ए
+            else if (mlRatio > 1.5) nextPath = PATH_AH; // अः
+            else if (mlRatio > 1.0) nextPath = PATH_O; // ओ
+            else nextPath = PATH_UU; // ऊ
+          } else {
+            // High energy (wide open)
+            if (hmRatio > 1.2) nextPath = PATH_AI; // ऐ
+            else if (mlRatio > 1.2) nextPath = PATH_AA; // आ
+            else nextPath = PATH_AU; // औ
+          }
+        }
+      }
+      
+      if (nextPath !== lastPath) {
+        animate(mouthPath, nextPath, { duration: 0.15, ease: "easeOut" });
+        lastPath = nextPath;
+      }
+      
+      animationId = requestAnimationFrame(updateAvatar);
+    };
+
+    animationId = requestAnimationFrame(updateAvatar);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+    };
+  }, [isModelSpeaking, isLive, mouthPath]);
 
   // Keep AudioContext alive when returning to foreground
   useEffect(() => {
@@ -1809,67 +2498,124 @@ export default function App() {
         });
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        alert('Link copied to clipboard!');
+        setError('Link copied to clipboard!');
       }
     } catch (err) {
-      console.error('Error sharing:', err);
+      console.warn('Error sharing:', err);
     }
   };
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-[#0038b8] via-[#002888] to-[#001858]"
+      className="fixed inset-0 flex flex-col overflow-hidden bg-[#002277]"
     >
       <FloatingStopButton stopAudio={pauseMessageAudio} isPlaying={playingMessageId !== null && !isPaused} titleText={t.stop} />
 
       {/* Inner App Container */}
       <div className="flex flex-col h-full w-full bg-transparent font-mukta text-white overflow-hidden relative">
         {/* Header */}
-          <header className="text-white p-4 pt-6 sm:pt-8 flex justify-between items-center z-10">
-            <div className="flex items-center gap-3">
-              <div className="relative w-16 h-16 flex-shrink-0 flex items-center justify-center">
+          <header className="text-white p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
                 <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-contain relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <Users size={36} className="text-sky-300 drop-shadow-[0_0_10px_rgba(125,211,252,1)] absolute z-0" />
-                <div className="absolute top-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
+                <Users size={18} className="text-sky-300 drop-shadow-[0_0_10px_rgba(125,211,252,1)] absolute z-0" />
+                <div className="absolute top-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
               </div>
-              <div>
-                <h1 className="text-3xl font-mukta font-bold tracking-wider text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]">{t.title}</h1>
-                <p className="text-xs text-green-200 opacity-90 font-sans">{t.subtitle}</p>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-mukta font-bold tracking-wider text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)] leading-none">{t.title}</h1>
+                <p className="text-[10px] text-white/80 font-sans leading-none mt-0.5">{t.subtitle}</p>
               </div>
+              
+              {currentChatId && (
+                <div className="flex flex-col justify-center overflow-hidden border-l border-white/10 pl-2">
+                  <span className="text-[8px] text-sky-300 uppercase tracking-widest font-bold opacity-70 leading-none">Chatting in</span>
+                  <span className="text-xs font-medium text-white truncate max-w-[80px] sm:max-w-[150px] leading-tight">
+                    {savedChats.find(c => c.id === currentChatId)?.name}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex items-center gap-1.5 relative" ref={moreMenuRef}>
               <button 
-                onClick={handleAppShare}
-                className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-white/10 transition-colors bg-white/5 border border-white/10"
-                title="Share App"
+                onClick={handleNewChat}
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all"
+                title="New Chat"
               >
-                <Share2 size={20} />
-                <span className="text-sm font-medium hidden sm:inline">Share</span>
+                <MessageSquare size={18} />
               </button>
+
               <button 
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-white/10 transition-colors bg-white/5 border border-white/10"
-                title={t.settings}
+                onClick={() => {
+                  if (showSettings) {
+                    setShowSettings(false);
+                  } else {
+                    setShowMoreMenu(!showMoreMenu);
+                  }
+                }}
+                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-500/30 text-sky-300 border-sky-500/50' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'} border`}
+                title="More Options"
               >
-                <Settings2 size={20} />
-                <span className="text-sm font-medium hidden sm:inline">{t.settings}</span>
+                <MoreVertical size={18} />
               </button>
+
+              <AnimatePresence>
+                {showMoreMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute right-0 top-full mt-2 w-48 bg-[#002266]/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                  >
+                    <div className="p-1.5 flex flex-col gap-1">
+                      <button 
+                        onClick={() => {
+                          setIsHistoryOpen(true);
+                          setShowMoreMenu(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                      >
+                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300 group-hover:bg-sky-500/30 transition-colors">
+                          <MessageSquare size={16} />
+                        </div>
+                        <span className="text-sm font-medium text-white/90">History</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          handleAppShare();
+                          setShowMoreMenu(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                      >
+                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300 group-hover:bg-emerald-500/30 transition-colors">
+                          <Share2 size={16} />
+                        </div>
+                        <span className="text-sm font-medium text-white/90">Share</span>
+                      </button>
+                      
+                      <button 
+                        onClick={() => {
+                          setShowSettings(!showSettings);
+                          setShowMoreMenu(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                      >
+                        <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 group-hover:bg-amber-500/30 transition-colors">
+                          <Settings2 size={16} />
+                        </div>
+                        <span className="text-sm font-medium text-white/90">{t.settings}</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </header>
 
           {/* Error Toast */}
           <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="fixed bottom-24 left-4 right-4 z-[100] bg-red-500/95 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-start gap-2 backdrop-blur-md border border-white/20"
-              >
-                <Info size={18} className="mt-0.5 shrink-0" />
-                <p>{error}</p>
-              </motion.div>
-            )}
+
           </AnimatePresence>
 
           {/* Settings Panel */}
@@ -1895,15 +2641,22 @@ export default function App() {
                     <select
                       value={uiLang}
                       onChange={(e) => setUiLang(e.target.value)}
-                      className="bg-slate-800 text-white border border-white/20 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
+                      className="bg-[#001a4d] text-white border border-white/20 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
                     >
                       <option value="en">English</option>
                       <option value="hi">हिन्दी (Hindi)</option>
+                      <option value="bho">भोजपुरी (Bhojpuri)</option>
                       <option value="bn">বাংলা (Bengali)</option>
                       <option value="ta">தமிழ் (Tamil)</option>
                       <option value="te">తెలుగు (Telugu)</option>
                       <option value="mr">मराठी (Marathi)</option>
                       <option value="gu">ગુજરાતી (Gujarati)</option>
+                      <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                      <option value="ml">മലയാളം (Malayalam)</option>
+                      <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                      <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                      <option value="as">অসমীয়া (Assamese)</option>
+                      <option value="ur">اردو (Urdu)</option>
                     </select>
                   </div>
                   
@@ -1923,8 +2676,8 @@ export default function App() {
                         value={voiceEngine}
                         onChange={(e) => setVoiceEngine(e.target.value as 'standard' | 'premium')}
                       >
-                        <option value="standard" className="bg-zinc-800">Standard (Offline, Fast)</option>
-                        <option value="premium" className="bg-zinc-800">Premium AI (Natural, Emotional)</option>
+                        <option value="standard" className="bg-[#001a4d]">Standard (Offline, Fast)</option>
+                        <option value="premium" className="bg-[#001a4d]">Premium AI (Natural, Emotional)</option>
                       </select>
                     </div>
 
@@ -1946,11 +2699,9 @@ export default function App() {
                           value={premiumVoice}
                           onChange={(e) => setPremiumVoice(e.target.value)}
                         >
-                          <option value="Zephyr" className="bg-zinc-800">Zephyr (Deep, Serious Male)</option>
-                          <option value="Fenrir" className="bg-zinc-800">Fenrir (Strong, Authoritative Male)</option>
-                          <option value="Charon" className="bg-zinc-800">Charon (Calm, Measured Male)</option>
-                          <option value="Puck" className="bg-zinc-800">Puck (Friendly, Energetic Male)</option>
-                          <option value="Kore" className="bg-zinc-800">Kore (Clear, Professional Female)</option>
+                          <option value="Fenrir" className="bg-[#001a4d]">Fenrir (Strong, Authoritative Male)</option>
+                          <option value="Charon" className="bg-[#001a4d]">Charon (Calm, Measured Male)</option>
+                          <option value="Puck" className="bg-[#001a4d]">Puck (Friendly, Energetic Male)</option>
                         </select>
                       </div>
                     ) : (
@@ -1969,9 +2720,9 @@ export default function App() {
                           value={selectedVoiceURI}
                           onChange={(e) => setSelectedVoiceURI(e.target.value)}
                         >
-                          <option value="" className="bg-zinc-800">Auto-select (Default)</option>
+                          <option value="" className="bg-[#001a4d]">Auto-select (Default)</option>
                           {availableVoices.map(v => (
-                            <option key={v.voiceURI} value={v.voiceURI} className="bg-zinc-800">
+                            <option key={v.voiceURI} value={v.voiceURI} className="bg-[#001a4d]">
                               {v.name} ({v.lang})
                             </option>
                           ))}
@@ -2053,7 +2804,7 @@ export default function App() {
                     {msg.role === 'model' && (
                       <div id={`message-header-${msg.id}`} className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 text-xs font-semibold text-yellow-300 drop-shadow-[0_0_5px_rgba(253,224,71,0.5)]">
-                          <div className="flex items-center justify-center w-6 h-6 bg-slate-800 rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
+                          <div className="flex items-center justify-center w-6 h-6 bg-[#001a4d] rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
                             <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             <Users size={12} className="text-sky-300 absolute z-0" />
                           </div>
@@ -2096,13 +2847,35 @@ export default function App() {
                       </div>
                     )}
                     {msg.role === 'user' && (
-                      <div className="flex items-center justify-end mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 relative">
+                          <button 
+                            onClick={() => handleCopy(msg.text, msg.id)}
+                            className="p-1 text-blue-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="Copy message"
+                          >
+                            {copiedMessageId === msg.id ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              setInput(msg.text);
+                              setEditMsgId(msg.id);
+                            }}
+                            className="p-1 text-blue-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="Edit message"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        </div>
                         <div className="text-xs font-semibold text-blue-200">
                           <span>{t.you}</span>
                         </div>
                       </div>
                     )}
-                    <div className={`prose max-w-none text-white prose-invert ${msg.role === 'user' ? 'prose-lg md:prose-xl text-right' : 'prose-2xl md:prose-2xl prose-p:text-[224px] md:prose-p:text-[288px] prose-li:text-[224px] md:prose-li:text-[288px] prose-strong:text-[224px] md:prose-strong:text-[288px] prose-headings:text-[256px] md:prose-headings:text-[320px] font-medium text-left leading-tight ai-message-content'}`}>
+                    <div 
+                      className={`prose max-w-none text-white prose-invert ${msg.role === 'user' ? 'prose-lg md:prose-xl text-right' : 'prose-2xl md:prose-2xl prose-p:text-[224px] md:prose-p:text-[288px] prose-li:text-[224px] md:prose-li:text-[288px] prose-strong:text-[224px] md:prose-strong:text-[288px] prose-headings:text-[256px] md:prose-headings:text-[320px] font-medium text-left leading-tight ai-message-content'}`}
+                    >
                       {playingMessageId === msg.id ? (
                         <ReactMarkdown rehypePlugins={[rehypeRaw]}>
                           {highlightMarkdown(mainText, playingTextIndex)}
@@ -2114,40 +2887,42 @@ export default function App() {
                     {msg.role === 'model' && (
                       <>
                         <div id={`message-actions-${msg.id}`} className="mt-3 flex justify-end items-center gap-2">
+                          {msg.id === '1' && !currentChatId && (
+                            <button
+                              onClick={() => setIsSaveModalOpen(true)}
+                              className="flex items-center justify-center p-2 bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 hover:text-sky-200 rounded-lg transition-colors mr-auto"
+                              title="Save Chat"
+                            >
+                              <Bookmark size={16} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleCopy(msg.text, msg.id)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                            className="flex items-center justify-center p-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
                             title={t.copy}
                           >
                             {copiedMessageId === msg.id ? (
-                              <>
-                                <Check size={16} className="text-green-400" />
-                                <span className="text-green-400">{t.copied}</span>
-                              </>
+                              <Check size={16} className="text-green-400" />
                             ) : (
-                              <>
-                                <Copy size={16} />
-                                <span>{t.copy}</span>
-                              </>
+                              <Copy size={16} />
                             )}
                           </button>
                           <button
                             onClick={() => handleShare(msg.text)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                            className="flex items-center justify-center p-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
                             title="Share"
                           >
                             <Share2 size={16} />
-                            <span>Share</span>
                           </button>
                         </div>
                         {questions.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
                             {questions.map((q, idx) => (
                               <button
-                                key={idx}
+                                key={`${msg.id}-q-${idx}`}
                                 onClick={() => handleSend(q)}
                                 disabled={isLoading}
-                                className="text-xs md:text-sm bg-slate-800/50 hover:bg-slate-700/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
+                                className="text-xs md:text-sm bg-[#001a4d]/50 hover:bg-[#002266]/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
                               >
                                 {q}
                               </button>
@@ -2174,9 +2949,9 @@ export default function App() {
                     t.q4
                   ].map((question, idx) => (
                     <button
-                      key={idx}
+                      key={`initial-q-${idx}`}
                       onClick={() => handleSend(question)}
-                      className="text-xs md:text-sm bg-slate-800/50 hover:bg-slate-700/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm"
+                      className="text-xs md:text-sm bg-[#001a4d]/50 hover:bg-[#002266]/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm"
                     >
                       {question}
                     </button>
@@ -2203,7 +2978,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#0a192f] overflow-hidden"
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#002277] overflow-hidden"
               >
                 {/* Circuit Background Pattern */}
                 <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -2218,7 +2993,7 @@ export default function App() {
                   </svg>
                 </div>
 
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0a192f] via-transparent to-[#0a192f]"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-[#002277] via-transparent to-[#002277]"></div>
                 
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48">
                   {/* Gen-Z Realistic Robot Avatar */}
@@ -2311,25 +3086,11 @@ export default function App() {
                       {/* Realistic Lips */}
                       <g>
                         <motion.path
-                          d={isModelSpeaking ? "M 75 135 Q 100 155 125 135 Q 100 145 75 135" : "M 80 140 Q 100 142 120 140"}
+                          d={mouthPath}
                           stroke={isModelSpeaking ? "#facc15" : "#60a5fa"}
                           strokeWidth="3"
                           fill={isModelSpeaking ? "rgba(250, 204, 21, 0.2)" : "none"}
                           strokeLinecap="round"
-                          animate={isModelSpeaking ? {
-                            d: [
-                              "M 80 140 Q 100 142 120 140",
-                              "M 75 135 Q 100 165 125 135 Q 100 145 75 135",
-                              "M 80 140 Q 100 142 120 140"
-                            ]
-                          } : {
-                            d: "M 80 140 Q 100 142 120 140"
-                          }}
-                          transition={isModelSpeaking ? {
-                            repeat: Infinity,
-                            duration: 0.3,
-                            ease: "easeInOut"
-                          } : {}}
                         />
                         {/* Subtle Glow under mouth when speaking */}
                         {isModelSpeaking && (
@@ -2384,7 +3145,25 @@ export default function App() {
           </main>
 
           {/* Input Area */}
-          <footer className="p-4 pb-5 sm:pb-6">
+          <footer className="p-4 pb-5 sm:pb-6 relative z-20">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="max-w-3xl mx-auto mb-2 bg-red-500/95 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium flex items-start gap-2 backdrop-blur-md border border-red-400/50"
+              >
+                <Info size={18} className="mt-0.5 shrink-0" />
+                <p className="flex-1">{error}</p>
+                <button 
+                  onClick={() => setError(null)}
+                  className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </motion.div>
+            )}
         <div className="max-w-3xl mx-auto relative flex items-end gap-2">
           {!isLive && (
             <div className="w-full relative flex items-end bg-white/10 backdrop-blur-xl border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-white/20 focus-within:border-white/50 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
@@ -2407,7 +3186,7 @@ export default function App() {
                     onClick={toggleVoiceTyping}
                     className={`flex items-center justify-center w-11 h-11 rounded-full transition-all transform active:scale-95 border group ${
                       isVoiceTyping 
-                        ? 'bg-red-500 text-white border-red-400/30 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse' 
+                        ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-sky-500 text-white border-transparent shadow-[0_0_15px_rgba(168,85,247,0.6)] animate-pulse' 
                         : 'bg-white/10 text-white/90 hover:bg-white/20 hover:text-white border-white/20'
                     }`}
                     title={isVoiceTyping ? t.stopVoiceTyping : t.voiceTyping}
@@ -2442,7 +3221,7 @@ export default function App() {
                   </button>
                 ) : input.trim() ? (
                   <button
-                    onClick={handleSend}
+                    onClick={() => handleSend(undefined, false, editMsgId || undefined)}
                     className="flex items-center justify-center w-11 h-11 bg-gradient-to-br from-white to-blue-100 text-[#0038b8] rounded-full hover:from-blue-50 hover:to-white transition-all transform active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/50 group"
                   >
                     <Send size={18} className="ml-0.5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
@@ -2459,6 +3238,179 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      {/* Save Chat Modal */}
+      <AnimatePresence>
+        {isSaveModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#002266] border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <h2 className="text-xl font-bold text-white mb-4">Save Chat</h2>
+              <input
+                type="text"
+                value={chatNameInput}
+                onChange={(e) => setChatNameInput(e.target.value)}
+                placeholder="Enter chat name..."
+                className="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white outline-none focus:ring-2 focus:ring-sky-500 mb-6"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveChat();
+                }}
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setIsSaveModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveChat}
+                  disabled={!chatNameInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white transition-colors disabled:opacity-50"
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat History Sidebar */}
+      <AnimatePresence>
+        {isHistoryOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsHistoryOpen(false)}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 z-50 w-80 bg-[#002266] border-r border-white/10 shadow-2xl flex flex-col"
+            >
+              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#001a4d]/50">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <MessageSquare size={20} className="text-sky-400" />
+                  Chat History
+                </h2>
+                <button
+                  onClick={() => setIsHistoryOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4">
+                <button
+                  onClick={handleNewChat}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 rounded-xl transition-colors font-medium"
+                >
+                  <MessageSquare size={18} />
+                  New Chat
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pt-0 space-y-2">
+                {savedChats.length === 0 ? (
+                  <div className="text-center text-white/40 py-8 text-sm">
+                    No saved chats yet.
+                  </div>
+                ) : (
+                  [...savedChats].sort((a, b) => {
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    return b.timestamp - a.timestamp;
+                  }).map(chat => (
+                    <div
+                      key={chat.id}
+                      onClick={() => handleLoadChat(chat)}
+                      className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors border ${
+                        currentChatId === chat.id 
+                          ? 'bg-sky-500/20 border-sky-500/50 text-sky-100' 
+                          : 'bg-white/5 border-transparent hover:bg-white/10 text-white/80 hover:text-white'
+                      }`}
+                    >
+                      {editingChatId === chat.id ? (
+                        <div className="flex-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editingChatName}
+                            onChange={(e) => setEditingChatName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveRename();
+                              if (e.key === 'Escape') handleCancelRename();
+                            }}
+                            className="flex-1 bg-black/20 border border-white/20 rounded px-2 py-1 text-sm text-white outline-none focus:border-sky-500"
+                            autoFocus
+                          />
+                          <button onClick={handleSaveRename} className="p-1 text-green-400 hover:bg-green-400/20 rounded">
+                            <Check size={14} />
+                          </button>
+                          <button onClick={handleCancelRename} className="p-1 text-red-400 hover:bg-red-400/20 rounded">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-col overflow-hidden flex-1">
+                            <div className="flex items-center gap-2">
+                              {chat.isPinned && <Pin size={12} className="text-sky-400 flex-shrink-0 fill-current" />}
+                              <span className="font-medium truncate">{chat.name}</span>
+                            </div>
+                            <span className="text-xs opacity-60">
+                              {new Date(chat.timestamp).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => handleTogglePin(e, chat.id)}
+                              className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-400 hover:bg-sky-400/10' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                              title={chat.isPinned ? "Unpin chat" : "Pin chat"}
+                            >
+                              <Pin size={14} className={chat.isPinned ? "fill-current" : ""} />
+                            </button>
+                            <button
+                              onClick={(e) => handleStartRename(e, chat)}
+                              className="p-1.5 text-white/40 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors"
+                              title="Rename chat"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteChat(e, chat.id)}
+                              className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                              title="Delete chat"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       </div>
     </div>
   );
