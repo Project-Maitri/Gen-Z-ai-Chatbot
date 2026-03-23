@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';  
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
 import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
