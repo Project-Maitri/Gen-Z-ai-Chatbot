@@ -1,25 +1,37 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
-export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
   return {
-    // 👇 यह लाइन जोड़ना बहुत ज़रूरी है ताकि GitHub को आपकी फाइलों का पता चले
-    base: '/Gen-Z-ai-Chatbot/', 
+    // 1. GitHub Pages के लिए यह पाथ बहुत ज़रूरी है
+    base: '/Gen-Z-ai-Chatbot/',
     
     plugins: [react(), tailwindcss()],
+    
+    // 2. API Key को सुरक्षित तरीके से जोड़ने के लिए
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
+    
+    // 3. पाथ रिजॉल्यूशन को सरल बनाया गया है
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': '/',
       },
     },
+    
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
+    
+    // 4. बिल्ड आउटपुट को GitHub Pages के अनुकूल बनाने के लिए
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      emptyOutDir: true,
+    }
   };
 });
