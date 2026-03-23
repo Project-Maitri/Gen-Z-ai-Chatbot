@@ -250,7 +250,7 @@ const FloatingStopButton = ({ stopAudio, isPlaying, titleText }: { stopAudio: ()
   return (
     <button
       onClick={stopAudio}
-      className="fixed z-50 text-red-400 hover:text-red-300 bg-gray-900/90 border border-red-500/30 hover:bg-gray-800 rounded-full p-2.5 shadow-xl transition-all flex items-center justify-center cursor-pointer animate-in fade-in zoom-in duration-200"
+      className="fixed z-50 text-red-600 hover:text-red-700 bg-white/90 border border-red-200 hover:bg-white rounded-full p-2.5 shadow-xl transition-all flex items-center justify-center cursor-pointer animate-in fade-in zoom-in duration-200"
       style={{ 
         top: `${position.top}px`, 
         right: `${position.right}px`,
@@ -288,6 +288,7 @@ const translations: Record<string, any> = {
     copied: "Copied",
     listen: "Listen",
     stop: "Stop",
+    back: "Back",
     listenAgain: "Listen again",
     speaking: "Gen-Z is speaking...",
     listening: "Gen-Z is listening...",
@@ -324,6 +325,7 @@ const translations: Record<string, any> = {
     copied: "कॉपी किया गया",
     listen: "सुनें",
     stop: "रोकें",
+    back: "वापस",
     listenAgain: "फिर से सुनें",
     speaking: "जेन-जी बोल रहे हैं...",
     listening: "जेन-जी सुन रहे हैं...",
@@ -360,6 +362,7 @@ const translations: Record<string, any> = {
     copied: "कॉपी हो गइल",
     listen: "सुनीं",
     stop: "रोकीं",
+    back: "पाछे",
     listenAgain: "फेरु से सुनीं",
     speaking: "जेन-जी बोल रहल बाड़े...",
     listening: "जेन-जी सुन रहल बाड़े...",
@@ -396,6 +399,7 @@ const translations: Record<string, any> = {
     copied: "কপি করা হয়েছে",
     listen: "শুনুন",
     stop: "থামান",
+    back: "ফিরে যান",
     listenAgain: "আবার শুনুন",
     speaking: "জেন-জি কথা বলছে...",
     listening: "জেন-জি শুনছে...",
@@ -429,6 +433,7 @@ const translations: Record<string, any> = {
     copied: "நகலெடுக்கப்பட்டது",
     listen: "கேட்க",
     stop: "நிறுத்து",
+    back: "பின்னால்",
     listenAgain: "மீண்டும் கேட்க",
     speaking: "ஜென்-ஜி பேசுகிறார்...",
     listening: "ஜென்-ஜி கேட்கிறார்...",
@@ -462,6 +467,7 @@ const translations: Record<string, any> = {
     copied: "కాపీ చేయబడింది",
     listen: "వినండి",
     stop: "ఆపండి",
+    back: "వెనుకకు",
     listenAgain: "మళ్ళీ వినండి",
     speaking: "జెన్-జి మాట్లాడుతున్నారు...",
     listening: "జెన్-జి వింటున్నారు...",
@@ -495,6 +501,7 @@ const translations: Record<string, any> = {
     copied: "कॉपी केले",
     listen: "ऐका",
     stop: "थांबवा",
+    back: "मागे",
     listenAgain: "पुन्हा ऐका",
     speaking: "जेन-जी बोलत आहेत...",
     listening: "जेन-जी ऐकत आहेत...",
@@ -528,6 +535,7 @@ const translations: Record<string, any> = {
     copied: "કૉપિ કર્યું",
     listen: "સાંભળો",
     stop: "અટકાવો",
+    back: "પાછા",
     listenAgain: "ફરી સાંભળો",
     speaking: "જેન-જી બોલી રહ્યા છે...",
     listening: "જેન-જી સાંભળી રહ્યા છે...",
@@ -561,6 +569,7 @@ const translations: Record<string, any> = {
     copied: "ನಕಲಿಸಲಾಗಿದೆ",
     listen: "ಆಲಿಸಿ",
     stop: "ನಿಲ್ಲಿಸಿ",
+    back: "ಹಿಂದೆ",
     listenAgain: "ಮತ್ತೆ ಆಲಿಸಿ",
     speaking: "ಜೆನ್-ಜಿ ಮಾತನಾಡುತ್ತಿದ್ದಾರೆ...",
     listening: "ಜೆನ್-ಜಿ ಆಲಿಸುತ್ತಿದ್ದಾರೆ...",
@@ -597,6 +606,7 @@ const translations: Record<string, any> = {
     copied: "പകർത്തി",
     listen: "കേൾക്കുക",
     stop: "നിർത്തുക",
+    back: "തിരികെ",
     listenAgain: "വീണ്ടും കേൾക്കുക",
     speaking: "ജെൻ-ജി സംസാരിക്കുന്നു...",
     listening: "ജെൻ-ജി കേൾക്കുന്നു...",
@@ -633,6 +643,7 @@ const translations: Record<string, any> = {
     copied: "କପି ହୋଇଛି",
     listen: "ଶୁଣନ୍ତୁ",
     stop: "ବନ୍ଦ କରନ୍ତୁ",
+    back: "ପଛକୁ",
     listenAgain: "ପୁଣି ଶୁଣନ୍ତୁ",
     speaking: "ଜେନ୍-ଜି କହୁଛନ୍ତି...",
     listening: "ଜେନ୍-ଜି ଶୁଣୁଛନ୍ତି...",
@@ -669,6 +680,7 @@ const translations: Record<string, any> = {
     copied: "ਕਾਪੀ ਕੀਤਾ ਗਿਆ",
     listen: "ਸੁਣੋ",
     stop: "ਰੋਕੋ",
+    back: "ਪਿੱਛੇ",
     listenAgain: "ਦੁਬਾਰਾ ਸੁਣੋ",
     speaking: "ਜੇਨ-ਜੀ ਬੋਲ ਰਹੇ ਹਨ...",
     listening: "ਜੇਨ-ਜੀ ਸੁਣ ਰਹੇ ਹਨ...",
@@ -705,6 +717,7 @@ const translations: Record<string, any> = {
     copied: "کاپی ہو گیا",
     listen: "سنیں",
     stop: "روکیں",
+    back: "پیچھے",
     listenAgain: "دوبارہ سنیں",
     speaking: "جین-جی بول رہے ہیں...",
     listening: "جین-جی سن رہے ہیں...",
@@ -741,6 +754,7 @@ const translations: Record<string, any> = {
     copied: "কপি কৰা হৈছে",
     listen: "শুনক",
     stop: "বন্ধ কৰক",
+    back: "উভতি যাওক",
     listenAgain: "আকৌ শুনক",
     speaking: "জেন-জিয়ে কথা পাতি আছে...",
     listening: "জেন-জিয়ে শুনি আছে...",
@@ -769,6 +783,47 @@ const translations: Record<string, any> = {
     errorTech: "ক্ষমা কৰিব, এটা কাৰিকৰী সমস্যা হৈছে। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।",
     premiumQuotaExceeded: "প্ৰিমিয়াম ভইচ কোটা শেষ হৈছে। ষ্টেণ্ডাৰ্ড ভইচলৈ সলনি কৰা হৈছে।"
   }
+};
+
+const VirtualNetworkBackground = () => {
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-[#fdfbf7]">
+      {/* Base Tech Image */}
+      <div 
+        className="absolute inset-0 opacity-100"
+        style={{
+          background: 'linear-gradient(135deg, #ffffff 0%, #f9f8f6 100%)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      
+      {/* Network Nodes & Lines */}
+      <div className="absolute inset-0 opacity-40">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="1"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+          
+          {/* Animated connection lines */}
+          <g stroke="rgba(16, 185, 129, 0.4)" strokeWidth="2" fill="none">
+            <path d="M 10 150 Q 150 200 300 100 T 600 300" className="animate-pulse" />
+            <path d="M 800 100 Q 600 250 400 400 T 100 600" className="animate-pulse" style={{ animationDelay: '1s' }} />
+            <path d="M 200 800 Q 400 600 700 700 T 1000 500" className="animate-pulse" style={{ animationDelay: '2s' }} />
+          </g>
+          
+          {/* Glowing Nodes */}
+          <circle cx="300" cy="100" r="4" fill="#34d399" className="animate-ping" />
+          <circle cx="600" cy="300" r="5" fill="#60a5fa" className="animate-ping" style={{ animationDelay: '0.5s' }} />
+          <circle cx="400" cy="400" r="4" fill="#fbbf24" className="animate-ping" style={{ animationDelay: '1.5s' }} />
+          <circle cx="700" cy="700" r="6" fill="#a78bfa" className="animate-ping" style={{ animationDelay: '2.5s' }} />
+        </svg>
+      </div>
+    </div>
+  );
 };
 
 export default function App() {
@@ -1246,6 +1301,8 @@ export default function App() {
   const avatarContainerRef = useRef<HTMLDivElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isMicMutedRef = useRef(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
 
   // TTS Refs
   const ttsAudioContextRef = useRef<AudioContext | null>(null);
@@ -2051,6 +2108,12 @@ export default function App() {
   };
 
   // Live API Audio Setup
+  const toggleMicMute = () => {
+    const newMutedState = !isMicMutedRef.current;
+    isMicMutedRef.current = newMutedState;
+    setIsMicMuted(newMutedState);
+  };
+
   const toggleLiveAudio = async () => {
     if (isLive) {
       stopLiveAudio();
@@ -2146,7 +2209,7 @@ export default function App() {
         }
         const base64 = btoa(binary);
         
-        if (sessionPromiseRef.current) {
+        if (sessionPromiseRef.current && !isMicMutedRef.current) {
           sessionPromiseRef.current.then(s => {
              s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
           });
@@ -2173,6 +2236,11 @@ export default function App() {
           onopen: () => {
              console.log("Live API connected");
              nextAudioTimeRef.current = 0;
+             if (sessionPromiseRef.current) {
+               sessionPromiseRef.current.then(s => {
+                 s.sendRealtimeInput({ text: "Please introduce yourself by saying exactly this phrase in Hindi: 'मैं Gen-Z हूं! कोई मदद या जानकारी चाहिए! बोलिए, मैं आपकी मदद के लिए यहां हूं!'" });
+               });
+             }
           },
           onmessage: async (message: LiveServerMessage) => {
              if (message.serverContent?.interrupted) {
@@ -2346,6 +2414,8 @@ export default function App() {
       animationFrameRef.current = null;
     }
     setIsLive(false);
+    setIsMicMuted(false);
+    isMicMutedRef.current = false;
     
     if (liveTranscriptRef.current.length > 0) {
       setMessages(prev => {
@@ -2507,29 +2577,31 @@ export default function App() {
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col overflow-hidden bg-[#002277]"
+      className="fixed inset-0 flex flex-col overflow-hidden"
     >
+      {/* Virtual AI Background */}
+      <VirtualNetworkBackground />
       <FloatingStopButton stopAudio={pauseMessageAudio} isPlaying={playingMessageId !== null && !isPaused} titleText={t.stop} />
 
       {/* Inner App Container */}
-      <div className="flex flex-col h-full w-full bg-transparent font-mukta text-white overflow-hidden relative">
+      <div className="flex flex-col h-full w-full bg-transparent font-mukta text-gray-900 overflow-hidden relative">
         {/* Header */}
-          <header className="text-white p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
+          <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
                 <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-contain relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <Users size={18} className="text-sky-300 drop-shadow-[0_0_10px_rgba(125,211,252,1)] absolute z-0" />
-                <div className="absolute top-0 right-0 w-2 h-2 bg-green-400 rounded-full border border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
+                <Users size={24} className="text-sky-600 drop-shadow-sm absolute z-0" />
+                <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-xl font-mukta font-bold tracking-wider text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)] leading-none">{t.title}</h1>
-                <p className="text-[10px] text-white/80 font-sans leading-none mt-0.5">{t.subtitle}</p>
+                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-600 drop-shadow-sm leading-none">{t.title}</h1>
+                <p className="text-[10px] text-gray-700 font-sans leading-none mt-0.5">{t.subtitle}</p>
               </div>
               
               {currentChatId && (
-                <div className="flex flex-col justify-center overflow-hidden border-l border-white/10 pl-2">
-                  <span className="text-[8px] text-sky-300 uppercase tracking-widest font-bold opacity-70 leading-none">Chatting in</span>
-                  <span className="text-xs font-medium text-white truncate max-w-[80px] sm:max-w-[150px] leading-tight">
+                <div className="flex flex-col justify-center overflow-hidden border-l border-gray-200 pl-2">
+                  <span className="text-[8px] text-sky-600 uppercase tracking-widest font-bold opacity-70 leading-none">Chatting in</span>
+                  <span className="text-xs font-medium text-gray-900 truncate max-w-[80px] sm:max-w-[150px] leading-tight">
                     {savedChats.find(c => c.id === currentChatId)?.name}
                   </span>
                 </div>
@@ -2539,7 +2611,7 @@ export default function App() {
             <div className="flex items-center gap-1.5 relative" ref={moreMenuRef}>
               <button 
                 onClick={handleNewChat}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md transition-all"
                 title="New Chat"
               >
                 <MessageSquare size={18} />
@@ -2553,7 +2625,7 @@ export default function App() {
                     setShowMoreMenu(!showMoreMenu);
                   }
                 }}
-                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-500/30 text-sky-300 border-sky-500/50' : 'bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10'} border`}
+                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-200 text-sky-600 border-sky-400' : 'bg-white shadow-sm border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md'} border`}
                 title="More Options"
               >
                 <MoreVertical size={18} />
@@ -2565,7 +2637,7 @@ export default function App() {
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-48 bg-[#002266]/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-48 bg-white/95 backdrop-blur-xl border border-gray-300 rounded-2xl shadow-2xl z-[100] overflow-hidden"
                   >
                     <div className="p-1.5 flex flex-col gap-1">
                       <button 
@@ -2573,12 +2645,12 @@ export default function App() {
                           setIsHistoryOpen(true);
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300 group-hover:bg-sky-500/30 transition-colors">
+                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600 group-hover:bg-sky-200 transition-colors">
                           <MessageSquare size={16} />
                         </div>
-                        <span className="text-sm font-medium text-white/90">History</span>
+                        <span className="text-sm font-medium text-gray-800">History</span>
                       </button>
                       
                       <button 
@@ -2586,12 +2658,12 @@ export default function App() {
                           handleAppShare();
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300 group-hover:bg-emerald-500/30 transition-colors">
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600 group-hover:bg-emerald-200 transition-colors">
                           <Share2 size={16} />
                         </div>
-                        <span className="text-sm font-medium text-white/90">Share</span>
+                        <span className="text-sm font-medium text-gray-800">Share</span>
                       </button>
                       
                       <button 
@@ -2599,12 +2671,12 @@ export default function App() {
                           setShowSettings(!showSettings);
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 group-hover:bg-amber-500/30 transition-colors">
+                        <div className="p-2 bg-amber-100 rounded-lg text-amber-600 group-hover:bg-amber-200 transition-colors">
                           <Settings2 size={16} />
                         </div>
-                        <span className="text-sm font-medium text-white/90">{t.settings}</span>
+                        <span className="text-sm font-medium text-gray-800">{t.settings}</span>
                       </button>
                     </div>
                   </motion.div>
@@ -2628,20 +2700,20 @@ export default function App() {
                 className="overflow-hidden z-0"
               >
                 <div className="p-4 max-w-3xl mx-auto grid grid-cols-1 gap-4 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar">
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                      <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                         <Globe size={20} />
                       </div>
                       <div>
-                        <h3 className="text-white font-medium">{t.language}</h3>
-                        <p className="text-white/60 text-xs">Choose your preferred language</p>
+                        <h3 className="text-gray-900 font-medium">{t.language}</h3>
+                        <p className="text-gray-500 text-xs">Choose your preferred language</p>
                       </div>
                     </div>
                     <select
                       value={uiLang}
                       onChange={(e) => setUiLang(e.target.value)}
-                      className="bg-[#001a4d] text-white border border-white/20 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
+                      className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
                     >
                       <option value="en">English</option>
                       <option value="hi">हिन्दी (Hindi)</option>
@@ -2660,69 +2732,69 @@ export default function App() {
                     </select>
                   </div>
                   
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                           <Volume2 size={20} />
                         </div>
                         <div>
-                          <h3 className="text-white font-medium">Voice Engine</h3>
-                          <p className="text-white/60 text-xs">Choose between standard and premium AI voices</p>
+                          <h3 className="text-gray-900 font-medium">Voice Engine</h3>
+                          <p className="text-gray-500 text-xs">Choose between standard and premium AI voices</p>
                         </div>
                       </div>
                       <select 
-                        className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-white outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
                         value={voiceEngine}
                         onChange={(e) => setVoiceEngine(e.target.value as 'standard' | 'premium')}
                       >
-                        <option value="standard" className="bg-[#001a4d]">Standard (Offline, Fast)</option>
-                        <option value="premium" className="bg-[#001a4d]">Premium AI (Natural, Emotional)</option>
+                        <option value="standard" className="bg-zinc-800">Standard (Offline, Fast)</option>
+                        <option value="premium" className="bg-zinc-800">Premium AI (Natural, Emotional)</option>
                       </select>
                     </div>
 
-                    <div className="h-px w-full bg-white/10"></div>
+                    <div className="h-px w-full bg-white shadow-md"></div>
 
                     {voiceEngine === 'premium' ? (
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                          <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                             <Users size={16} />
                           </div>
                           <div>
-                            <h3 className="text-white font-medium">Premium Voice</h3>
-                            <p className="text-white/60 text-xs">Select a high-quality AI voice model</p>
+                            <h3 className="text-gray-900 font-medium">Premium Voice</h3>
+                            <p className="text-gray-500 text-xs">Select a high-quality AI voice model</p>
                           </div>
                         </div>
                         <select 
-                          className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-white outline-none focus:ring-2 focus:ring-sky-500"
+                          className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
                           value={premiumVoice}
                           onChange={(e) => setPremiumVoice(e.target.value)}
                         >
-                          <option value="Fenrir" className="bg-[#001a4d]">Fenrir (Strong, Authoritative Male)</option>
-                          <option value="Charon" className="bg-[#001a4d]">Charon (Calm, Measured Male)</option>
-                          <option value="Puck" className="bg-[#001a4d]">Puck (Friendly, Energetic Male)</option>
+                          <option value="Fenrir" className="bg-zinc-800">Fenrir (Strong, Authoritative Male)</option>
+                          <option value="Charon" className="bg-zinc-800">Charon (Calm, Measured Male)</option>
+                          <option value="Puck" className="bg-zinc-800">Puck (Friendly, Energetic Male)</option>
                         </select>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                          <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                             <Users size={16} />
                           </div>
                           <div>
-                            <h3 className="text-white font-medium">Standard Voice</h3>
-                            <p className="text-white/60 text-xs">Choose a device voice</p>
+                            <h3 className="text-gray-900 font-medium">Standard Voice</h3>
+                            <p className="text-gray-500 text-xs">Choose a device voice</p>
                           </div>
                         </div>
                         <select 
-                          className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-white outline-none focus:ring-2 focus:ring-sky-500"
+                          className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
                           value={selectedVoiceURI}
                           onChange={(e) => setSelectedVoiceURI(e.target.value)}
                         >
-                          <option value="" className="bg-[#001a4d]">Auto-select (Default)</option>
+                          <option value="" className="bg-zinc-800">Auto-select (Default)</option>
                           {availableVoices.map(v => (
-                            <option key={v.voiceURI} value={v.voiceURI} className="bg-[#001a4d]">
+                            <option key={v.voiceURI} value={v.voiceURI} className="bg-zinc-800">
                               {v.name} ({v.lang})
                             </option>
                           ))}
@@ -2731,15 +2803,15 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                           <Zap size={20} />
                         </div>
                         <div>
-                          <h3 className="text-white font-medium">{t.speechRate || "Speech Rate"}</h3>
-                          <p className="text-white/60 text-xs">{t.adjustRate || "Adjust voice speed"}</p>
+                          <h3 className="text-gray-900 font-medium">{t.speechRate || "Speech Rate"}</h3>
+                          <p className="text-gray-500 text-xs">{t.adjustRate || "Adjust voice speed"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -2752,20 +2824,20 @@ export default function App() {
                           onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                           className="w-24 md:w-32 accent-sky-500"
                         />
-                        <span className="text-white/80 w-8 text-right">{speechRate.toFixed(1)}x</span>
+                        <span className="text-gray-700 w-8 text-right">{speechRate.toFixed(1)}x</span>
                       </div>
                     </div>
                     
-                    <div className="h-px w-full bg-white/10"></div>
+                    <div className="h-px w-full bg-white shadow-md"></div>
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-500/20 rounded-lg text-sky-300">
+                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
                           <Volume2 size={20} />
                         </div>
                         <div>
-                          <h3 className="text-white font-medium">{t.speechPitch || "Speech Pitch"}</h3>
-                          <p className="text-white/60 text-xs">{t.adjustPitch || "Adjust voice pitch"}</p>
+                          <h3 className="text-gray-900 font-medium">{t.speechPitch || "Speech Pitch"}</h3>
+                          <p className="text-gray-500 text-xs">{t.adjustPitch || "Adjust voice pitch"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -2778,7 +2850,7 @@ export default function App() {
                           onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
                           className="w-24 md:w-32 accent-sky-500"
                         />
-                        <span className="text-white/80 w-8 text-right">{speechPitch.toFixed(1)}</span>
+                        <span className="text-gray-700 w-8 text-right">{speechPitch.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
@@ -2800,13 +2872,13 @@ export default function App() {
                   key={msg.id} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_4px_15px_rgba(0,0,0,0.1)]' : ''}`}>
+                  <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-white shadow-md backdrop-blur-md border border-gray-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)]' : ''}`}>
                     {msg.role === 'model' && (
                       <div id={`message-header-${msg.id}`} className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-yellow-300 drop-shadow-[0_0_5px_rgba(253,224,71,0.5)]">
-                          <div className="flex items-center justify-center w-6 h-6 bg-[#001a4d] rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-yellow-600 drop-shadow-sm">
+                          <div className="flex items-center justify-center w-7 h-7 bg-white rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
                             <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <Users size={12} className="text-sky-300 absolute z-0" />
+                            <Users size={14} className="text-sky-600 absolute z-0" />
                           </div>
                           <span className="font-mukta text-sm">{t.title}</span>
                         </div>
@@ -2815,13 +2887,13 @@ export default function App() {
                         {!(playingMessageId === msg.id && !isPaused && isGeneratingAudio !== msg.id) && (
                           <button 
                             onClick={() => playMessageAudio(mainText, msg.id)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white/90 hover:text-white rounded-lg transition-colors text-sm font-medium"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white shadow-md hover:bg-gray-100 shadow-md text-gray-800 hover:text-gray-900 rounded-lg transition-colors text-sm font-medium"
                             title={playingMessageId === msg.id ? (isPaused ? t.listenAgain : t.stop) : t.listen}
                             disabled={isGeneratingAudio === msg.id}
                           >
                             {isGeneratingAudio === msg.id ? (
                               <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-white rounded-full animate-spin"></div>
                                 <span>Loading...</span>
                               </>
                             ) : playingMessageId === msg.id ? (
@@ -2851,7 +2923,7 @@ export default function App() {
                         <div className="flex items-center gap-2 relative">
                           <button 
                             onClick={() => handleCopy(msg.text, msg.id)}
-                            className="p-1 text-blue-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            className="p-1 text-blue-600 hover:text-gray-900 hover:bg-white shadow-md rounded transition-colors"
                             title="Copy message"
                           >
                             {copiedMessageId === msg.id ? <Check size={12} /> : <Copy size={12} />}
@@ -2862,19 +2934,19 @@ export default function App() {
                               setInput(msg.text);
                               setEditMsgId(msg.id);
                             }}
-                            className="p-1 text-blue-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            className="p-1 text-blue-600 hover:text-gray-900 hover:bg-white shadow-md rounded transition-colors"
                             title="Edit message"
                           >
                             <Edit2 size={12} />
                           </button>
                         </div>
-                        <div className="text-xs font-semibold text-blue-200">
+                        <div className="text-xs font-semibold text-blue-700">
                           <span>{t.you}</span>
                         </div>
                       </div>
                     )}
                     <div 
-                      className={`prose max-w-none text-white prose-invert ${msg.role === 'user' ? 'prose-lg md:prose-xl text-right' : 'prose-2xl md:prose-2xl prose-p:text-[224px] md:prose-p:text-[288px] prose-li:text-[224px] md:prose-li:text-[288px] prose-strong:text-[224px] md:prose-strong:text-[288px] prose-headings:text-[256px] md:prose-headings:text-[320px] font-medium text-left leading-tight ai-message-content'}`}
+                      className={`prose max-w-none text-gray-900  ${msg.role === 'user' ? 'prose-lg md:prose-xl text-right' : 'prose-2xl md:prose-2xl prose-p:text-[224px] md:prose-p:text-[288px] prose-li:text-[224px] md:prose-li:text-[288px] prose-strong:text-[224px] md:prose-strong:text-[288px] prose-headings:text-[256px] md:prose-headings:text-[320px] font-medium text-left leading-tight ai-message-content'}`}
                     >
                       {playingMessageId === msg.id ? (
                         <ReactMarkdown rehypePlugins={[rehypeRaw]}>
@@ -2890,15 +2962,16 @@ export default function App() {
                           {msg.id === '1' && !currentChatId && (
                             <button
                               onClick={() => setIsSaveModalOpen(true)}
-                              className="flex items-center justify-center p-2 bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 hover:text-sky-200 rounded-lg transition-colors mr-auto"
+                              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 hover:text-sky-800 rounded-lg transition-colors mr-auto text-sm font-medium border border-sky-200"
                               title="Save Chat"
                             >
-                              <Bookmark size={16} />
+                              <Bookmark size={14} />
+                              <span>Save Chat</span>
                             </button>
                           )}
                           <button
                             onClick={() => handleCopy(msg.text, msg.id)}
-                            className="flex items-center justify-center p-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
+                            className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
                             title={t.copy}
                           >
                             {copiedMessageId === msg.id ? (
@@ -2909,7 +2982,7 @@ export default function App() {
                           </button>
                           <button
                             onClick={() => handleShare(msg.text)}
-                            className="flex items-center justify-center p-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg transition-colors"
+                            className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
                             title="Share"
                           >
                             <Share2 size={16} />
@@ -2922,7 +2995,7 @@ export default function App() {
                                 key={`${msg.id}-q-${idx}`}
                                 onClick={() => handleSend(q)}
                                 disabled={isLoading}
-                                className="text-xs md:text-sm bg-[#001a4d]/50 hover:bg-[#002266]/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
+                                className="text-xs md:text-sm bg-white hover:bg-white border border-sky-300 text-sky-800 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
                               >
                                 {q}
                               </button>
@@ -2951,7 +3024,7 @@ export default function App() {
                     <button
                       key={`initial-q-${idx}`}
                       onClick={() => handleSend(question)}
-                      className="text-xs md:text-sm bg-[#001a4d]/50 hover:bg-[#002266]/50 border border-sky-300/30 text-sky-100 px-3 py-2 rounded-full transition-colors shadow-sm"
+                      className="text-xs md:text-sm bg-white hover:bg-white border border-sky-300 text-sky-800 px-3 py-2 rounded-full transition-colors shadow-sm"
                     >
                       {question}
                     </button>
@@ -2966,8 +3039,8 @@ export default function App() {
                   className="flex justify-start"
                 >
                   <div className="p-2 flex items-center gap-3">
-                    <Loader2 size={18} className="animate-spin text-yellow-300" />
-                    <span className="text-sm text-white/70"><span className="text-yellow-300 font-semibold drop-shadow-[0_0_5px_rgba(253,224,71,0.5)]">{t.title}</span> {t.thinking}</span>
+                    <Loader2 size={18} className="animate-spin text-yellow-600" />
+                    <span className="text-sm text-gray-600"><span className="text-yellow-600 font-semibold drop-shadow-sm">{t.title}</span> {t.thinking}</span>
                   </div>
                 </motion.div>
               )}
@@ -2978,8 +3051,10 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#002277] overflow-hidden"
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden"
               >
+                {/* Virtual AI Background */}
+                <VirtualNetworkBackground />
                 {/* Circuit Background Pattern */}
                 <div className="absolute inset-0 opacity-20 pointer-events-none">
                   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -2993,13 +3068,21 @@ export default function App() {
                   </svg>
                 </div>
 
-                <div className="absolute inset-0 bg-gradient-to-b from-[#002277] via-transparent to-[#002277]"></div>
-                
+                {/* Close Button */}
+                <button
+                  onClick={toggleLiveAudio}
+                  className="absolute bottom-4 right-4 z-[60] px-3 py-1.5 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-lg border border-gray-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 backdrop-blur-md"
+                  title={t.back}
+                >
+                  <X size={16} />
+                  <span className="font-medium text-xs">{t.back}</span>
+                </button>
+
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48">
                   {/* Gen-Z Realistic Robot Avatar */}
                   <div 
                     ref={avatarContainerRef}
-                    className="relative z-10 w-64 h-64 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300"
+                    className="relative z-10 w-80 h-80 md:w-[32rem] md:h-[32rem] flex items-center justify-center transition-all duration-300"
                   >
                     {/* Glowing Aura */}
                     {isModelSpeaking && (
@@ -3111,10 +3194,10 @@ export default function App() {
                     <motion.div 
                       animate={{ opacity: [0.7, 1, 0.7] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 shadow-xl mb-8"
+                      className="flex items-center gap-3 bg-white shadow-sm backdrop-blur-md px-6 py-2 rounded-full border border-gray-200 shadow-xl mb-8"
                     >
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
-                      <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide">
+                      <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
                         {isModelSpeaking ? t.speaking : t.listening}
                       </span>
                     </motion.div>
@@ -3124,18 +3207,24 @@ export default function App() {
                       <motion.div 
                         animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className={`absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 ${isModelSpeaking ? 'border-yellow-400/30' : 'border-blue-400/30'}`}
+                        className={`absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 ${isModelSpeaking ? 'border-yellow-400/30' : (isMicMuted ? 'border-red-400/30' : 'border-blue-400/30')}`}
                       ></motion.div>
                       
                       <button
-                        onClick={toggleLiveAudio}
+                        onClick={toggleMicMute}
                         className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 hover:scale-105 active:scale-95 ${
-                          isModelSpeaking 
-                            ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_10px_30px_rgba(234,179,8,0.5)] border-yellow-200/50' 
-                            : 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_10px_30px_rgba(30,58,138,0.5)] border-white/20'
+                          isMicMuted
+                            ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_10px_30px_rgba(239,68,68,0.5)] border-red-300'
+                            : isModelSpeaking 
+                              ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_10px_30px_rgba(234,179,8,0.5)] border-yellow-200/50' 
+                              : 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_10px_30px_rgba(30,58,138,0.5)] border-gray-300'
                         }`}
                       >
-                        <Mic size={40} className="md:w-12 md:h-12" />
+                        {isMicMuted ? (
+                          <MicOff size={40} className="md:w-12 md:h-12 text-white" />
+                        ) : (
+                          <Mic size={40} className="md:w-12 md:h-12 text-white" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -3158,7 +3247,7 @@ export default function App() {
                 <p className="flex-1">{error}</p>
                 <button 
                   onClick={() => setError(null)}
-                  className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-1 hover:bg-white shadow-md rounded-full transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -3166,13 +3255,13 @@ export default function App() {
             )}
         <div className="max-w-3xl mx-auto relative flex items-end gap-2">
           {!isLive && (
-            <div className="w-full relative flex items-end bg-white/10 backdrop-blur-xl border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-white/20 focus-within:border-white/50 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
+            <div className="w-full relative flex items-end bg-white shadow-md backdrop-blur-xl border border-gray-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-gray-100 shadow-md focus-within:border-gray-400 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t.typeMessage}
-                className={`w-full bg-transparent text-white placeholder-white/60 py-3 px-4 focus:outline-none resize-none min-h-[56px] max-h-32 font-medium ${
+                className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-4 focus:outline-none resize-none min-h-[56px] max-h-32 font-medium ${
                   (isLoading || (input.trim() && !isVoiceTyping) || (!input.trim() && isVoiceTyping))
                     ? 'pr-[60px] sm:pr-[70px]' 
                     : 'pr-[110px] sm:pr-[120px]'
@@ -3187,7 +3276,7 @@ export default function App() {
                     className={`flex items-center justify-center w-11 h-11 rounded-full transition-all transform active:scale-95 border group ${
                       isVoiceTyping 
                         ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-sky-500 text-white border-transparent shadow-[0_0_15px_rgba(168,85,247,0.6)] animate-pulse' 
-                        : 'bg-white/10 text-white/90 hover:bg-white/20 hover:text-white border-white/20'
+                        : 'bg-white shadow-md text-gray-800 hover:bg-gray-100 shadow-md hover:text-gray-900 border-gray-300'
                     }`}
                     title={isVoiceTyping ? t.stopVoiceTyping : t.voiceTyping}
                   >
@@ -3222,7 +3311,7 @@ export default function App() {
                 ) : input.trim() ? (
                   <button
                     onClick={() => handleSend(undefined, false, editMsgId || undefined)}
-                    className="flex items-center justify-center w-11 h-11 bg-gradient-to-br from-white to-blue-100 text-[#0038b8] rounded-full hover:from-blue-50 hover:to-white transition-all transform active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/50 group"
+                    className="flex items-center justify-center w-11 h-11 bg-gradient-to-br from-white to-blue-100 text-[#0038b8] rounded-full hover:from-blue-50 hover:to-white transition-all transform active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-gray-400 group"
                   >
                     <Send size={18} className="ml-0.5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </button>
@@ -3232,7 +3321,7 @@ export default function App() {
           )}
         </div>
         <div className="max-w-3xl mx-auto mt-2 text-center">
-          <p className="text-xs text-blue-200/80 flex items-center justify-center gap-1">
+          <p className="text-xs text-blue-700/80 flex items-center justify-center gap-1">
             <Info size={12} />
             {t.poweredBy}
           </p>
@@ -3252,15 +3341,15 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#002266] border border-white/20 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-white border border-gray-300 rounded-2xl p-6 w-full max-w-md shadow-2xl"
             >
-              <h2 className="text-xl font-bold text-white mb-4">Save Chat</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Save Chat</h2>
               <input
                 type="text"
                 value={chatNameInput}
                 onChange={(e) => setChatNameInput(e.target.value)}
                 placeholder="Enter chat name..."
-                className="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white outline-none focus:ring-2 focus:ring-sky-500 mb-6"
+                className="w-full bg-white shadow-md border border-gray-300 rounded-xl p-3 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500 mb-6"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveChat();
@@ -3269,7 +3358,7 @@ export default function App() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  className="px-4 py-2 rounded-xl bg-white shadow-md hover:bg-gray-100 shadow-md text-gray-900 transition-colors"
                 >
                   Cancel
                 </button>
@@ -3302,16 +3391,16 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 w-80 bg-[#002266] border-r border-white/10 shadow-2xl flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col"
             >
-              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#001a4d]/50">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <MessageSquare size={20} className="text-sky-400" />
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <MessageSquare size={20} className="text-sky-600" />
                   Chat History
                 </h2>
                 <button
                   onClick={() => setIsHistoryOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
+                  className="p-2 hover:bg-white shadow-md rounded-full transition-colors text-gray-600 hover:text-gray-900"
                 >
                   <X size={20} />
                 </button>
@@ -3320,7 +3409,7 @@ export default function App() {
               <div className="p-4">
                 <button
                   onClick={handleNewChat}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 rounded-xl transition-colors font-medium"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-100 hover:bg-sky-200 text-sky-600 border border-sky-300 rounded-xl transition-colors font-medium"
                 >
                   <MessageSquare size={18} />
                   New Chat
@@ -3329,7 +3418,7 @@ export default function App() {
 
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pt-0 space-y-2">
                 {savedChats.length === 0 ? (
-                  <div className="text-center text-white/40 py-8 text-sm">
+                  <div className="text-center text-gray-400 py-8 text-sm">
                     No saved chats yet.
                   </div>
                 ) : (
@@ -3343,8 +3432,8 @@ export default function App() {
                       onClick={() => handleLoadChat(chat)}
                       className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors border ${
                         currentChatId === chat.id 
-                          ? 'bg-sky-500/20 border-sky-500/50 text-sky-100' 
-                          : 'bg-white/5 border-transparent hover:bg-white/10 text-white/80 hover:text-white'
+                          ? 'bg-sky-100 border-sky-400 text-sky-800' 
+                          : 'bg-white shadow-sm border-transparent hover:bg-white shadow-md text-gray-700 hover:text-gray-900'
                       }`}
                     >
                       {editingChatId === chat.id ? (
@@ -3357,13 +3446,13 @@ export default function App() {
                               if (e.key === 'Enter') handleSaveRename();
                               if (e.key === 'Escape') handleCancelRename();
                             }}
-                            className="flex-1 bg-black/20 border border-white/20 rounded px-2 py-1 text-sm text-white outline-none focus:border-sky-500"
+                            className="flex-1 bg-white border-gray-300 border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 outline-none focus:border-sky-500"
                             autoFocus
                           />
                           <button onClick={handleSaveRename} className="p-1 text-green-400 hover:bg-green-400/20 rounded">
                             <Check size={14} />
                           </button>
-                          <button onClick={handleCancelRename} className="p-1 text-red-400 hover:bg-red-400/20 rounded">
+                          <button onClick={handleCancelRename} className="p-1 text-red-600 hover:bg-red-400/20 rounded">
                             <X size={14} />
                           </button>
                         </div>
@@ -3371,7 +3460,7 @@ export default function App() {
                         <>
                           <div className="flex flex-col overflow-hidden flex-1">
                             <div className="flex items-center gap-2">
-                              {chat.isPinned && <Pin size={12} className="text-sky-400 flex-shrink-0 fill-current" />}
+                              {chat.isPinned && <Pin size={12} className="text-sky-600 flex-shrink-0 fill-current" />}
                               <span className="font-medium truncate">{chat.name}</span>
                             </div>
                             <span className="text-xs opacity-60">
@@ -3381,21 +3470,21 @@ export default function App() {
                           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => handleTogglePin(e, chat.id)}
-                              className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-400 hover:bg-sky-400/10' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                              className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-600 hover:bg-sky-400/10' : 'text-gray-400 hover:text-gray-900 hover:bg-white shadow-md'}`}
                               title={chat.isPinned ? "Unpin chat" : "Pin chat"}
                             >
                               <Pin size={14} className={chat.isPinned ? "fill-current" : ""} />
                             </button>
                             <button
                               onClick={(e) => handleStartRename(e, chat)}
-                              className="p-1.5 text-white/40 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-sky-600 hover:bg-sky-400/10 rounded-lg transition-colors"
                               title="Rename chat"
                             >
                               <Edit2 size={14} />
                             </button>
                             <button
                               onClick={(e) => handleDeleteChat(e, chat.id)}
-                              className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-400/10 rounded-lg transition-colors"
                               title="Delete chat"
                             >
                               <Trash2 size={14} />

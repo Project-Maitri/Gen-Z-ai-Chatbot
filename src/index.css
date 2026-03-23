@@ -22,7 +22,7 @@
 .ai-message-content h4,
 .ai-message-content h5,
 .ai-message-content h6 {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
   padding-bottom: 0.5em;
   margin-bottom: 0.5em;
 }
