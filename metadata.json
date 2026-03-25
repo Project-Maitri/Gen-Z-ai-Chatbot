@@ -1,9 +1,10 @@
 {
-  "name": "Gen-Z -  AI Assistant, E-MAITRI.",
+  "name": "Gen-Z - AI Assistant, E-MAITRI",
   "description": "An empathetic AI chat assistant for the digital governance web application, explaining rural governance, family networks, and digital transparency in multiple Indian languages.",
   "requestFramePermissions": [
     "microphone",
-    "camera",
-    "screen-wake-lock"
+    "screen-wake-lock",
+    "display-capture",
+    "camera"
   ]
 }

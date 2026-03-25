@@ -6,8 +6,8 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    // 1. GitHub Pages के लिए यह पाथ बहुत ज़रूरी है
-    base: '/Gen-Z-ai-Chatbot/',
+    // 1. GitHub Pages के लिए './' सबसे सुरक्षित है क्योंकि यह किसी भी रिपॉजिटरी नाम के साथ काम करता है
+    base: mode === 'production' ? './' : '/',
     
     plugins: [react(), tailwindcss()],
     
@@ -16,10 +16,10 @@ export default defineConfig(({ mode }) => {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     
-    // 3. पाथ रिजॉल्यूशन को सरल बनाया गया है
+    // 3. पाथ रिजॉल्यूशन को ठीक किया गया है
     resolve: {
       alias: {
-        '@': '/',
+        '@': '/src',
       },
     },
     
