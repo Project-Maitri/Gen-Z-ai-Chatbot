@@ -131,8 +131,18 @@ const createWavFromPcmBase64 = (base64Pcm: string, sampleRate: number = 24000): 
   }
 };
 
-// Initialize Gemini API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Initialize Gemini API safely
+let ai: any = null;
+try {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey && apiKey !== 'undefined') {
+    ai = new GoogleGenAI({ apiKey });
+  } else {
+    console.warn("GEMINI_API_KEY is missing. Some features may not work.");
+  }
+} catch (e) {
+  console.error("Failed to initialize Gemini API:", e);
+}
 
 function highlightMarkdown(text: string, cleanIndex: number) {
   const cleanText = text.replace(/[*_#`]/g, '');

@@ -10,8 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    // GitHub Pages के लिए './' सबसे सुरक्षित है क्योंकि यह किसी भी रिपॉजिटरी नाम के साथ काम करता है
-    base: './',
+    // GitHub Pages के लिए रिपॉजिटरी नाम का उपयोग करना सबसे सुरक्षित है
+    base: '/Gen-Z-ai-Chatbot/',
     
     plugins: [react(), tailwindcss()],
     
