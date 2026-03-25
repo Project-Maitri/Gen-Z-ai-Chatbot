@@ -1903,7 +1903,13 @@ const VirtualNetworkBackground = () => {
 };
 
 export default function App() {
-  const [uiLang, setUiLang] = useState(() => localStorage.getItem('uiLang_v2') || 'en');
+  const [uiLang, setUiLang] = useState(() => {
+    try {
+      return localStorage.getItem('uiLang_v2') || 'en';
+    } catch (e) {
+      return 'en';
+    }
+  });
   
   useEffect(() => {
     localStorage.setItem('uiLang_v2', uiLang);
@@ -1936,8 +1942,13 @@ export default function App() {
   
   // Chat History States
   const [savedChats, setSavedChats] = useState<SavedChat[]>(() => {
-    const saved = localStorage.getItem('savedChats_v1');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('savedChats_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse saved chats:", e);
+      return [];
+    }
   });
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
