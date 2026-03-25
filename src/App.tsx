@@ -134,7 +134,9 @@ const createWavFromPcmBase64 = (base64Pcm: string, sampleRate: number = 24000): 
 // Initialize Gemini API safely
 let ai: any = null;
 try {
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Use a safer way to access process.env to avoid "process is not defined" error in some environments
+  const apiKey = typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined;
+  
   if (apiKey && apiKey !== 'undefined') {
     ai = new GoogleGenAI({ apiKey });
   } else {
