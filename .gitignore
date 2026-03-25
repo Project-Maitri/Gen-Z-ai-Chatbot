@@ -1,6 +1,6 @@
 node_modules/
 build/
-dist/
+# dist/  <-- We are un-ignoring this so we can push the built files directly
 coverage/
 .DS_Store
 *.log
