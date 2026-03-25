@@ -135,7 +135,9 @@ const createWavFromPcmBase64 = (base64Pcm: string, sampleRate: number = 24000): 
 let ai: any = null;
 try {
   // Use a safer way to access process.env to avoid "process is not defined" error in some environments
-  const apiKey = typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined;
+  // In Vite, we also check import.meta.env
+  const apiKey = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) || 
+                 (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
   
   if (apiKey && apiKey !== 'undefined') {
     ai = new GoogleGenAI({ apiKey });
@@ -3065,6 +3067,9 @@ export default function App() {
     abortControllerRef.current = abortController;
     
     try {
+      if (!ai) {
+        throw new Error("AI service is not initialized. Please ensure your Gemini API key is correctly configured in the environment.");
+      }
       const modelName = useFastModel ? "gemini-3.1-flash-lite-preview" : "gemini-3.1-pro-preview";
       
       // Build contents array from history
