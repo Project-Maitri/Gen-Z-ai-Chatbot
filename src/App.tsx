@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -1919,13 +1919,15 @@ export default function App() {
 
   const t = translations[uiLang] || translations['en'];
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'model',
-      text: t.initialMessage
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem('currentMessages_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse current messages:", e);
     }
-  ]);
+    return [{ id: '1', role: 'model', text: t.initialMessage }];
+  });
 
   // Update initial message when language changes if it's the only message
   useEffect(() => {
@@ -1936,6 +1938,7 @@ export default function App() {
       return prev;
     });
   }, [uiLang, t.initialMessage]);
+
   const [input, setInput] = useState('');
   const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1952,7 +1955,9 @@ export default function App() {
       return [];
     }
   });
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(() => {
+    return localStorage.getItem('currentChatId_v1');
+  });
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [chatNameInput, setChatNameInput] = useState('');
@@ -1963,12 +1968,28 @@ export default function App() {
     localStorage.setItem('savedChats_v1', JSON.stringify(savedChats));
   }, [savedChats]);
 
+  useEffect(() => {
+    localStorage.setItem('currentMessages_v1', JSON.stringify(messages));
+    if (currentChatId) {
+      localStorage.setItem('currentChatId_v1', currentChatId);
+    } else {
+      localStorage.removeItem('currentChatId_v1');
+    }
+  }, [messages, currentChatId]);
+
   // Sync messages to the current saved chat
   useEffect(() => {
     if (currentChatId && messages.length > 0) {
-      setSavedChats(prev => prev.map(chat => 
-        chat.id === currentChatId ? { ...chat, messages, timestamp: Date.now() } : chat
-      ));
+      setSavedChats(prev => {
+        const existingChat = prev.find(chat => chat.id === currentChatId);
+        // Only update if messages actually changed to avoid unnecessary timestamp updates
+        if (existingChat && JSON.stringify(existingChat.messages) === JSON.stringify(messages)) {
+          return prev;
+        }
+        return prev.map(chat => 
+          chat.id === currentChatId ? { ...chat, messages, timestamp: Date.now() } : chat
+        );
+      });
     }
   }, [messages, currentChatId]);
 
@@ -3797,8 +3818,7 @@ export default function App() {
           <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-contain relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <Users size={24} className="text-sky-600 drop-shadow-sm absolute z-0" />
+                <Bot size={24} className="text-sky-600 drop-shadow-sm absolute z-10" />
                 <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
               </div>
               <div className="flex flex-col">
@@ -4095,8 +4115,7 @@ export default function App() {
                       <div id={`message-header-${msg.id}`} className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 text-xs font-semibold text-yellow-600 drop-shadow-sm">
                           <div className="flex items-center justify-center w-7 h-7 bg-white rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
-                            <img src="/logo.png" alt="Gen-Z" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            <Users size={14} className="text-sky-600 absolute z-0" />
+                            <Bot size={14} className="text-sky-600" />
                           </div>
                           <span className="font-mukta text-sm">{t.title}</span>
                         </div>
