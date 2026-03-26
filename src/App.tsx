@@ -1732,136 +1732,292 @@ const translations: Record<string, any> = {
     puckDesc: "پک (دوستانہ، توانا مرد)"
   },
   sa: {
-    appTitle: "संस्कृत-संवादः",
-    appSubtitle: "भवतः एआई-सहायकः",
-    newChat: "नूतनः संवादः",
-    saveChat: "संवादं रक्षतु",
-    rename: "नाम परिवर्तयतु",
-    delete: "मार्जयेत्",
-    pin: "पिन करोतु",
-    unpin: "अनपिन करोतु",
+    title: "जेन-जी",
+    subtitle: "एआई-सहायकः, ई-मैत्री।",
+    you: "भवान्",
+    copy: "प्रतिलिपिं करोतु",
+    copied: "प्रतिलिपिः कृता",
+    listen: "शृणोतु",
+    stop: "स्थगयतु",
+    back: "पृष्ठतः",
+    listenAgain: "पुनः शृणोतु",
+    speaking: "जेन-जी वदति...",
+    listening: "जेन-जी शृणोति...",
+    thinking: "चिन्तयति...",
+    liveChatOn: "सजीव-संवादः आरब्धः: कृपया वदतु",
+    stopVoiceChat: "ध्वनि-संवादं स्थगयतु",
+    startVoiceChat: "सजीव-ध्वनि-संवादम् आरभताम्",
+    voiceTyping: "ध्वनि-टङ्कणम्",
+    stopVoiceTyping: "ध्वनि-टङ्कणं स्थगयतु",
+    speechNotSupported: "अस्मिन् ब्राउजर् मध्ये भाषण-अभिज्ञानं न समर्थितम्।",
+    liveChat: "सजीव-संवादः",
+    typeMessage: "सन्देशं टङ्कयतु...",
+    poweredBy: "ई-मैत्री डिजिटल-मञ्चेन सञ्चालितम्।",
     settings: "सेटिंग्स्",
     language: "भाषा",
     speechRate: "भाषणस्य गतिः",
-    pitch: "स्वरः",
+    adjustRate: "ध्वनेः गतिं व्यवस्थापयतु",
+    speechPitch: "स्वरः",
+    adjustPitch: "ध्वनेः स्वरं व्यवस्थापयतु",
+    q1: "डिजिटल-गवर्नेंस किम् अस्ति?",
+    q2: "त्रि-स्तरीय-संरचनां स्पष्टीकरोतु।",
+    q3: "बूथ-प्रबन्धनं कथं कार्यं करोति?",
+    q4: "पारिवारिक-गठबन्धन-आन्दोलनं किम् अस्ति?",
+    initialMessage: "अहं जेन-जी अस्मि! ई-मैत्री-पोर्टल् मध्ये भवतः स्वागतम्! वदतु मित्र, अहं भवतः कथं साहाय्यं कर्तुं शक्नोमि? भवान् काम् सूचनाम् इच्छति?",
+    errorTraffic: "क्षम्यताम्, इदानीम् अत्यधिकः यातायात-भारः अस्ति अथवा कोटा समाप्तः। कृपया किञ्चित्कालानन्तरं पुनः प्रयतताम्।",
+    errorTech: "क्षम्यताम्, काचित् तकनीकी समस्या अस्ति। कृपया पुनः प्रयतताम्।",
+    premiumQuotaExceeded: "प्रीमियम-ध्वनि-कोटा समाप्तः। सामान्य-ध्वनौ प्रत्यागच्छति।",
+    newChat: "नूतनः संवादः",
+    moreOptions: "अधिक-विकल्पाः",
+    chattingIn: "संवादः चलति",
+    saveChat: "संवादं रक्षतु",
+    enterChatName: "संवादस्य नाम लिखतु...",
+    cancel: "रद्द करोतु",
+    save: "रक्षतु",
+    chatHistory: "संवाद-इतिहासः",
+    noSavedChats: "कोऽपि रक्षितः संवादः नास्ति।",
     voiceEngine: "ध्वनि-इञ्जिनम्",
-    close: "पिदधातु",
-    copy: "प्रतिलिपिं करोतु",
-    stop: "स्थगयतु",
-    back: "पृष्ठतः",
-    listen: "शृणोतु",
-    maxChatsError: "अधिकतमं १०० संवादाः एव अनुमताः।",
-    errorTraffic: "अत्यधिकः यातायात-भारः। कृपया किञ्चित्कालानन्तरं पुनः प्रयतताम्।",
-    errorTech: "काचित् तकनीकी समस्या अस्ति। कृपया पुनः प्रयतताम्।",
-    liveChatOn: "सजीव-संवादः आरब्धः",
-    stopVoiceChat: "ध्वनि-संवादं स्थगयतु",
-    startVoiceChat: "ध्वनि-संवादम् आरभताम्",
-    voiceTyping: "ध्वनि-टङ्कणम्",
-    stopVoiceTyping: "ध्वनि-टङ्कणं स्थगयतु",
-    liveChat: "सजीव-संवादः",
-    typeMessage: "सन्देशं टङ्कयतु...",
-    fenrirDesc: "तीव्रः स्पष्टः च",
-    charonDesc: "गम्भीरः शान्तः च",
-    puckDesc: "उष्णः मैत्रीपूर्णः च"
+    standard: "सामान्यम्",
+    premium: "प्रीमियम",
+    clearChatHistory: "संवाद-इतिहासं मार्जयेत्",
+    clearAll: "सर्वं मार्जयेत्",
+    areYouSureClear: "किं भवान् सर्वान् रक्षितान् संवादान् मार्जयितुम् इच्छति? एतत् पुनः प्राप्तुं न शक्यते।",
+    uploadImage: "चित्रं / स्क्रीनशॉट् अपलोड् करोतु",
+    screenOn: "स्क्रीन ऑन",
+    screenOff: "स्क्रीन ऑफ",
+    stopGenerating: "निर्माणं स्थगयतु",
+    maxChatsError: "भवान् केवलं १० संवादान् रक्षितुं शक्नोति। नूतनं रक्षितुं कृपया पुरातनं संवादं मार्जयेत्।",
+    edit: "सम्पादयतु",
+    share: "साझा करोतु",
+    pinChat: "संवादं पिन करोतु",
+    unpinChat: "संवादम् अनपिन करोतु",
+    renameChat: "संवादस्य नाम परिवर्तयतु",
+    deleteChat: "संवादं मार्जयेत्",
+    loading: "लोड् भवति...",
+    chooseLanguage: "स्वस्य इष्टतमां भाषां चिनोतु",
+    chooseVoiceEngine: "सामान्य-प्रीमियम-एआई-ध्वन्योः मध्ये चिनोतु",
+    selectPremiumVoice: "उच्च-गुणवत्तायुक्तम् एआई-ध्वनि-प्रतिरूपं चिनोतु",
+    selectStandardVoice: "यन्त्रस्य ध्वनिं चिनोतु",
+    autoSelect: "स्वतः चिनोतु (डिफॉल्ट्)",
+    fenrirDesc: "फेनरिर (दृढः, आधिकारिकः पुरुषः)",
+    charonDesc: "कैरन (शान्तः, गम्भीरः पुरुषः)",
+    puckDesc: "पक (मैत्रीपूर्णः, ऊर्जावान् पुरुषः)"
   },
   sat: {
-    appTitle: "ᱥᱟᱱᱛᱟᱲᱤ ᱨᱚᱯᱚᱲ",
-    appSubtitle: "ᱟᱢᱟᱜ ᱮᱟᱭᱤ ᱜᱚᱲᱚᱭᱤᱡ",
-    newChat: "ᱱᱟᱶᱟ ᱨᱚᱯᱚᱲ",
-    saveChat: "ᱨᱚᱯᱚᱲ ᱥᱟᱧᱪᱟᱣ ᱢᱮ",
-    rename: "ᱧᱩᱛᱩᱢ ᱵᱚᱫᱚᱞ ᱢᱮ",
-    delete: "ᱢᱮᱴᱟᱣ ᱢᱮ",
-    pin: "ᱯᱤᱱ ᱢᱮ",
-    unpin: "ᱟᱱᱯᱤᱱ ᱢᱮ",
+    title: "ᱡᱮᱱ-ᱡᱤ",
+    subtitle: "ᱮᱟᱭᱤ ᱢᱮᱥᱮᱱᱡᱟᱨ, ᱤ-ᱢᱟᱭᱛᱨᱤ᱾",
+    you: "ᱟᱢ",
+    copy: "ᱱᱚᱠᱚᱞ ᱢᱮ",
+    copied: "ᱱᱚᱠᱚᱞ ᱟᱠᱟᱱᱟ",
+    listen: "ᱟᱸᱡᱚᱢ ᱢᱮ",
+    stop: "ᱛᱤᱸᱜᱩ ᱢᱮ",
+    back: "ᱛᱟᱭᱚᱢ",
+    listenAgain: "ᱟᱨᱦᱚᱸ ᱟᱸᱡᱚᱢ ᱢᱮ",
+    speaking: "ᱡᱮᱱ-ᱡᱤ ᱨᱚᱲ ᱮᱫᱟᱭ...",
+    listening: "ᱡᱮᱱ-ᱡᱤ ᱟᱸᱡᱚᱢ ᱮᱫᱟᱭ...",
+    thinking: "ᱩᱭᱦᱟᱹᱨ ᱮᱫᱟᱭ...",
+    liveChatOn: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ ᱮᱦᱚᱵ ᱮᱱᱟ: ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱨᱚᱲ ᱢᱮ",
+    stopVoiceChat: "ᱟᱲᱟᱝ ᱨᱚᱯᱚᱲ ᱛᱤᱸᱜᱩ ᱢᱮ",
+    startVoiceChat: "ᱞᱟᱭᱤᱵᱽ ᱟᱲᱟᱝ ᱨᱚᱯᱚᱲ ᱮᱦᱚᱵ ᱢᱮ",
+    voiceTyping: "ᱟᱲᱟᱝ ᱴᱟᱭᱯᱤᱝ",
+    stopVoiceTyping: "ᱟᱲᱟᱝ ᱴᱟᱭᱯᱤᱝ ᱛᱤᱸᱜᱩ ᱢᱮ",
+    speechNotSupported: "ᱱᱚᱣᱟ ᱵᱨᱟᱣᱡᱟᱨ ᱨᱮ ᱥᱯᱤᱪ ᱨᱤᱠᱚᱜᱽᱱᱤᱥᱚᱱ ᱵᱟᱹᱱᱩᱜᱼᱟ᱾",
+    liveChat: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ",
+    typeMessage: "ᱢᱮᱥᱮᱡᱽ ᱴᱟᱭᱤᱯ ᱢᱮ...",
+    poweredBy: "ᱤ-ᱢᱟᱭᱛᱨᱤ ᱰᱤᱡᱤᱴᱟᱞ ᱯᱞᱮᱴᱯᱷᱚᱨᱢ ᱦᱚᱛᱮᱛᱮ ᱪᱟᱞᱟᱜ ᱠᱟᱱᱟ᱾",
     settings: "ᱥᱮᱴᱤᱝᱥ",
     language: "ᱯᱟᱹᱨᱥᱤ",
     speechRate: "ᱨᱚᱲ ᱨᱮᱭᱟᱜ ᱜᱟᱹᱛᱤ",
-    pitch: "ᱥᱟᱰᱮ",
+    adjustRate: "ᱟᱲᱟᱝ ᱨᱮᱭᱟᱜ ᱜᱟᱹᱛᱤ ᱴᱷᱤᱠ ᱢᱮ",
+    speechPitch: "ᱟᱲᱟᱝ ᱨᱮᱭᱟᱜ ᱥᱟᱰᱮ",
+    adjustPitch: "ᱟᱲᱟᱝ ᱨᱮᱭᱟᱜ ᱥᱟᱰᱮ ᱴᱷᱤᱠ ᱢᱮ",
+    q1: "ᱰᱤᱡᱤᱴᱟᱞ ᱜᱚᱵᱷᱚᱨᱱᱮᱱᱥ ᱫᱚ ᱪᱮᱫ ᱠᱟᱱᱟ?",
+    q2: "ᱯᱮ-ᱛᱷᱚᱠ ᱨᱮᱭᱟᱜ ᱜᱚᱲᱦᱚᱱ ᱵᱩᱡᱷᱟᱹᱣ ᱢᱮ᱾",
+    q3: "ᱵᱩᱛᱷ ᱢᱮᱱᱮᱡᱽᱢᱮᱱᱴ ᱪᱮᱫ ᱞᱮᱠᱟ ᱠᱟᱹᱢᱤᱭᱟ?",
+    q4: "ᱯᱷᱮᱢᱤᱞᱤ ᱮᱞᱟᱭᱮᱱᱥ ᱢᱩᱵᱷᱢᱮᱱᱴ ᱫᱚ ᱪᱮᱫ ᱠᱟᱱᱟ?",
+    initialMessage: "ᱤᱧ ᱫᱚ ᱡᱮᱱ-ᱡᱤ ᱠᱟᱹᱱᱟᱹᱧ! ᱤ-ᱢᱟᱭᱛᱨᱤ ᱯᱚᱨᱴᱟᱞ ᱨᱮ ᱟᱢᱟᱜ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ! ᱞᱟᱹᱭ ᱢᱮ ᱜᱟᱛᱮ, ᱤᱧ ᱪᱮᱫ ᱞᱮᱠᱟᱧ ᱜᱚᱲᱚ ᱫᱟᱲᱮᱭᱟᱢᱟ? ᱟᱢ ᱪᱮᱫ ᱵᱟᱰᱟᱭ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ?",
+    errorTraffic: "ᱤᱠᱟᱹ ᱠᱟᱹᱧ ᱢᱮ, ᱱᱤᱛᱚᱜ ᱟᱹᱰᱤ ᱡᱟᱹᱥᱛᱤ ᱴᱨᱟᱯᱷᱤᱠ ᱢᱮᱱᱟᱜᱼᱟ ᱥᱮ ᱠᱳᱴᱟ ᱪᱟᱵᱟ ᱟᱠᱟᱱᱟ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱛᱟᱭᱚᱢ ᱛᱮ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
+    errorTech: "ᱤᱠᱟᱹ ᱠᱟᱹᱧ ᱢᱮ, ᱢᱤᱫᱴᱟᱝ ᱴᱮᱠᱱᱤᱠᱟᱞ ᱮᱴᱠᱮᱴᱚᱬᱮ ᱦᱩᱭ ᱮᱱᱟ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱟᱨᱦᱚᱸ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
+    premiumQuotaExceeded: "ᱯᱨᱤᱢᱤᱭᱟᱢ ᱟᱲᱟᱝ ᱠᱳᱴᱟ ᱪᱟᱵᱟ ᱟᱠᱟᱱᱟ᱾ ᱥᱴᱮᱱᱰᱟᱨᱰ ᱟᱲᱟᱝ ᱛᱮ ᱨᱩᱣᱟᱹᱲ ᱠᱟᱱᱟ᱾",
+    newChat: "ᱱᱟᱶᱟ ᱨᱚᱯᱚᱲ",
+    moreOptions: "ᱟᱨᱦᱚᱸ ᱚᱯᱥᱚᱱ",
+    chattingIn: "ᱨᱚᱯᱚᱲ ᱠᱟᱱᱟ",
+    saveChat: "ᱨᱚᱯᱚᱲ ᱥᱟᱧᱪᱟᱣ ᱢᱮ",
+    enterChatName: "ᱨᱚᱯᱚᱲ ᱨᱮᱭᱟᱜ ᱧᱩᱛᱩᱢ ᱮᱢ ᱢᱮ...",
+    cancel: "ᱵᱟᱹᱛᱤᱞ ᱢᱮ",
+    save: "ᱥᱟᱧᱪᱟᱣ ᱢᱮ",
+    chatHistory: "ᱨᱚᱯᱚᱲ ᱱᱟᱜᱟᱢ",
+    noSavedChats: "ᱚᱠᱟ ᱨᱚᱯᱚᱲ ᱦᱚᱸ ᱵᱟᱝ ᱥᱟᱧᱪᱟᱣ ᱟᱠᱟᱱᱟ᱾",
     voiceEngine: "ᱟᱲᱟᱝ ᱤᱧᱡᱤᱱ",
-    close: "ᱵᱚᱸᱫᱽ ᱢᱮ",
-    copy: "ᱱᱚᱠᱚᱞ ᱢᱮ",
-    stop: "ᱛᱤᱸᱜᱩ ᱢᱮ",
-    back: "ᱛᱟᱭᱚᱢ",
-    listen: "ᱟᱸᱡᱚᱢ ᱢᱮ",
-    maxChatsError: "ᱡᱟᱹᱥᱛᱤ ᱠᱷᱚᱱ ᱡᱟᱹᱥᱛᱤ ᱑᱐᱐ ᱨᱚᱯᱚᱲ ᱨᱮᱭᱟᱜ ᱟᱹᱭᱫᱟᱹᱨᱤ ᱢᱮᱱᱟᱜᱼᱟ᱾",
-    errorTraffic: "ᱟᱹᱰᱤ ᱡᱟᱹᱥᱛᱤ ᱴᱨᱟᱯᱷᱤᱠ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱛᱟᱭᱚᱢ ᱛᱮ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
-    errorTech: "ᱢᱤᱫᱴᱟᱝ ᱴᱮᱠᱱᱤᱠᱟᱞ ᱮᱴᱠᱮᱴᱚᱬᱮ ᱢᱮᱱᱟᱜᱼᱟ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱟᱨᱦᱚᱸ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
-    liveChatOn: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ ᱮᱦᱚᱵ ᱮᱱᱟ",
-    stopVoiceChat: "ᱟᱲᱟᱝ ᱨᱚᱯᱚᱲ ᱛᱤᱸᱜᱩ ᱢᱮ",
-    startVoiceChat: "ᱟᱲᱟᱝ ᱨᱚᱯᱚᱲ ᱮᱦᱚᱵ ᱢᱮ",
-    voiceTyping: "ᱟᱲᱟᱝ ᱴᱟᱭᱯᱤᱝ",
-    stopVoiceTyping: "ᱟᱲᱟᱝ ᱴᱟᱭᱯᱤᱝ ᱛᱤᱸᱜᱩ ᱢᱮ",
-    liveChat: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ",
-    typeMessage: "ᱢᱮᱥᱮᱡᱽ ᱴᱟᱭᱤᱯ ᱢᱮ...",
-    fenrirDesc: "ᱩᱥᱟᱹᱨᱟ ᱟᱨ ᱯᱷᱩᱨᱪᱟᱹ",
-    charonDesc: "ᱜᱟᱹᱦᱤᱨ ᱟᱨ ᱛᱷᱤᱨ",
-    puckDesc: "ᱞᱚᱞᱚ ᱟᱨ ᱜᱟᱛᱮ ᱞᱮᱠᱟ"
+    standard: "ᱥᱴᱮᱱᱰᱟᱨᱰ",
+    premium: "ᱯᱨᱤᱢᱤᱭᱟᱢ",
+    clearChatHistory: "ᱨᱚᱯᱚᱲ ᱱᱟᱜᱟᱢ ᱯᱷᱟᱨᱪᱟᱭ ᱢᱮ",
+    clearAll: "ᱡᱚᱛᱚ ᱯᱷᱟᱨᱪᱟᱭ ᱢᱮ",
+    areYouSureClear: "ᱪᱮᱫ ᱟᱢ ᱥᱟᱹᱨᱤ ᱜᱮ ᱡᱚᱛᱚ ᱥᱟᱧᱪᱟᱣ ᱟᱠᱟᱱ ᱨᱚᱯᱚᱲ ᱢᱮᱴᱟᱣ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ? ᱱᱚᱣᱟ ᱫᱚ ᱨᱩᱣᱟᱹᱲ ᱵᱟᱝ ᱜᱟᱱᱚᱜᱼᱟ᱾",
+    uploadImage: "ᱥᱠᱨᱤᱱᱥᱚᱴ / ᱪᱤᱛᱟᱹᱨ ᱟᱯᱞᱳᱰ ᱢᱮ",
+    screenOn: "ᱥᱠᱨᱤᱱ ᱚᱱ",
+    screenOff: "ᱥᱠᱨᱤᱱ ᱚᱯᱷ",
+    stopGenerating: "ᱵᱮᱱᱟᱣ ᱛᱤᱸᱜᱩ ᱢᱮ",
+    maxChatsError: "ᱟᱢ ᱫᱚ ᱑᱐ ᱜᱚᱴᱟᱝ ᱨᱚᱯᱚᱲ ᱜᱮᱢ ᱥᱟᱧᱪᱟᱣ ᱫᱟᱲᱮᱭᱟᱜᱼᱟ᱾ ᱱᱟᱶᱟ ᱥᱟᱧᱪᱟᱣ ᱞᱟᱹᱜᱤᱫ ᱢᱟᱨᱮ ᱨᱚᱯᱚᱲ ᱢᱮᱴᱟᱣ ᱢᱮ᱾",
+    edit: "ᱥᱟᱯᱲᱟᱣ ᱢᱮ",
+    share: "ᱦᱟᱹᱴᱤᱧ ᱢᱮ",
+    pinChat: "ᱨᱚᱯᱚᱲ ᱯᱤᱱ ᱢᱮ",
+    unpinChat: "ᱨᱚᱯᱚᱲ ᱟᱱᱯᱤᱱ ᱢᱮ",
+    renameChat: "ᱨᱚᱯᱚᱲ ᱨᱮᱭᱟᱜ ᱧᱩᱛᱩᱢ ᱵᱚᱫᱚᱞ ᱢᱮ",
+    deleteChat: "ᱨᱚᱯᱚᱲ ᱢᱮᱴᱟᱣ ᱢᱮ",
+    loading: "ᱞᱳᱰᱚᱜ ᱠᱟᱱᱟ...",
+    chooseLanguage: "ᱟᱢᱟᱜ ᱠᱩᱥᱤᱭᱟᱜ ᱯᱟᱹᱨᱥᱤ ᱵᱟᱪᱷᱟᱣ ᱢᱮ",
+    chooseVoiceEngine: "ᱥᱴᱮᱱᱰᱟᱨᱰ ᱟᱨ ᱯᱨᱤᱢᱤᱭᱟᱢ ᱮᱟᱭᱤ ᱟᱲᱟᱝ ᱵᱟᱪᱷᱟᱣ ᱢᱮ",
+    selectPremiumVoice: "ᱱᱟᱯᱟᱭ ᱠᱣᱟᱞᱤᱴᱤ ᱮᱟᱭᱤ ᱟᱲᱟᱝ ᱢᱚᱰᱮᱞ ᱵᱟᱪᱷᱟᱣ ᱢᱮ",
+    selectStandardVoice: "ᱰᱤᱵᱷᱟᱭᱤᱥ ᱨᱮᱭᱟᱜ ᱟᱲᱟᱝ ᱵᱟᱪᱷᱟᱣ ᱢᱮ",
+    autoSelect: "ᱟᱡ ᱛᱮ ᱵᱟᱪᱷᱟᱣ (ᱰᱤᱯᱷᱚᱞᱴ)",
+    fenrirDesc: "ᱯᱷᱮᱱᱨᱤᱨ (ᱠᱮᱴᱮᱡ, ᱚᱫᱷᱤᱠᱟᱨᱤ ᱠᱚᱲᱟ)",
+    charonDesc: "ᱠᱮᱨᱚᱱ (ᱛᱷᱤᱨ, ᱥᱚᱢᱟᱱ ᱠᱚᱲᱟ)",
+    puckDesc: "ᱯᱟᱠ (ᱜᱟᱛᱮ ᱞᱮᱠᱟ, ᱮᱱᱟᱨᱡᱮᱴᱤᱠ ᱠᱚᱲᱟ)"
   },
   brx: {
-    appTitle: "बर' सावरायनाय",
-    appSubtitle: "नोंथांनि AI हेफाजाबगिरि",
-    newChat: "गोदान सावरायनाय",
-    saveChat: "सावरायनायखौ दोनथ'",
-    rename: "मुं सोलाय",
-    delete: "हुखुमोर",
-    pin: "पिन खालाम",
-    unpin: "आनपिन खालाम",
+    title: "जेन-जी",
+    subtitle: "AI मेसेंजर, ई-मैत्री।",
+    you: "नोंथां",
+    copy: "कपि खालाम",
+    copied: "कपि खालामबाय",
+    listen: "खोनासं",
+    stop: "थाद'",
+    back: "उनथिं",
+    listenAgain: "फिन खोनासं",
+    speaking: "जेन-जी बुंगासिनो दं...",
+    listening: "जेन-जी खोनासं-गासिनो दं...",
+    thinking: "सानगासिनो दं...",
+    liveChatOn: "लाइभ गारां सावरायनाय जागायबाय: अननानै बुं",
+    stopVoiceChat: "गारां सावरायनायखौ थाद'हो",
+    startVoiceChat: "लाइभ गारां सावरायनायखौ जागाय",
+    voiceTyping: "गारां टाइपिं",
+    stopVoiceTyping: "गारां टाइपिंखौ थाद'हो",
+    speechNotSupported: "बे ब्राउजाराव गारां सिनायनाय गैया।",
+    liveChat: "लाइभ सावरायनाय",
+    typeMessage: "मेसेज टाइप खालाम...",
+    poweredBy: "ई-मैत्री डिजिटल प्लेटफर्मजों सामलायजानाय।",
     settings: "सेटिंस",
     language: "राव",
     speechRate: "बुंनायनि गोख्रैथि",
-    pitch: "गारां",
+    adjustRate: "गारांनि गोख्रैथिखौ थि खालाम",
+    speechPitch: "गारांनि पिच",
+    adjustPitch: "गारांनि पिचखौ थि खालाम",
+    q1: "डिजिटल गभर्नेन्सआ मा?",
+    q2: "थाम-थाखोआरि दाथायखौ बेखेव।",
+    q3: "बुथ सामलायनाया माबोरै खामानि मावो?",
+    q4: "नखर आफाद आन्दोलनआ मा?",
+    initialMessage: "आं जेन-जी! ई-मैत्री पोर्टेलाव नोंथांखौ बरायबाय! बुं लोगो, आं नोंथांखौ माबोरै हेफाजाब खालामनो हागोन? नोंथांनो मा फोरमायथि नांगौ?",
+    errorTraffic: "निमाहा हो, दा गोबां ट्राफिक दं एबा कोटा जोबबाय। अननानै उनाव नाजाफिन।",
+    errorTech: "निमाहा हो, माबा मोनसे जेंना जादों। अननानै नाजाफिन।",
+    premiumQuotaExceeded: "प्रिमियाम गारां कोटा जोबबाय। स्ट्यान्डार्ड गारांआव थांफिनबाय।",
+    newChat: "गोदान सावरायनाय",
+    moreOptions: "गोबां बासिख'नाय",
+    chattingIn: "सावरायगासिनो दं",
+    saveChat: "सावरायनायखौ दोनथ'",
+    enterChatName: "सावरायनायनि मुं लिर...",
+    cancel: "बातिल खालाम",
+    save: "दोनथ'",
+    chatHistory: "सावरायनायनि जारिमिन",
+    noSavedChats: "जेबो दोनथ'नाय सावरायनाय गैया।",
     voiceEngine: "गारां इन्जिन",
-    close: "बन्द खालाम",
-    copy: "कपि खालाम",
-    stop: "थाद'",
-    back: "उनथिं",
-    listen: "खोनासं",
-    maxChatsError: "बांसिन 100 सावरायनायनि मोनथाय दं।",
-    errorTraffic: "गोबां ट्राफिक। अननानै उनाव नाजाफिन।",
-    errorTech: "माबा मोनसे जेंना जादों। अननानै नाजाफिन।",
-    liveChatOn: "लाइभ सावरायनाय जागायबाय",
-    stopVoiceChat: "गारां सावरायनायखौ थाद'हो",
-    startVoiceChat: "गारां सावरायनायखौ जागाय",
-    voiceTyping: "गारां टाइपिं",
-    stopVoiceTyping: "गारां टाइपिंखौ थाद'हो",
-    liveChat: "लाइभ सावरायनाय",
-    typeMessage: "मेसेज टाइप खालाम...",
-    fenrirDesc: "गोख्रै आरो रोखा",
-    charonDesc: "गोथौ आरो सिरि",
-    puckDesc: "गुदुं आरो लोगोआरि"
+    standard: "स्ट्यान्डार्ड",
+    premium: "प्रिमियाम",
+    clearChatHistory: "सावरायनायनि जारिमिनखौ हुखुमोर",
+    clearAll: "गासैखौबो हुखुमोर",
+    areYouSureClear: "नोंथांआ गासै दोनथ'नाय सावरायनायखौ हुखुमोरनो सानमारदोंना? बेखौ फिन लाबोनो हानाय नङा।",
+    uploadImage: "स्क्रिनसट / सावगारि आपलोड खालाम",
+    screenOn: "स्क्रिन अन",
+    screenOff: "स्क्रिन अफ",
+    stopGenerating: "दाबावनायखौ थाद'हो",
+    maxChatsError: "नोंथांआ 10 सावरायनायल' दोनथ'नो हागोन। गोदान दोनथ'नो थाखाय अननानै गोजाम सावरायनायखौ हुखुमोर।",
+    edit: "सुजु",
+    share: "रानना हो",
+    pinChat: "सावरायनायखौ पिन खालाम",
+    unpinChat: "सावरायनायखौ आनपिन खालाम",
+    renameChat: "सावरायनायनि मुं सोलाय",
+    deleteChat: "सावरायनायखौ हुखुमोर",
+    loading: "लोड जागासिनो दं...",
+    chooseLanguage: "नोंथांनि मोजां मोननाय रावखौ बासिख'",
+    chooseVoiceEngine: "स्ट्यान्डार्ड आरो प्रिमियाम AI गारांनि गेजेराव बासिख'",
+    selectPremiumVoice: "गोजौ गुननि AI गारां मोडेलखौ बासिख'",
+    selectStandardVoice: "डिभाइसनि गारांखौ बासिख'",
+    autoSelect: "गावनोगाव बासिख' (डिफल्ट)",
+    fenrirDesc: "फेनरिर (गोख्रै, गोहोआरि हौवा)",
+    charonDesc: "कैरन (सिरि, समान हौवा)",
+    puckDesc: "पाक (लोगोआरि, गोख्रै हौवा)"
   },
   mni: {
-    appTitle: "মৈতৈ চ্যাট",
-    appSubtitle: "নহাক্কী AI মতেং পাংবা",
-    newChat: "অনোউবা চ্যাট",
-    saveChat: "চ্যাট সেভ তৌবিয়ু",
-    rename: "মিং হোংবিয়ু",
-    delete: "মুত্থত্পিয়ু",
-    pin: "পিন তৌবিয়ু",
-    unpin: "আনপিন তৌবিয়ু",
+    title: "জেন-জি",
+    subtitle: "AI মেসেঞ্জার, ই-মৈত্রী।",
+    you: "নহাক",
+    copy: "কপি তৌবিয়ু",
+    copied: "কপি তৌরে",
+    listen: "তাবিয়ু",
+    stop: "লেপ্পিয়ু",
+    back: "হন্দোকপিয়ু",
+    listenAgain: "অমুক হন্না তাবিয়ু",
+    speaking: "জেন-জি ঙাংলি...",
+    listening: "জেন-জি তালি...",
+    thinking: "খল্লি...",
+    liveChatOn: "লাইভ ভোইস চ্যাট ওন তৌরে: চানবীদুনা ঙাংবিয়ু",
+    stopVoiceChat: "ভোইস চ্যাট লেপ্পিয়ু",
+    startVoiceChat: "লাইভ ভোইস চ্যাট হৌবিয়ু",
+    voiceTyping: "ভোইস টাইপিং",
+    stopVoiceTyping: "ভোইস টাইপিং লেপ্পিয়ু",
+    speechNotSupported: "ব্রাউজার অসিদা স্পীচ রিকগনিশন সাপোর্ট তৌদে।",
+    liveChat: "লাইভ চ্যাট",
+    typeMessage: "মেসেজ টাইপ তৌবিয়ু...",
+    poweredBy: "ই-মৈত্রী ডিজিটাল প্লাটফর্মনা পাউবা।",
     settings: "সেটিংস",
     language: "লোন",
     speechRate: "ঙাংবগী খোংজেল",
-    pitch: "খোল্লেল",
+    adjustRate: "খোঞ্জেলগী খোংজেল শেমদোকপিয়ু",
+    speechPitch: "খোল্লেল",
+    adjustPitch: "খোল্লেল শেমদোকপিয়ু",
+    q1: "ডিজিটাল গভর্নেন্স হায়বসি করিনো?",
+    q2: "থ্রি-টিয়ার স্ট্রাকচরগী মরমদা তাকপিয়ু।",
+    q3: "বুথ ম্যানেজমেন্টনা করম্না থবক তৌবগে?",
+    q4: "ফ্যামিলি এলায়েন্স মুভমেন্ট হায়বসি করিনো?",
+    initialMessage: "ঐ জেন-জি নি! ই-মৈত্রী পোর্টেলদা তরাম্না ওকচরি! হায়বিয়ু মরুপ, ঐনা নহাক্কী করম্না মতেং পাংবা ঙমগনি? নহাক্না করি ইনফরমেশন পাম্বিগে?",
+    errorTraffic: "ঙাকপিয়ু, হৌজিক য়াম্না ট্রাফিক লৈ নত্রগা কোটা লোইরে। চানবীদুনা মতুংদা অমুক হন্না হোত্নবিয়ু।",
+    errorTech: "ঙাকপিয়ু, টেকনিকেল ওইবা অৱাবা অমা লৈরে। চানবীদুনা অমুক হন্না হোত্নবিয়ু।",
+    premiumQuotaExceeded: "প্রিমিয়াম ভোইস কোটা লোইরে। স্ট্যান্ডার্ড ভোইসতা হন্দোক্লে।",
+    newChat: "অনোউবা চ্যাট",
+    moreOptions: "অতোপ্পা অপশনশিং",
+    chattingIn: "চ্যাট তৌরি",
+    saveChat: "চ্যাট সেভ তৌবিয়ু",
+    enterChatName: "চ্যাটকী মিং থোনবিয়ু...",
+    cancel: "কেন্সেল তৌবিয়ু",
+    save: "সেভ তৌবিয়ু",
+    chatHistory: "চ্যাট হিস্ট্রি",
+    noSavedChats: "সেভ তৌবা চ্যাট অমত্তা লৈতে।",
     voiceEngine: "খোঞ্জেল ইঞ্জিন",
-    close: "থিংজিল্লু",
-    copy: "কপি তৌবিয়ু",
-    stop: "লেপ্পিয়ু",
-    back: "হন্দোকপিয়ু",
-    listen: "তাবিয়ু",
-    maxChatsError: "খ্বাইদগী য়াম্না চ্যাট ১০০ খক্তমক য়াই।",
-    errorTraffic: "ট্রাফিক য়াম্না লৈ। চানবীদুনা মতুংদা অমুক হন্না হোত্নবিয়ু।",
-    errorTech: "টেকনিকেল ওইবা অৱাবা অমা লৈরে। চানবীদুনা অমুক হন্না হোত্নবিয়ু।",
-    liveChatOn: "লাইভ চ্যাট হৌরে",
-    stopVoiceChat: "খোঞ্জেল চ্যাট লেপ্পিয়ু",
-    startVoiceChat: "খোঞ্জেল চ্যাট হৌবিয়ু",
-    voiceTyping: "খোঞ্জেল টাইপিং",
-    stopVoiceTyping: "খোঞ্জেল টাইপিং লেপ্পিয়ু",
-    liveChat: "লাইভ চ্যাট",
-    typeMessage: "মেসেজ টাইপ তৌবিয়ু...",
-    fenrirDesc: "থুনা অমসুং ময়েক শেংনা",
-    charonDesc: "লুনা অমসুং তপথনা",
-    puckDesc: "অশাবা অমসুং মরূপ-মপাং ওইবা"
+    standard: "স্ট্যান্ডার্ড",
+    premium: "প্রিমিয়াম",
+    clearChatHistory: "চ্যাট হিস্ট্রি মুত্থত্পিয়ু",
+    clearAll: "পুম্নমক মুত্থত্পিয়ু",
+    areYouSureClear: "নহাক্না সেভ তৌবা চ্যাট পুম্নমক মুত্থত্পা পাম্ব্রা? অসি অমুক হন্না ফংলোই।",
+    uploadImage: "স্ক্রিনশট / ফটো আপলোড তৌবিয়ু",
+    screenOn: "স্ক্রিন ওন",
+    screenOff: "স্ক্রিন ওফ",
+    stopGenerating: "শেম্বা লেপ্পিয়ু",
+    maxChatsError: "নহাক্না চ্যাট ১০ খক্তমক সেভ তৌবা য়াই। অনোউবা সেভ তৌনবা চানবীদুনা অরিবা চ্যাট অমা মুত্থত্পিয়ু।",
+    edit: "শেমদোকপিয়ু",
+    share: "শেয়ার তৌবিয়ু",
+    pinChat: "চ্যাট পিন তৌবিয়ু",
+    unpinChat: "চ্যাট আনপিন তৌবিয়ু",
+    renameChat: "চ্যাটকী মিং হোংবিয়ু",
+    deleteChat: "চ্যাট মুত্থত্পিয়ু",
+    loading: "লোড তৌরি...",
+    chooseLanguage: "নহাক্না পাম্বা লোন খনখত্পিয়ু",
+    chooseVoiceEngine: "স্ট্যান্ডার্ড অমসুং প্রিমিয়াম AI খোঞ্জেলগী মরক্তা খনখত্পিয়ু",
+    selectPremiumVoice: "মগুন ৱাংবা AI ভোইস মডেল খনখত্পিয়ু",
+    selectStandardVoice: "ডিভাইসকী খোঞ্জেল খনখত্পিয়ু",
+    autoSelect: "ওটো সিলেক্ট (ডিফল্ট)",
+    fenrirDesc: "ফেনরির (মপাঙ্গল কনবা, ওথোরিটেটিভ নুপা)",
+    charonDesc: "ক্যারন (শান্ত ওইবা, মেজার্ড নুপা)",
+    puckDesc: "পাক (মরুপ ওইবা, এনার্জেটিক নুপা)"
   }
 };
 
@@ -3036,10 +3192,9 @@ export default function App() {
     if (isLoading) return;
     
     const imageToSend = selectedImage;
-    if (!editMsgId) {
-      setInput('');
-      setSelectedImage(null);
-    }
+    setInput('');
+    setSelectedImage(null);
+    setEditMsgId(null);
     const newMsgId = editMsgId || Date.now().toString();
     
     // Build currentMessages synchronously
@@ -3166,7 +3321,6 @@ export default function App() {
       if (abortControllerRef.current === abortController) {
         setIsLoading(false);
         abortControllerRef.current = null;
-        setEditMsgId(null);
       }
     }
   };
@@ -3308,40 +3462,109 @@ export default function App() {
       return;
     }
 
-    setIsScreenSharing(true);
-    isScreenSharingRef.current = true;
+    try {
+      // Check if getDisplayMedia is available (not available on mobile or if iframe lacks permissions)
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            displaySurface: "browser",
+          },
+          audio: false
+        });
 
-    const captureFrame = async () => {
-      if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
-      
-      try {
-        // Capture the entire document body
-        const canvas = await html2canvas(document.body, {
-          scale: 0.5, // Lower scale for better performance
-          useCORS: true,
-          logging: false,
-          backgroundColor: null,
-        });
+        screenStreamRef.current = stream;
+
+        stream.getVideoTracks()[0].onended = () => {
+          stopScreenShare();
+        };
+
+        if (screenVideoRef.current) {
+          screenVideoRef.current.srcObject = stream;
+          await screenVideoRef.current.play();
+        }
+
+        setIsScreenSharing(true);
+        isScreenSharingRef.current = true;
+
+        const captureFrame = async () => {
+          if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
+          if (!screenVideoRef.current || !screenCanvasRef.current) return;
+          
+          try {
+            const video = screenVideoRef.current;
+            const canvas = screenCanvasRef.current;
+            
+            if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+            const scale = 0.5;
+            canvas.width = video.videoWidth * scale;
+            canvas.height = video.videoHeight * scale;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const base64DataUrl = canvas.toDataURL('image/jpeg', 0.5);
+            if (!base64DataUrl) return;
+            
+            const base64Data = base64DataUrl.split(',')[1];
+            if (!base64Data) return;
+            
+            setLatestFrame(base64DataUrl);
+            
+            sessionPromiseRef.current.then(s => {
+              s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
+            });
+          } catch (err) {
+            console.warn("Screen Capture error:", err);
+          }
+        };
+
+        setTimeout(captureFrame, 500);
+        screenIntervalRef.current = window.setInterval(captureFrame, 2500);
+      } else {
+        // Fallback to html2canvas if getDisplayMedia is not supported
+        console.warn("getDisplayMedia not supported, falling back to html2canvas");
         
-        const base64DataUrl = canvas.toDataURL('image/jpeg', 0.5);
-        if (!base64DataUrl) return;
-        const base64Data = base64DataUrl.split(',')[1];
-        if (!base64Data) return;
-        
-        setLatestFrame(base64DataUrl);
-        
-        sessionPromiseRef.current.then(s => {
-          s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
-        });
-      } catch (err) {
-        console.warn("DOM Capture error:", err);
+        setIsScreenSharing(true);
+        isScreenSharingRef.current = true;
+
+        const captureFrame = async () => {
+          if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
+          
+          try {
+            const canvas = await html2canvas(document.body, {
+              scale: 0.5,
+              useCORS: true,
+              logging: false,
+              backgroundColor: null,
+            });
+            
+            const base64DataUrl = canvas.toDataURL('image/jpeg', 0.5);
+            if (!base64DataUrl) return;
+            const base64Data = base64DataUrl.split(',')[1];
+            if (!base64Data) return;
+            
+            setLatestFrame(base64DataUrl);
+            
+            sessionPromiseRef.current.then(s => {
+              s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
+            });
+          } catch (err) {
+            console.warn("DOM Capture error:", err);
+          }
+        };
+
+        captureFrame();
+        screenIntervalRef.current = window.setInterval(captureFrame, 2500);
       }
-    };
-
-    // Initial capture
-    captureFrame();
-    // Loop every 2.5 seconds (2500ms) to avoid performance issues on mobile
-    screenIntervalRef.current = window.setInterval(captureFrame, 2500);
+    } catch (err) {
+      console.error("Error starting screen share:", err);
+      setIsScreenSharing(false);
+      isScreenSharingRef.current = false;
+      alert("Screen sharing failed. If you are using an iframe, please ensure it has the allow=\"display-capture\" attribute. Note: Screen sharing is not supported on mobile browsers.");
+    }
   };
 
   const toggleLiveAudio = async () => {
@@ -3813,6 +4036,10 @@ export default function App() {
     <div 
       className="fixed inset-0 flex flex-col overflow-hidden"
     >
+      {/* Hidden elements for screen sharing */}
+      <video ref={screenVideoRef} style={{ display: 'none' }} playsInline muted />
+      <canvas ref={screenCanvasRef} style={{ display: 'none' }} />
+
       {/* Virtual AI Background */}
       <VirtualNetworkBackground />
       <FloatingStopButton stopAudio={pauseMessageAudio} isPlaying={playingMessageId !== null && !isPaused} titleText={t.stop} />
@@ -4341,7 +4568,7 @@ export default function App() {
                   {/* Gen-Z Realistic Robot Avatar */}
                   <div 
                     ref={avatarContainerRef}
-                    className="relative z-10 w-40 h-40 md:w-64 md:h-64 flex items-center justify-center transition-all duration-300"
+                    className="relative z-10 w-60 h-60 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300"
                   >
                     {/* Glowing Aura */}
                     {isModelSpeaking && (
@@ -4552,6 +4779,24 @@ export default function App() {
         <div className="max-w-3xl mx-auto relative flex items-end gap-2">
           {!isLive && (
             <div className="w-full relative flex flex-col bg-white shadow-md backdrop-blur-xl border border-gray-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-gray-100 shadow-md focus-within:border-gray-400 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
+              {editMsgId && (
+                <div className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-1.5 mb-2 rounded-xl border border-blue-100 text-xs font-medium mx-2 mt-1">
+                  <div className="flex items-center gap-1.5">
+                    <Edit2 size={12} />
+                    <span>{t.edit}</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setEditMsgId(null);
+                      setInput('');
+                      setSelectedImage(null);
+                    }}
+                    className="text-blue-500 hover:text-blue-800 p-0.5 rounded-full hover:bg-blue-100 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
               {selectedImage && (
                 <div className="relative w-20 h-20 mb-2 ml-12">
                   <img src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} alt="Selected" className="w-full h-full object-cover rounded-lg border border-gray-300 shadow-sm" />
