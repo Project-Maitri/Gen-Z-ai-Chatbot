@@ -4353,6 +4353,10 @@ export default function App() {
                           <Zap size={10} /> AI is currently offline. Please provide an API key.
                         </p>
                       )}
+                      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                        <span className="text-[10px] text-gray-400 font-mono">Build: 2026.03.26.1520</span>
+                        <span className="text-[10px] text-gray-400">v1.2.5</span>
+                      </div>
                     </div>
                     
                     <div className="h-px w-full bg-white shadow-md"></div>
