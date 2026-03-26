@@ -147,11 +147,32 @@ const initAI = (key: string | null) => {
   }
 };
 
+// Safe localStorage helper to prevent crashes in iframes with blocked third-party cookies
+const safeStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {}
+  },
+  removeItem: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+};
+
 // Initial load
 try {
   const apiKey = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) || 
                  (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) ||
-                 localStorage.getItem('gemini_api_key_v1');
+                 safeStorage.getItem('gemini_api_key_v1');
   initAI(apiKey);
 } catch (e) {
   console.error("Initial AI setup failed:", e);
@@ -2074,21 +2095,21 @@ const VirtualNetworkBackground = () => {
 export default function App() {
   const [uiLang, setUiLang] = useState(() => {
     try {
-      return localStorage.getItem('uiLang_v2') || 'en';
+      return safeStorage.getItem('uiLang_v2') || 'en';
     } catch (e) {
       return 'en';
     }
   });
   
   useEffect(() => {
-    localStorage.setItem('uiLang_v2', uiLang);
+    safeStorage.setItem('uiLang_v2', uiLang);
   }, [uiLang]);
 
   const t = translations[uiLang] || translations['en'];
 
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
-      const saved = localStorage.getItem('currentMessages_v1');
+      const saved = safeStorage.getItem('currentMessages_v1');
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error("Failed to parse current messages:", e);
@@ -2115,7 +2136,7 @@ export default function App() {
   // Chat History States
   const [savedChats, setSavedChats] = useState<SavedChat[]>(() => {
     try {
-      const saved = localStorage.getItem('savedChats_v1');
+      const saved = safeStorage.getItem('savedChats_v1');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       console.error("Failed to parse saved chats:", e);
@@ -2123,7 +2144,7 @@ export default function App() {
     }
   });
   const [currentChatId, setCurrentChatId] = useState<string | null>(() => {
-    return localStorage.getItem('currentChatId_v1');
+    return safeStorage.getItem('currentChatId_v1');
   });
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -2132,15 +2153,15 @@ export default function App() {
   const [editingChatName, setEditingChatName] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('savedChats_v1', JSON.stringify(savedChats));
+    safeStorage.setItem('savedChats_v1', JSON.stringify(savedChats));
   }, [savedChats]);
 
   useEffect(() => {
-    localStorage.setItem('currentMessages_v1', JSON.stringify(messages));
+    safeStorage.setItem('currentMessages_v1', JSON.stringify(messages));
     if (currentChatId) {
-      localStorage.setItem('currentChatId_v1', currentChatId);
+      safeStorage.setItem('currentChatId_v1', currentChatId);
     } else {
-      localStorage.removeItem('currentChatId_v1');
+      safeStorage.removeItem('currentChatId_v1');
     }
   }, [messages, currentChatId]);
 
@@ -2210,14 +2231,14 @@ export default function App() {
   }, [showSettings]);
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('speechRate_v4') || '0.8'));
-  const [speechPitch, setSpeechPitch] = useState(() => parseFloat(localStorage.getItem('speechPitch_v4') || '1.0'));
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => localStorage.getItem('selectedVoiceURI') || '');
-  const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('gemini_api_key_v1') || '');
+  const [speechRate, setSpeechRate] = useState(() => parseFloat(safeStorage.getItem('speechRate_v4') || '0.8'));
+  const [speechPitch, setSpeechPitch] = useState(() => parseFloat(safeStorage.getItem('speechPitch_v4') || '1.0'));
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => safeStorage.getItem('selectedVoiceURI') || '');
+  const [userApiKey, setUserApiKey] = useState(() => safeStorage.getItem('gemini_api_key_v1') || '');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (localStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
+  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
   const [premiumVoice, setPremiumVoice] = useState(() => {
-    const saved = localStorage.getItem('premiumVoice');
+    const saved = safeStorage.getItem('premiumVoice');
     const femaleVoices = ['Kore', 'Zephyr'];
     return (saved && !femaleVoices.includes(saved)) ? saved : 'Fenrir';
   });
@@ -2362,7 +2383,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('voiceEngine_v3', voiceEngine);
+    safeStorage.setItem('voiceEngine_v3', voiceEngine);
     voiceEngineRef.current = voiceEngine;
     
     if (playingMessageIdRef.current && !isPaused) {
@@ -2379,7 +2400,7 @@ export default function App() {
   }, [voiceEngine]);
 
   useEffect(() => {
-    localStorage.setItem('premiumVoice', premiumVoice);
+    safeStorage.setItem('premiumVoice', premiumVoice);
     premiumVoiceRef.current = premiumVoice;
     
     if (playingMessageIdRef.current && !isPaused && voiceEngine === 'premium') {
@@ -2397,6 +2418,7 @@ export default function App() {
 
   // Load available voices
   useEffect(() => {
+    if (!window.speechSynthesis) return;
     const loadVoices = () => {
       const allVoices = window.speechSynthesis.getVoices();
       // Filter out voices that are explicitly labeled as female
@@ -2412,7 +2434,7 @@ export default function App() {
 
   // Save selected voice
   useEffect(() => {
-    localStorage.setItem('selectedVoiceURI', selectedVoiceURI);
+    safeStorage.setItem('selectedVoiceURI', selectedVoiceURI);
     selectedVoiceURIRef.current = selectedVoiceURI;
     
     // If audio is currently playing, restart it with the new voice
@@ -2432,7 +2454,7 @@ export default function App() {
 
   // Save speech settings and restart audio if playing
   useEffect(() => {
-    localStorage.setItem('speechRate_v4', speechRate.toString());
+    safeStorage.setItem('speechRate_v4', speechRate.toString());
     speechRateRef.current = speechRate;
     
     // If audio is currently playing, restart it with the new rate
@@ -2451,7 +2473,7 @@ export default function App() {
   }, [speechRate]);
 
   useEffect(() => {
-    localStorage.setItem('speechPitch_v4', speechPitch.toString());
+    safeStorage.setItem('speechPitch_v4', speechPitch.toString());
     speechPitchRef.current = speechPitch;
     
     // If audio is currently playing, restart it with the new pitch
@@ -2471,9 +2493,9 @@ export default function App() {
 
   useEffect(() => {
     if (userApiKey) {
-      localStorage.setItem('gemini_api_key_v1', userApiKey);
+      safeStorage.setItem('gemini_api_key_v1', userApiKey);
     } else {
-      localStorage.removeItem('gemini_api_key_v1');
+      safeStorage.removeItem('gemini_api_key_v1');
     }
     // Re-initialize AI with the new key
     const envKey = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) || 
@@ -2483,6 +2505,7 @@ export default function App() {
 
   // Zero-Delay Voice Setup (First Launch)
   useEffect(() => {
+    if (!window.speechSynthesis) return;
     let initialized = false;
     
     const setupVoices = () => {
@@ -2756,7 +2779,9 @@ export default function App() {
     setPlayingTextIndex(0);
     startTimeRef.current = 0;
     lastStartIndexRef.current = 0;
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     if (premiumAudioRef.current) {
       premiumAudioRef.current.pause();
       premiumAudioRef.current.currentTime = 0;
@@ -2785,7 +2810,9 @@ export default function App() {
     }
     
     currentUtteranceRef.current = null;
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     if (premiumAudioRef.current) {
       premiumAudioRef.current.pause();
     }
@@ -2813,7 +2840,9 @@ export default function App() {
       setPlayingTextIndex(0);
     } else {
       currentUtteranceRef.current = null;
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     }
     
     setPlayingMessageId(messageId);
@@ -3073,7 +3102,7 @@ export default function App() {
         startTimeRef.current = Date.now();
       };
       
-      const voices = window.speechSynthesis.getVoices();
+      const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
       
       // Check if user has explicitly selected a voice
       let selectedVoice = null;
@@ -3183,7 +3212,9 @@ export default function App() {
         }
       };
 
-      window.speechSynthesis.speak(utterance);
+      if (window.speechSynthesis) {
+        window.speechSynthesis.speak(utterance);
+      }
     } catch (e: any) {
       console.warn("TTS Error", e);
       setError(t.errorTech);
