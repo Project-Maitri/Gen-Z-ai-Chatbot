@@ -10,8 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    // GitHub Pages के लिए सापेक्ष पथ (Relative Path) का उपयोग करना सबसे सुरक्षित है
-    base: './',
+    // GitHub Pages के लिए रिपॉजिटरी नाम को बेस पाथ के रूप में सेट करना
+    base: '/Gen-Z-ai-Chatbot/',
     
     plugins: [react(), tailwindcss()],
     
