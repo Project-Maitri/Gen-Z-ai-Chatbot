@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot } from 'lucide-react';
+import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -4085,13 +4085,15 @@ export default function App() {
         {/* Header */}
           <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <Bot size={24} className="text-sky-600 drop-shadow-sm absolute z-10" />
-                <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border border-slate-800 shadow-[0_0_5px_rgba(74,222,128,0.8)] z-20"></div>
+              <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center mt-1.5">
+                <Flame size={38} className="text-orange-500 drop-shadow-sm relative z-10" />
+                <div className="absolute -top-1 right-2.5 z-20">
+                  <Sparkles size={14} className="text-blue-400 animate-pulse drop-shadow-sm" />
+                </div>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-600 drop-shadow-sm leading-none">{t.title}</h1>
-                <p className="text-[10px] text-gray-700 font-sans leading-none mt-0.5">{t.subtitle}</p>
+                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">{t.title}</h1>
+                <p className="text-[10px] text-green-600 font-sans font-medium leading-none mt-0.5">{t.subtitle}</p>
               </div>
               
               {currentChatId && (
@@ -4124,7 +4126,7 @@ export default function App() {
                 className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-200 text-sky-600 border-sky-400' : 'bg-white shadow-sm border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md'} border`}
                 title={t.moreOptions}
               >
-                <MoreVertical size={18} />
+                <Menu size={18} />
               </button>
 
               <AnimatePresence>
@@ -4381,9 +4383,12 @@ export default function App() {
                   <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-white shadow-md backdrop-blur-md border border-gray-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)]' : ''}`}>
                     {msg.role === 'model' && (
                       <div id={`message-header-${msg.id}`} className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-yellow-600 drop-shadow-sm">
-                          <div className="flex items-center justify-center w-7 h-7 bg-white rounded-full border border-sky-300/50 shadow-[0_0_5px_rgba(125,211,252,0.5)] relative overflow-hidden">
-                            <Bot size={14} className="text-sky-600" />
+                        <div className="flex items-center gap-2 text-xs font-semibold text-yellow-500 drop-shadow-sm">
+                          <div className="flex items-center justify-center w-7 h-7 relative mt-1">
+                            <Flame size={24} className="text-orange-500 relative z-10" />
+                            <div className="absolute -top-2 right-0.5 z-20">
+                              <Sparkles size={10} className="text-blue-400 animate-pulse drop-shadow-sm" />
+                            </div>
                           </div>
                           <span className="font-mukta text-sm">{t.title}</span>
                         </div>
@@ -4553,8 +4558,8 @@ export default function App() {
                   className="flex justify-start"
                 >
                   <div className="p-2 flex items-center gap-3">
-                    <Loader2 size={18} className="animate-spin text-yellow-600" />
-                    <span className="text-sm text-gray-600"><span className="text-yellow-600 font-semibold drop-shadow-sm">{t.title}</span> {t.thinking}</span>
+                    <Loader2 size={18} className="animate-spin text-yellow-500" />
+                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{t.title}</span> {t.thinking}</span>
                   </div>
                 </motion.div>
               )}
@@ -4884,9 +4889,15 @@ export default function App() {
                       title={isVoiceTyping ? t.stopVoiceTyping : t.voiceTyping}
                     >
                       {isVoiceTyping ? (
-                        <MicOff size={20} className="group-hover:scale-110 transition-transform" />
+                        <div className="relative flex items-center justify-center">
+                          <MicOff size={20} className="group-hover:scale-110 transition-transform" />
+                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(59,130,246,0.8)]"></div>
+                        </div>
                       ) : (
-                        <Mic size={20} className="group-hover:scale-110 transition-transform" />
+                        <div className="relative flex items-center justify-center">
+                          <Mic size={20} className="group-hover:scale-110 transition-transform" />
+                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(59,130,246,0.8)]"></div>
+                        </div>
                       )}
                     </button>
                   )}
@@ -4914,9 +4925,9 @@ export default function App() {
                   ) : (input.trim() || selectedImage) ? (
                     <button
                       onClick={() => handleSend(undefined, false, editMsgId || undefined)}
-                      className="flex items-center justify-center w-11 h-11 bg-gradient-to-br from-white to-blue-100 text-[#0038b8] rounded-full hover:from-blue-50 hover:to-white transition-all transform active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-gray-400 group"
+                      className="relative flex items-center justify-center w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-500 text-white rounded-full hover:from-blue-500 hover:to-indigo-400 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)] group"
                     >
-                      <Send size={18} className="ml-0.5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                      <ArrowUp size={22} strokeWidth={2.5} className="relative z-10 group-hover:-translate-y-1 transition-transform duration-300" />
                     </button>
                   ) : null}
                 </div>
