@@ -15,11 +15,6 @@ export default defineConfig(({ mode }) => {
     
     plugins: [react(), tailwindcss()],
     
-    // API Key को सुरक्षित तरीके से जोड़ने के लिए
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY || ""),
-    },
-    
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

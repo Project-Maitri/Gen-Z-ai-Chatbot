@@ -170,9 +170,7 @@ const safeStorage = {
 
 // Initial load
 try {
-  const apiKey = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) || 
-                 (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) ||
-                 safeStorage.getItem('gemini_api_key_v1');
+  const apiKey = (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
   initAI(apiKey);
 } catch (e) {
   console.error("Initial AI setup failed:", e);
@@ -2234,7 +2232,6 @@ export default function App() {
   const [speechRate, setSpeechRate] = useState(() => parseFloat(safeStorage.getItem('speechRate_v4') || '0.8'));
   const [speechPitch, setSpeechPitch] = useState(() => parseFloat(safeStorage.getItem('speechPitch_v4') || '1.0'));
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => safeStorage.getItem('selectedVoiceURI') || '');
-  const [userApiKey, setUserApiKey] = useState(() => safeStorage.getItem('gemini_api_key_v1') || '');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
   const [premiumVoice, setPremiumVoice] = useState(() => {
@@ -2490,18 +2487,6 @@ export default function App() {
       }
     }
   }, [speechPitch]);
-
-  useEffect(() => {
-    if (userApiKey) {
-      safeStorage.setItem('gemini_api_key_v1', userApiKey);
-    } else {
-      safeStorage.removeItem('gemini_api_key_v1');
-    }
-    // Re-initialize AI with the new key
-    const envKey = (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) || 
-                   (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
-    initAI(userApiKey || envKey);
-  }, [userApiKey]);
 
   // Zero-Delay Voice Setup (First Launch)
   useEffect(() => {
@@ -4357,39 +4342,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-                          <Settings2 size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-gray-900 font-medium">Gemini API Key</h3>
-                          <p className="text-gray-500 text-xs">Required for GitHub Pages / Static Hosting</p>
-                        </div>
-                      </div>
-                      <div className="relative">
-                        <input 
-                          type="password"
-                          placeholder="Enter your Gemini API Key..."
-                          value={userApiKey}
-                          onChange={(e) => setUserApiKey(e.target.value)}
-                          className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 outline-none focus:border-sky-400 transition-colors pr-10"
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                          {userApiKey ? <Check size={16} className="text-green-500" /> : <Info size={16} />}
-                        </div>
-                      </div>
-                      {!userApiKey && !ai && (
-                        <p className="text-amber-600 text-[10px] flex items-center gap-1">
-                          <Zap size={10} /> AI is currently offline. Please provide an API key.
-                        </p>
-                      )}
-                      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
-                        <span className="text-[10px] text-gray-400 font-mono">Build: 2026.03.26.1520</span>
-                        <span className="text-[10px] text-gray-400">v1.2.5</span>
-                      </div>
-                    </div>
-                    
                     <div className="h-px w-full bg-white shadow-md"></div>
                     
                     <div className="flex items-center justify-between">
