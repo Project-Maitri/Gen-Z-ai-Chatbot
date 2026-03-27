@@ -170,7 +170,7 @@ const safeStorage = {
 
 // Initial load
 try {
-  const apiKey = (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
+  const apiKey = process.env.GEMINI_API_KEY || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
   initAI(apiKey);
 } catch (e) {
   console.error("Initial AI setup failed:", e);
