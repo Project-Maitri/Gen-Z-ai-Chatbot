@@ -2106,12 +2106,6 @@ export default function App() {
   const t = translations[uiLang] || translations['en'];
 
   const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const saved = safeStorage.getItem('currentMessages_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to parse current messages:", e);
-    }
     return [{ id: '1', role: 'model', text: t.initialMessage }];
   });
 
@@ -2141,9 +2135,7 @@ export default function App() {
       return [];
     }
   });
-  const [currentChatId, setCurrentChatId] = useState<string | null>(() => {
-    return safeStorage.getItem('currentChatId_v1');
-  });
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [chatNameInput, setChatNameInput] = useState('');
@@ -2155,13 +2147,13 @@ export default function App() {
   }, [savedChats]);
 
   useEffect(() => {
-    safeStorage.setItem('currentMessages_v1', JSON.stringify(messages));
+    // Only save currentChatId to storage if needed, but we don't persist current messages across reloads anymore
     if (currentChatId) {
       safeStorage.setItem('currentChatId_v1', currentChatId);
     } else {
       safeStorage.removeItem('currentChatId_v1');
     }
-  }, [messages, currentChatId]);
+  }, [currentChatId]);
 
   // Sync messages to the current saved chat
   useEffect(() => {
