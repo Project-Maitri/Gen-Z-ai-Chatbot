@@ -2073,14 +2073,13 @@ const VirtualNetworkBackground = () => {
           <rect width="100%" height="100%" fill="url(#grid)" />
           
           {/* Animated connection lines */}
-          <g stroke="rgba(16, 185, 129, 0.4)" strokeWidth="2" fill="none">
+          <g stroke="rgba(59, 130, 246, 0.4)" strokeWidth="2" fill="none">
             <path d="M 10 150 Q 150 200 300 100 T 600 300" className="animate-pulse" />
             <path d="M 800 100 Q 600 250 400 400 T 100 600" className="animate-pulse" style={{ animationDelay: '1s' }} />
             <path d="M 200 800 Q 400 600 700 700 T 1000 500" className="animate-pulse" style={{ animationDelay: '2s' }} />
           </g>
           
           {/* Glowing Nodes */}
-          <circle cx="300" cy="100" r="4" fill="#34d399" className="animate-ping" />
           <circle cx="600" cy="300" r="5" fill="#60a5fa" className="animate-ping" style={{ animationDelay: '0.5s' }} />
           <circle cx="400" cy="400" r="4" fill="#fbbf24" className="animate-ping" style={{ animationDelay: '1.5s' }} />
           <circle cx="700" cy="700" r="6" fill="#a78bfa" className="animate-ping" style={{ animationDelay: '2.5s' }} />
