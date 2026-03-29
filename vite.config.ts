@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
     },
     
     build: {
-      outDir: 'docs',
+      outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,
       sourcemap: false,
