@@ -11,9 +11,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     // GitHub Pages के लिए सापेक्ष पथ (Relative Path) का उपयोग करना सबसे सुरक्षित है
-    base: '/Gen-Z-ai-Chatbot/',
+    base: './',
 
     plugins: [react(), tailwindcss()],
+    
+    define: {
+      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ""),
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY || ""),
+    },
     
     resolve: {
       alias: {
