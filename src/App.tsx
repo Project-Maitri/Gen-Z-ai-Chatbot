@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame } from 'lucide-react';
+import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -147,6 +147,10 @@ const initAI = (key: string | null) => {
   }
 };
 
+const getApiKey = () => {
+  return process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+};
+
 // Safe localStorage helper to prevent crashes in iframes with blocked third-party cookies
 const safeStorage = {
   getItem: (key: string) => {
@@ -170,8 +174,7 @@ const safeStorage = {
 
 // Initial load
 try {
-  const apiKey = process.env.GEMINI_API_KEY || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY);
-  initAI(apiKey);
+  initAI(getApiKey());
 } catch (e) {
   console.error("Initial AI setup failed:", e);
 }
@@ -344,7 +347,14 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "Stop Voice Typing",
     speechNotSupported: "Speech recognition is not supported in this browser.",
     liveChat: "Live Chat",
-    typeMessage: "Type a message...",
+    typeMessage: "Type a message or use the mic! Talk directly to Gen-Z using the last voice chat button!",
+    typeMessages: [
+      "Type your message here",
+      "Send message by speaking into the mic",
+      "Live chat with the pink voice chat button"
+    ],
+    userNameLabel: "Bot Name",
+    userNamePlaceholder: "Enter bot's name",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "Settings",
     language: "Language",
@@ -416,7 +426,14 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "बोलना बंद करें",
     speechNotSupported: "आपके ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नहीं है।",
     liveChat: "लाइव चैट",
-    typeMessage: "संदेश टाइप करें...",
+    typeMessage: "संदेश टाइप करें या माइक से बोलकर टाइप करें! आप आखिरी वाइस चैट बटन से जेन-जी से सीधी बातचीत करें!",
+    typeMessages: [
+      "यहां अपना संदेश टाइप करें",
+      "माइक से बोलकर संदेश भेजें",
+      "गुलाबी वायस चैट बटन से लाइव चैट करें"
+    ],
+    userNameLabel: "बॉट का नाम",
+    userNamePlaceholder: "बॉट का नाम दर्ज करें",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "सेटिंग्स",
     language: "भाषा (Language)",
@@ -489,6 +506,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "रउआ ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नइखे।",
     liveChat: "लाइव चैट",
     typeMessage: "संदेश टाइप करीं...",
+    typeMessages: [
+      "इहाँ आपन संदेस टाइप करीं",
+      "माइक से बोल के संदेस भेजीं",
+      "गुलाबी वायस चैट बटन से लाइव चैट करीं"
+    ],
+    userNameLabel: "बॉट के नाम",
+    userNamePlaceholder: "बॉट के नाम दर्ज करीं",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "सेटिंग्स",
     language: "भाषा (Language)",
@@ -560,6 +584,13 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "ভয়েস টাইপিং বন্ধ করুন",
     liveChat: "লাইভ চ্যাট",
     typeMessage: "একটি বার্তা লিখুন...",
+    typeMessages: [
+      "এখানে আপনার বার্তা টাইপ করুন",
+      "মাইকে কথা বলে বার্তা পাঠান",
+      "গোলাপি ভয়েস চ্যাট বোতাম দিয়ে লাইভ চ্যাট করুন"
+    ],
+    userNameLabel: "বটের নাম",
+    userNamePlaceholder: "বটের নাম লিখুন",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "সেটিংস",
     language: "ভাষা (Language)",
@@ -631,6 +662,13 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "குரல் தட்டச்சு நிறுத்து",
     liveChat: "நேரலை அரட்டை",
     typeMessage: "ஒரு செய்தியை தட்டச்சு செய்யவும்...",
+    typeMessages: [
+      "உங்கள் செய்தியை இங்கே தட்டச்சு செய்யவும்",
+      "மைக்கில் பேசி செய்தியை அனுப்பவும்",
+      "இளஞ்சிவப்பு குரல் அரட்டை பொத்தானுடன் நேரலை அரட்டை செய்யவும்"
+    ],
+    userNameLabel: "பாட் பெயர்",
+    userNamePlaceholder: "பாட் பெயரை உள்ளிடவும்",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "அமைப்புகள்",
     language: "மொழி (Language)",
@@ -702,6 +740,13 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "వాయిస్ టైపింగ్ ఆపండి",
     liveChat: "లైవ్ చాట్",
     typeMessage: "సందేశాన్ని టైప్ చేయండి...",
+    typeMessages: [
+      "మీ సందేశాన్ని ఇక్కడ టైప్ చేయండి",
+      "మైక్‌లో మాట్లాడటం ద్వారా సందేశాన్ని పంపండి",
+      "గులాబీ వాయిస్ చాట్ బటన్‌తో లైవ్ చాట్ చేయండి"
+    ],
+    userNameLabel: "బాట్ పేరు",
+    userNamePlaceholder: "బాట్ పేరు నమోదు చేయండి",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "సెట్టింగ్‌లు",
     language: "భాష (Language)",
@@ -773,6 +818,13 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "व्हॉइस टायपिंग थांबवा",
     liveChat: "लाइव्ह चॅट",
     typeMessage: "संदेश टाइप करा...",
+    typeMessages: [
+      "तुमचा संदेश येथे टाईप करा",
+      "माईकमध्ये बोलून संदेश पाठवा",
+      "गुलाबी व्हॉइस चॅट बटणासह लाईव्ह चॅट करा"
+    ],
+    userNameLabel: "बॉटचे नाव",
+    userNamePlaceholder: "बॉटचे नाव प्रविष्ट करा",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "सेटिंग्ज",
     language: "भाषा (Language)",
@@ -844,6 +896,13 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "વૉઇસ ટાઇપિંગ બંધ કરો",
     liveChat: "લાઇવ ચેટ",
     typeMessage: "સંદેશ લખો...",
+    typeMessages: [
+      "તમારો સંદેશ અહીં ટાઇપ કરો",
+      "માઇકમાં બોલીને સંદેશ મોકલો",
+      "ગુલાબી વૉઇસ ચેટ બટન સાથે લાઇવ ચેટ કરો"
+    ],
+    userNameLabel: "બૉટનું નામ",
+    userNamePlaceholder: "બૉટનું નામ દાખલ કરો",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "સેટિંગ્સ",
     language: "ભાષા (Language)",
@@ -916,6 +975,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.",
     liveChat: "ಲೈವ್ ಚಾಟ್",
     typeMessage: "ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ...",
+    typeMessages: [
+      "ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ",
+      "ಮೈಕ್‌ನಲ್ಲಿ ಮಾತನಾಡುವ ಮೂಲಕ ಸಂದೇಶ ಕಳುಹಿಸಿ",
+      "ಗುಲಾಬಿ ಧ್ವನಿ ಚಾಟ್ ಬಟನ್‌ನೊಂದಿಗೆ ಲೈವ್ ಚಾಟ್ ಮಾಡಿ"
+    ],
+    userNameLabel: "ಬಾಟ್ ಹೆಸರು",
+    userNamePlaceholder: "ಬಾಟ್ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
     language: "ಭಾಷೆ (Language)",
@@ -988,6 +1054,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "നിങ്ങളുടെ ബ്രൗസറിൽ സ്പീച്ച് റെക്കഗ്നിഷൻ പിന്തുണയ്ക്കുന്നില്ല.",
     liveChat: "ലൈവ് ചാറ്റ്",
     typeMessage: "ഒരു സന്ദേശം ടൈപ്പ് ചെയ്യുക...",
+    typeMessages: [
+      "നിങ്ങളുടെ സന്ദേശം ഇവിടെ ടൈപ്പ് ചെയ്യുക",
+      "മൈക്കിലൂടെ സംസാരിച്ച് സന്ദേശം അയക്കുക",
+      "പിങ്ക് വോയ്‌സ് ചാറ്റ് ബട്ടൺ ഉപയോഗിച്ച് ലൈവ് ചാറ്റ് ചെയ്യുക"
+    ],
+    userNameLabel: "ബോട്ടിന്റെ പേര്",
+    userNamePlaceholder: "ബോട്ടിന്റെ പേര് നൽകുക",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ക്രമീകരണങ്ങൾ",
     language: "ഭാഷ (Language)",
@@ -1060,6 +1133,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ଆପଣଙ୍କ ବ୍ରାଉଜରରେ ସ୍ପିଚ୍ ରେକଗ୍ନିସନ୍ ସପୋର୍ଟ କରେ ନାହିଁ।",
     liveChat: "ଲାଇଭ୍ ଚାଟ୍",
     typeMessage: "ଏକ ମେସେଜ୍ ଟାଇପ୍ କରନ୍ତୁ...",
+    typeMessages: [
+      "ଆପଣଙ୍କର ବାର୍ତ୍ତା ଏଠାରେ ଟାଇପ୍ କରନ୍ତୁ",
+      "ମାଇକ୍ ରେ କହି ବାର୍ତ୍ତା ପଠାନ୍ତୁ",
+      "ଗୋଲାପୀ ଭଏସ୍ ଚାଟ୍ ବଟନ୍ ସହିତ ଲାଇଭ୍ ଚାଟ୍ କରନ୍ତୁ"
+    ],
+    userNameLabel: "ବଟ୍ ନାମ",
+    userNamePlaceholder: "ବଟ୍ ନାମ ଦିଅନ୍ତୁ",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ସେଟିଂସ୍",
     language: "ଭାଷା (Language)",
@@ -1132,6 +1212,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਸਪੀਚ ਰਿਕੋਗਨੀਸ਼ਨ ਸਪੋਰਟ ਨਹੀਂ ਹੈ।",
     liveChat: "ਲਾਈਵ ਚੈਟ",
     typeMessage: "ਸੁਨੇਹਾ ਟਾਈਪ ਕਰੋ...",
+    typeMessages: [
+      "ਆਪਣਾ ਸੁਨੇਹਾ ਇੱਥੇ ਟਾਈਪ ਕਰੋ",
+      "ਮਾਈਕ ਵਿੱਚ ਬੋਲ ਕੇ ਸੁਨੇਹਾ ਭੇਜੋ",
+      "ਗੁਲਾਬੀ ਵੌਇਸ ਚੈਟ ਬਟਨ ਨਾਲ ਲਾਈਵ ਚੈਟ ਕਰੋ"
+    ],
+    userNameLabel: "ਬੋਟ ਦਾ ਨਾਮ",
+    userNamePlaceholder: "ਬੋਟ ਦਾ ਨਾਮ ਦਰਜ ਕਰੋ",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ਸੈਟਿੰਗਾਂ",
     language: "ਭਾਸ਼ਾ (Language)",
@@ -1204,6 +1291,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "آپ کے براؤزر میں اسپیچ ریکگنیشن سپورٹ نہیں ہے۔",
     liveChat: "لائیو چیٹ",
     typeMessage: "پیغام ٹائپ کریں...",
+    typeMessages: [
+      "اپنا پیغام یہاں ٹائپ کریں",
+      "مائیک میں بول کر پیغام بھیجیں",
+      "گلابی وائس چیٹ بٹن کے ساتھ لائیو چیٹ کریں"
+    ],
+    userNameLabel: "بوٹ کا نام",
+    userNamePlaceholder: "بوٹ کا نام درج کریں",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ترتیبات",
     language: "زبان (Language)",
@@ -1276,6 +1370,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "আপোনাৰ ব্ৰাউজাৰত স্পীচ ৰিকগনিচন চাপোৰ্ট নকৰে।",
     liveChat: "লাইভ চেট",
     typeMessage: "এটা মেছেজ টাইপ কৰক...",
+    typeMessages: [
+      "আপোনাৰ বাৰ্তা ইয়াত টাইপ কৰক",
+      "মাইকত কথা পাতি বাৰ্তা পঠাওক",
+      "গোলাপী ভইচ চেট বুটামৰ সৈতে লাইভ চেট কৰক"
+    ],
+    userNameLabel: "বটৰ নাম",
+    userNamePlaceholder: "বটৰ নাম লিখক",
     poweredBy: "Powered by E-MAITRI digital platform.",
     settings: "ছেটিংছ",
     language: "ভাষা (Language)",
@@ -1348,6 +1449,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "यस ब्राउजरमा स्पीच रिकग्निसन समर्थित छैन।",
     liveChat: "लाइभ च्याट",
     typeMessage: "सन्देश टाइप गर्नुहोस्...",
+    typeMessages: [
+      "तपाईंको सन्देश यहाँ टाइप गर्नुहोस्",
+      "माइकमा बोलेर सन्देश पठाउनुहोस्",
+      "गुलाबी भ्वाइस च्याट बटनको साथ लाइभ च्याट गर्नुहोस्"
+    ],
+    userNameLabel: "बोटको नाम",
+    userNamePlaceholder: "बोटको नाम प्रविष्ट गर्नुहोस्",
     poweredBy: "ई-मैत्री डिजिटल प्लेटफर्म द्वारा संचालित।",
     settings: "सेटिङहरू",
     language: "भाषा",
@@ -1420,6 +1528,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ई ब्राउजर मे स्पीच रिकग्निशन समर्थित नहि अछि।",
     liveChat: "लाइव चैट",
     typeMessage: "संदेश टाइप करू...",
+    typeMessages: [
+      "अपन संदेश एतय टाइप करू",
+      "माइक सँ बाजि कऽ संदेश पठाउ",
+      "गुलाबी वॉयस चैट बटन सँ लाइव चैट करू"
+    ],
+    userNameLabel: "बॉट के नाम",
+    userNamePlaceholder: "बॉट के नाम दर्ज करू",
     poweredBy: "ई-मैत्री डिजिटल प्लेटफॉर्म द्वारा संचालित।",
     settings: "सेटिंग्स",
     language: "भाषा",
@@ -1492,6 +1607,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "هن برائوزر ۾ اسپيچ ريڪگنيشن سپورٽ ناهي.",
     liveChat: "لائيو چيٽ",
     typeMessage: "هڪ پيغام لکو...",
+    typeMessages: [
+      "پنهنجو پيغام هتي ٽائپ ڪريو",
+      "مائڪ ۾ ڳالهائي پيغام موڪليو",
+      "گلابي وائس چيٽ بٽڻ سان لائيو چيٽ ڪريو"
+    ],
+    userNameLabel: "بوٽ جو نالو",
+    userNamePlaceholder: "بوٽ جو نالو داخل ڪريو",
     poweredBy: "اي-ميتري ڊجيٽل پليٽ فارم پاران هلندڙ.",
     settings: "سيٽنگون",
     language: "ٻولي",
@@ -1564,6 +1686,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ह्या ब्राउझरांत स्पीच रिकग्निशन समर्थित ना.",
     liveChat: "लायव्ह चॅट",
     typeMessage: "संदेश टायप करात...",
+    typeMessages: [
+      "तुमचो संदेश हांगा टायप करात",
+      "मायकांत उलोवन संदेश धाडात",
+      "गुलाबी व्हॉइस चॅट बटणा वांगडा लायव्ह चॅट करात"
+    ],
+    userNameLabel: "बॉटचें नांव",
+    userNamePlaceholder: "बॉटचें नांव बरोवचें",
     poweredBy: "ई-मैत्री डिजिटल प्लॅटफॉर्मान संचालित.",
     settings: "सेटिंग्ज",
     language: "भास",
@@ -1636,6 +1765,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "इस ब्राउज़र च स्पीच रिकग्निशन समर्थित नेईं ऐ।",
     liveChat: "लाइव चैट",
     typeMessage: "सनेआ टाइप करो...",
+    typeMessages: [
+      "अपना सनेआ इत्थै टाइप करो",
+      "माइक च बोलियै सनेआ भेजो",
+      "गुलाबी वायस चैट बटन कन्नै लाइव चैट करो"
+    ],
+    userNameLabel: "बॉट दा नां",
+    userNamePlaceholder: "बॉट दा नां दर्ज करो",
     poweredBy: "ई-मैत्री डिजिटल प्लेटफॉर्म राहें संचालित।",
     settings: "सेटिंगां",
     language: "भाशा",
@@ -1708,6 +1844,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "یَتھ براؤزرس مَنٛز چھُنٕہ سپیچ رِکگنِشن سپورٹ۔",
     liveChat: "لائیو چیٹ",
     typeMessage: "میسج ٹائپ کٔرِو...",
+    typeMessages: [
+      "پَنُن میسج یَتھ جاے ٹائپ کٔرِو",
+      "مائکَس مَنٛز کَتھ کٔرِتھ میسج دِیِو",
+      "گُلابی وائس چیٹ بَٹُن سٟتۍ لائیو چیٹ کٔرِو"
+    ],
+    userNameLabel: "بوٹُن ناو",
+    userNamePlaceholder: "بوٹُن ناو دَرٕج کٔرِو",
     poweredBy: "ای-میتری ڈیجیٹل پلیٹ فارم دٔسۍ چلاونہٕ یِوان۔",
     settings: "سیٹنگز",
     language: "زبان",
@@ -1780,6 +1923,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "अस्मिन् ब्राउजर् मध्ये भाषण-अभिज्ञानं न समर्थितम्।",
     liveChat: "सजीव-संवादः",
     typeMessage: "सन्देशं टङ्कयतु...",
+    typeMessages: [
+      "स्वसन्देशम् अत्र टङ्कयतु",
+      "ध्वनिग्राहके उक्त्वा सन्देशं प्रेषयतु",
+      "पाटलवर्णस्य ध्वनि-संवाद-गुण्डेन सजीव-संवादं करोतु"
+    ],
+    userNameLabel: "बॉट-नाम",
+    userNamePlaceholder: "बॉट-नाम लिखतु",
     poweredBy: "ई-मैत्री डिजिटल-मञ्चेन सञ्चालितम्।",
     settings: "सेटिंग्स्",
     language: "भाषा",
@@ -1852,6 +2002,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ᱱᱚᱣᱟ ᱵᱨᱟᱣᱡᱟᱨ ᱨᱮ ᱥᱯᱤᱪ ᱨᱤᱠᱚᱜᱽᱱᱤᱥᱚᱱ ᱵᱟᱹᱱᱩᱜᱼᱟ᱾",
     liveChat: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ",
     typeMessage: "ᱢᱮᱥᱮᱡᱽ ᱴᱟᱭᱤᱯ ᱢᱮ...",
+    typeMessages: [
+      "ᱟᱢᱟᱜ ᱢᱮᱥᱮᱡᱽ ᱱᱚᱸᱰᱮ ᱴᱟᱭᱤᱯ ᱢᱮ",
+      "ᱢᱟᱭᱤᱠ ᱨᱮ ᱨᱚᱲ ᱠᱟᱛᱮ ᱢᱮᱥᱮᱡᱽ ᱵᱷᱮᱡᱟᱭ ᱢᱮ",
+      "ᱜᱩᱞᱟᱹᱯᱤ ᱵᱷᱚᱭᱮᱥ ᱪᱮᱴ ᱵᱚᱛᱟᱢ ᱥᱟᱶ ᱞᱟᱭᱤᱵᱽ ᱪᱮᱴ ᱢᱮ"
+    ],
+    userNameLabel: "ᱵᱚᱴ ᱟᱜ ᱧᱩᱛᱩᱢ",
+    userNamePlaceholder: "ᱵᱚᱴ ᱟᱜ ᱧᱩᱛᱩᱢ ᱚᱞ ᱢᱮ",
     poweredBy: "ᱤ-ᱢᱟᱭᱛᱨᱤ ᱰᱤᱡᱤᱴᱟᱞ ᱯᱞᱮᱴᱯᱷᱚᱨᱢ ᱦᱚᱛᱮᱛᱮ ᱪᱟᱞᱟᱜ ᱠᱟᱱᱟ᱾",
     settings: "ᱥᱮᱴᱤᱝᱥ",
     language: "ᱯᱟᱹᱨᱥᱤ",
@@ -1924,6 +2081,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "बे ब्राउजाराव गारां सिनायनाय गैया।",
     liveChat: "लाइभ सावरायनाय",
     typeMessage: "मेसेज टाइप खालाम...",
+    typeMessages: [
+      "नोंथांनि मेसेजखौ बेवहाय टाइप खालाम",
+      "माइकआव बुंनानै मेसेज दैथाय",
+      "गोलाफि गारां सावरायनाय बुथामजों लाइभ सावराय"
+    ],
+    userNameLabel: "बटनि मुं",
+    userNamePlaceholder: "बटनि मुं लिर",
     poweredBy: "ई-मैत्री डिजिटल प्लेटफर्मजों सामलायजानाय।",
     settings: "सेटिंस",
     language: "राव",
@@ -1996,6 +2160,13 @@ const translations: Record<string, any> = {
     speechNotSupported: "ব্রাউজার অসিদা স্পীচ রিকগনিশন সাপোর্ট তৌদে।",
     liveChat: "লাইভ চ্যাট",
     typeMessage: "মেসেজ টাইপ তৌবিয়ু...",
+    typeMessages: [
+      "নহাক্কী মেসেজ মফম অসিদা টাইপ তৌবিয়ু",
+      "মাইক্তা ঙাংদুনা মেসেজ থাবিয়ু",
+      "পিঙ্ক ভোইস চ্যাট বটনগা লোয়ননা লাইভ চ্যাট তৌবিয়ু"
+    ],
+    userNameLabel: "বোটকী মমিং",
+    userNamePlaceholder: "বোটকী মমিং ইবিয়ু",
     poweredBy: "ই-মৈত্রী ডিজিটাল প্লাটফর্মনা পাউবা।",
     settings: "সেটিংস",
     language: "লোন",
@@ -2104,23 +2275,128 @@ export default function App() {
 
   const t = translations[uiLang] || translations['en'];
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    return [{ id: '1', role: 'model', text: t.initialMessage }];
+  const [input, setInput] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [placeholderText, setPlaceholderText] = useState('');
+
+  const [userName, setUserName] = useState(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBotName = urlParams.get('botName');
+      if (urlBotName) {
+        // Remove it from URL so it doesn't override future changes on reload
+        urlParams.delete('botName');
+        const newSearch = urlParams.toString();
+        const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        safeStorage.setItem('userName_v1', urlBotName);
+        return urlBotName;
+      }
+      return safeStorage.getItem('userName_v1') || '';
+    } catch (e) {
+      return '';
+    }
   });
 
-  // Update initial message when language changes if it's the only message
+  const getInitialMessage = (lang: string, name: string) => {
+    const trans = translations[lang] || translations['en'];
+    let msg = trans.initialMessage;
+    if (name.trim()) {
+      msg = msg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, name.trim());
+    }
+    return msg;
+  };
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // We need to read userName directly here for initial state
+    let initialName = '';
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBotName = urlParams.get('botName');
+      if (urlBotName) {
+        initialName = urlBotName;
+      } else {
+        initialName = safeStorage.getItem('userName_v1') || '';
+      }
+    } catch (e) {}
+    return [{ id: '1', role: 'model', text: getInitialMessage(uiLang, initialName) }];
+  });
+
+  // Update initial message when language or bot name changes if it's the only message
   useEffect(() => {
     setMessages(prev => {
-      if (prev.length === 1 && Object.values(translations).some(lang => lang.initialMessage === prev[0].text)) {
-        return [{ ...prev[0], text: t.initialMessage }];
+      if (prev.length === 1) {
+        // Check if the current message is some version of the initial message
+        const isInitial = Object.values(translations).some(lang => {
+          const baseMsg = lang.initialMessage;
+          // Could be the original or the replaced version
+          return prev[0].text === baseMsg || 
+                 (userName.trim() && prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, userName.trim()));
+        });
+        
+        if (isInitial) {
+          return [{ ...prev[0], text: getInitialMessage(uiLang, userName) }];
+        }
       }
       return prev;
     });
-  }, [uiLang, t.initialMessage]);
+  }, [uiLang, userName]);
 
-  const [input, setInput] = useState('');
+  useEffect(() => {
+    try {
+      safeStorage.setItem('userName_v1', userName);
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, [userName]);
+
+  useEffect(() => {
+    let i = 0;
+    let messageIndex = 0;
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    const messages = t.typeMessages || [t.typeMessage];
+
+    const typeWriter = () => {
+      if (!isMounted) return;
+      
+      const currentMessage = messages[messageIndex];
+      
+      if (i < currentMessage.length) {
+        setPlaceholderText(currentMessage.substring(0, i + 1));
+        i++;
+        timeoutId = setTimeout(typeWriter, 100);
+      } else {
+        timeoutId = setTimeout(() => {
+          if (!isMounted) return;
+          i = 0;
+          messageIndex = (messageIndex + 1) % messages.length;
+          setPlaceholderText("");
+          typeWriter();
+        }, 3000);
+      }
+    };
+
+    typeWriter();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [t.typeMessage, t.typeMessages]);
+
   const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const placeholderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (placeholderRef.current) {
+      placeholderRef.current.scrollTop = placeholderRef.current.scrollHeight;
+    }
+  }, [placeholderText]);
+
   const [editMsgId, setEditMsgId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -2829,7 +3105,7 @@ export default function App() {
       // Remove basic markdown characters and replace emojis with spaces for cleaner speech
       // We replace with spaces of the same length to keep indices aligned for highlighting
       const cleanText = text
-        .replace(/[*_#`]/g, '')
+        .replace(/[*_#`\-<>]/g, ' ')
         .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
       currentTextRef.current = cleanText;
       
@@ -2867,6 +3143,9 @@ export default function App() {
           if (!base64Audio) {
             setIsGeneratingAudio(messageId);
             try {
+              if (!ai) {
+                initAI(getApiKey());
+              }
               if (!ai) {
                 throw new Error("AI service not initialized. Please set your API Key in Settings.");
               }
@@ -3255,6 +3534,9 @@ export default function App() {
     
     try {
       if (!ai) {
+        initAI(getApiKey());
+      }
+      if (!ai) {
         throw new Error("AI service is not initialized. Please ensure your Gemini API key is correctly configured in the environment.");
       }
       const modelName = useFastModel ? "gemini-3.1-flash-lite-preview" : "gemini-3.1-pro-preview";
@@ -3285,7 +3567,11 @@ export default function App() {
         });
 
       const config: any = {};
-      const systemInstruction = String(SYSTEM_INSTRUCTION);
+      let systemInstruction = String(SYSTEM_INSTRUCTION);
+      if (userName.trim()) {
+        systemInstruction += `\n\nCRITICAL: Your name is ${userName.trim()}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      }
+      
       if (systemInstruction && systemInstruction.trim() !== '') {
         config.systemInstruction = systemInstruction;
       }
@@ -3710,13 +3996,22 @@ export default function App() {
       processor.connect(dummyDest);
       
       if (!ai) {
+        initAI(getApiKey());
+      }
+      if (!ai) {
         throw new Error("AI service not initialized. Please set your API Key in Settings.");
       }
+      let liveInstruction = SYSTEM_INSTRUCTION;
+      if (userName.trim()) {
+        liveInstruction += `\n\nCRITICAL: Your name is ${userName.trim()}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      }
+      liveInstruction += "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.";
+
       const sessionPromise = ai.live.connect({
-        model: "gemini-2.5-flash-native-audio-preview-12-2025",
+        model: "gemini-3.1-flash-live-preview",
         config: {
           responseModalities: [Modality.AUDIO],
-          systemInstruction: SYSTEM_INSTRUCTION + "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.",
+          systemInstruction: liveInstruction,
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } }
           },
@@ -4052,14 +4347,21 @@ export default function App() {
 
   const handleAppShare = async () => {
     try {
+      let shareUrl = window.location.href;
+      if (userName.trim()) {
+        const url = new URL(shareUrl);
+        url.searchParams.set('botName', userName.trim());
+        shareUrl = url.toString();
+      }
+
       if (navigator.share) {
         await navigator.share({
           title: t.title,
           text: t.subtitle,
-          url: window.location.href,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setError(t.copied);
       }
     } catch (err) {
@@ -4197,6 +4499,25 @@ export default function App() {
                 className="overflow-hidden z-0"
               >
                 <div className="p-4 max-w-3xl mx-auto grid grid-cols-1 gap-4 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  {/* User Name Setting */}
+                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-gray-900 font-medium">{t.userNameLabel}</h3>
+                        <p className="text-gray-500 text-xs">{t.userNamePlaceholder}</p>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      placeholder={t.userNamePlaceholder}
+                      className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors w-full sm:w-auto"
+                    />
+                  </div>
                   <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
@@ -4369,7 +4690,7 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
             <div className="flex-1 flex-shrink-0 min-h-[20px]"></div>
-            <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative">
+            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 ${((isInputFocused || isVoiceTyping) && !isLoading) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
               {!isLive && messages.map((msg) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 return (
@@ -4863,11 +5184,30 @@ export default function App() {
                   ref={fileInputRef} 
                   onChange={handleImageUpload} 
                 />
+                
+                {!input && !selectedImage && !isInputFocused && !isVoiceTyping && (
+                  <div className={`absolute top-0 left-[48px] right-0 h-full pointer-events-none py-3 px-2 ${
+                    (isLoading || isVoiceTyping)
+                      ? 'pr-[60px] sm:pr-[70px]' 
+                      : 'pr-[110px] sm:pr-[120px]'
+                  }`}>
+                    <div 
+                      ref={placeholderRef}
+                      className="w-full h-full text-gray-400 font-medium overflow-hidden"
+                      style={{ scrollBehavior: 'smooth', wordBreak: 'break-word' }}
+                    >
+                      {placeholderText}
+                    </div>
+                  </div>
+                )}
+
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={t.typeMessage}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
+                  placeholder=""
                   className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-2 focus:outline-none resize-none min-h-[56px] max-h-32 font-medium ${
                     (isLoading || (input.trim() && !isVoiceTyping) || (!input.trim() && isVoiceTyping) || selectedImage)
                       ? 'pr-[60px] sm:pr-[70px]' 
