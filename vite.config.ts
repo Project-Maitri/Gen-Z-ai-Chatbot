@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     // GitHub Pages के लिए सापेक्ष पथ (Relative Path) का उपयोग करना सबसे सुरक्षित है
-    base: './',
+    base: '/Gen-Z-ai-Chatbot/',
 
     plugins: [react(), tailwindcss()],
     
