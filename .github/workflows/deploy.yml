@@ -22,7 +22,7 @@ jobs:
           VITE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs # यहाँ 'dist' की जगह 'docs' लिखें क्योंकि Vite वहीं फाइलें बना रहा है
+          path: dist # इसे वापस 'dist' कर दिया है क्योंकि Vite यहीं आउटपुट देता है
   deploy:
     needs: build
     runs-on: ubuntu-latest
