@@ -4690,7 +4690,7 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
             <div className="flex-1 flex-shrink-0 min-h-[20px]"></div>
-            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 ${((isInputFocused || isVoiceTyping) && !isLoading) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100">
               {!isLive && messages.map((msg) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 return (

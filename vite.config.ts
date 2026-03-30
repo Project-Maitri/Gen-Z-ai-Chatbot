@@ -10,15 +10,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    // GitHub Pages के लिए सापेक्ष पथ (Relative Path) का उपयोग करना सबसे सुरक्षित है
-    base: '/Gen-Z-ai-Chatbot/',
+    // GitHub Pages के लिए सापेक्ष पथ (Relative Path)
+    base: '',
 
     plugins: [react(), tailwindcss()],
     
     define: {
-      // यह लाइन GitHub Secrets को आपके कोड के 'process.env' में मैप कर देगी
-      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY || ""),
-      'process.env.API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY || ""),
+      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ""),
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY || ""),
     },
     
     resolve: {
@@ -34,7 +33,7 @@ export default defineConfig(({ mode }) => {
     },
     
     build: {
-      outDir: 'dist',
+      outDir: 'docs',
       assetsDir: 'assets',
       emptyOutDir: true,
       sourcemap: false,
