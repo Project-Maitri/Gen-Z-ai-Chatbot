@@ -406,7 +406,9 @@ const translations: Record<string, any> = {
     autoSelect: "Auto-select (Default)",
     fenrirDesc: "Fenrir (Strong, Authoritative Male)",
     charonDesc: "Charon (Calm, Measured Male)",
-    puckDesc: "Puck (Friendly, Energetic Male)"
+    puckDesc: "Puck (Friendly, Energetic Male)",
+    errorMicPermission: "Microphone permission denied. Please enable it in your browser settings.",
+    errorMicNotFound: "No microphone found. Please connect a microphone and try again."
   },
   hi: {
     title: "जेन-जी",
@@ -485,7 +487,9 @@ const translations: Record<string, any> = {
     autoSelect: "स्वतः चुनें (डिफ़ॉल्ट)",
     fenrirDesc: "फेनरिर (मजबूत, आधिकारिक पुरुष)",
     charonDesc: "कैरन (शांत, नपा-तुला पुरुष)",
-    puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)"
+    puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)",
+    errorMicPermission: "माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया अपने ब्राउज़र सेटिंग्स में इसे सक्षम करें।",
+    errorMicNotFound: "कोई माइक्रोफ़ोन नहीं मिला। कृपया माइक्रोफ़ोन कनेक्ट करें और पुनः प्रयास करें।"
   },
   bho: {
     title: "जेन-जी",
@@ -3996,17 +4000,27 @@ export default function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { 
-          sampleRate: 16000, 
-          channelCount: 1,
           echoCancellation: true,
-          noiseSuppression: true
+          noiseSuppression: true,
+          autoGainControl: true
         } 
       });
       mediaStreamRef.current = stream;
 
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      let audioCtx;
+      try {
+        // Try to create AudioContext with 16000Hz sample rate
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      } catch (e) {
+        console.warn("Failed to create AudioContext with 16000Hz, falling back to default:", e);
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      
       await audioCtx.resume();
       audioContextRef.current = audioCtx;
+      
+      const actualSampleRate = audioCtx.sampleRate;
+      console.log("AudioContext sample rate:", actualSampleRate);
       
       // HTML5 Audio element hack to keep browser alive in background
       if (!backgroundAudioRef.current) {
@@ -4055,9 +4069,24 @@ export default function App() {
         }
 
         const inputData = e.inputBuffer.getChannelData(0);
-        const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          let s = Math.max(-1, Math.min(1, inputData[i]));
+        
+        // Simple downsampling if sample rate is not 16000
+        let processedData = inputData;
+        const currentRate = e.inputBuffer.sampleRate;
+        
+        if (currentRate !== 16000) {
+          const ratio = currentRate / 16000;
+          const newLength = Math.round(inputData.length / ratio);
+          const resampledData = new Float32Array(newLength);
+          for (let i = 0; i < newLength; i++) {
+            resampledData[i] = inputData[Math.round(i * ratio)];
+          }
+          processedData = resampledData;
+        }
+
+        const pcm16 = new Int16Array(processedData.length);
+        for (let i = 0; i < processedData.length; i++) {
+          let s = Math.max(-1, Math.min(1, processedData[i]));
           pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
         
@@ -4077,11 +4106,19 @@ export default function App() {
         if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
           sessionPromiseRef.current.then(s => {
             try {
+              // Check if session is still active and if the underlying WebSocket is open (if possible)
               if (s && isSessionActiveRef.current) {
                 s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
               }
-            } catch (err) {
-              console.warn("Failed to send audio input:", err);
+            } catch (err: any) {
+              // Only log if it's not a "WebSocket is closed" error to reduce noise
+              const errMsg = err?.message || String(err);
+              if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
+                console.warn("Failed to send audio input:", err);
+              } else {
+                // If we hit a closed socket, ensure we stop the session locally
+                isSessionActiveRef.current = false;
+              }
             }
           }).catch(() => {});
         }
@@ -4180,6 +4217,11 @@ export default function App() {
              console.log("Live API closed");
              isSessionActiveRef.current = false;
              stopLiveAudio();
+          },
+          onerror: (err: any) => {
+             console.warn("Live API error:", err);
+             isSessionActiveRef.current = false;
+             stopLiveAudio();
           }
         }
       });
@@ -4187,19 +4229,27 @@ export default function App() {
       setIsLive(true);
     } catch (e: any) {
       console.warn("Live Audio Error:", e);
-      const errStr = typeof e === 'string' ? e : JSON.stringify(e);
-      const isQuotaErr = errStr.toLowerCase().includes('429') || 
-                           errStr.toLowerCase().includes('503') ||
-                           errStr.toLowerCase().includes('service unavailable') ||
-                           errStr.toLowerCase().includes('quota') || 
-                           errStr.includes('RESOURCE_EXHAUSTED') ||
-                           errStr.toLowerCase().includes('limit') ||
-                           errStr.toLowerCase().includes('exceeded');
-      if (isQuotaErr) {
-        setError(t.errorTraffic);
+      let errorMsg = t.errorTech;
+      
+      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+        errorMsg = t.errorMicPermission || "Microphone permission denied. Please enable it in your browser settings.";
+      } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
+        errorMsg = t.errorMicNotFound || "No microphone found. Please connect a microphone and try again.";
       } else {
-        setError(t.errorTech);
+        const errStr = typeof e === 'string' ? e : (e.message || JSON.stringify(e));
+        const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                             errStr.toLowerCase().includes('503') ||
+                             errStr.toLowerCase().includes('service unavailable') ||
+                             errStr.toLowerCase().includes('quota') || 
+                             errStr.includes('RESOURCE_EXHAUSTED') ||
+                             errStr.toLowerCase().includes('limit') ||
+                             errStr.toLowerCase().includes('exceeded');
+        if (isQuotaErr) {
+          errorMsg = t.errorTraffic;
+        }
       }
+      
+      setError(errorMsg);
       setIsLive(false);
     }
   };
