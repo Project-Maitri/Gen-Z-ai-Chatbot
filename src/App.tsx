@@ -366,7 +366,7 @@ const translations: Record<string, any> = {
     q2: "Explain the three-tier structure.",
     q3: "How does Booth Management work?",
     q4: "What is Family Alliance Movement?",
-    initialMessage: "I am Gen-Z! Welcome to the E-Maitri portal! Tell me friend, how can I help you? What information do you need?",
+    initialMessage: "Hello Gen-Z! Welcome to the E-Maitri portal! Tell me friend, how can I help you? What information do you need?",
     errorTraffic: "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later.",
     errorTech: "Sorry, a technical issue occurred. Please try again.",
     premiumQuotaExceeded: "Premium voice quota exceeded. Falling back to standard voice.",
@@ -445,7 +445,7 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय संरचना को समझाएं।",
     q3: "बूथ प्रबंधन कैसे काम करता है?",
     q4: "पारिवारिक गठबंधन आंदोलन क्या है?",
-    initialMessage: "मैं Gen-Z हूं! ई-मैत्री पोर्टल में आपका स्वागत है! बताइए मित्र मैं आपको किस तरह से सहयोग कर सकता हूं? आपको क्या जानकारी चाहिए?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टल में आपका स्वागत है! बताइए मित्र मैं आपको किस तरह से सहयोग कर सकता हूं? आपको क्या जानकारी चाहिए?",
     errorTraffic: "क्षमा करें, अभी अधिक ट्रैफिक है या कोटा समाप्त हो गया है। कृपया कुछ समय बाद पुनः प्रयास करें।",
     errorTech: "क्षमा करें, एक तकनीकी त्रुटि हुई। कृपया पुनः प्रयास करें।",
     premiumQuotaExceeded: "प्रीमियम वॉइस कोटा समाप्त हो गया है। मानक वॉइस पर स्विच किया जा रहा है।",
@@ -2299,13 +2299,13 @@ export default function App() {
     }
   });
 
+  const [setupName, setSetupName] = useState('');
+
+  const displayBotName = userName || (uiLang === 'hi' ? 'नारद' : 'Nard');
+
   const getInitialMessage = (lang: string, name: string) => {
     const trans = translations[lang] || translations['en'];
-    let msg = trans.initialMessage;
-    if (name.trim()) {
-      msg = msg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, name.trim());
-    }
-    return msg;
+    return trans.initialMessage;
   };
 
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -2330,9 +2330,12 @@ export default function App() {
         // Check if the current message is some version of the initial message
         const isInitial = Object.values(translations).some(lang => {
           const baseMsg = lang.initialMessage;
+          const currentBotName = userName.trim() || (uiLang === 'hi' ? 'नारद' : 'Nard');
           // Could be the original or the replaced version
           return prev[0].text === baseMsg || 
-                 (userName.trim() && prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, userName.trim()));
+                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, currentBotName) ||
+                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, 'Nard') ||
+                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, 'नारद');
         });
         
         if (isInitial) {
@@ -2357,7 +2360,9 @@ export default function App() {
     let isMounted = true;
     let timeoutId: NodeJS.Timeout;
 
-    const messages = t.typeMessages || [t.typeMessage];
+    const messages = (t.typeMessages || [t.typeMessage]).map((msg: string) => 
+      msg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName)
+    );
 
     const typeWriter = () => {
       if (!isMounted) return;
@@ -2385,7 +2390,7 @@ export default function App() {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [t.typeMessage, t.typeMessages]);
+  }, [t.typeMessage, t.typeMessages, displayBotName]);
 
   const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2820,7 +2825,7 @@ export default function App() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Gen-Z Response',
+          title: `${displayBotName} Response`,
           text: cleanText,
         });
       } catch (error) {
@@ -3568,8 +3573,8 @@ export default function App() {
 
       const config: any = {};
       let systemInstruction = String(SYSTEM_INSTRUCTION);
-      if (userName.trim()) {
-        systemInstruction += `\n\nCRITICAL: Your name is ${userName.trim()}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      if (displayBotName) {
+        systemInstruction += `\n\nCRITICAL: Your name is ${displayBotName}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
       }
       
       if (systemInstruction && systemInstruction.trim() !== '') {
@@ -4002,8 +4007,8 @@ export default function App() {
         throw new Error("AI service not initialized. Please set your API Key in Settings.");
       }
       let liveInstruction = SYSTEM_INSTRUCTION;
-      if (userName.trim()) {
-        liveInstruction += `\n\nCRITICAL: Your name is ${userName.trim()}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      if (displayBotName) {
+        liveInstruction += `\n\nCRITICAL: Your name is ${displayBotName}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
       }
       liveInstruction += "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.";
 
@@ -4356,7 +4361,7 @@ export default function App() {
 
       if (navigator.share) {
         await navigator.share({
-          title: t.title,
+          title: displayBotName,
           text: t.subtitle,
           url: shareUrl,
         });
@@ -4710,7 +4715,7 @@ export default function App() {
                               <Sparkles size={10} className="text-blue-400 animate-pulse drop-shadow-sm" />
                             </div>
                           </div>
-                          <span className="font-mukta text-sm">{t.title}</span>
+                          <span className="font-mukta text-sm">{displayBotName}</span>
                         </div>
                         
                         {/* Speaker Button at Top Right */}
@@ -4847,6 +4852,51 @@ export default function App() {
                 </motion.div>
               )})}
               
+              {!isLive && messages.length === 1 && !userName && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex justify-start mt-4"
+                >
+                  <div className="max-w-[95%] md:max-w-[85%] p-4 sm:p-5 rounded-2xl bg-white border border-sky-100 shadow-sm text-gray-800">
+                    <div className="flex items-center gap-2 mb-3 text-sky-600">
+                      <Bot size={20} />
+                      <h3 className="font-medium">{uiLang === 'hi' ? 'अपने सहायक का नाम रखें' : 'Name Your Assistant'}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      {uiLang === 'hi' ? 'आप मुझे क्या बुलाना चाहेंगे? आप अपने AI सहायक के लिए एक कस्टम नाम सेट कर सकते हैं। आप अपना नाम भी आजमा सकते हैं।' : 'What would you like to call me? You can set a custom name for your AI assistant. You can also try your own name.'}
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={setupName}
+                        onChange={(e) => setSetupName(e.target.value)}
+                        placeholder={t.userNamePlaceholder}
+                        className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-400 transition-colors"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && setupName.trim()) {
+                            setUserName(setupName.trim());
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (setupName.trim()) {
+                            setUserName(setupName.trim());
+                          } else {
+                            setUserName(uiLang === 'hi' ? 'नारद' : 'Nard');
+                          }
+                        }}
+                        className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        {setupName.trim() ? (uiLang === 'hi' ? 'सुरक्षित करें' : 'Save') : (uiLang === 'hi' ? 'डिफ़ॉल्ट नाम सेव करें' : 'Save Default Name')}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {messages.length === 1 && !isLive && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -4879,7 +4929,7 @@ export default function App() {
                 >
                   <div className="p-2 flex items-center gap-3">
                     <Loader2 size={18} className="animate-spin text-yellow-500" />
-                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{t.title}</span> {t.thinking}</span>
+                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {t.thinking}</span>
                   </div>
                 </motion.div>
               )}
@@ -5045,7 +5095,9 @@ export default function App() {
                     >
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
                       <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
-                        {isModelSpeaking ? t.speaking : t.listening}
+                        {isModelSpeaking 
+                          ? t.speaking.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName) 
+                          : t.listening.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName)}
                       </span>
                     </motion.div>
 
