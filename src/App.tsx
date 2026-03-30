@@ -14,6 +14,8 @@ const isQuotaError = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
   return lowerMsg.includes('quota') || 
          lowerMsg.includes('429') || 
+         lowerMsg.includes('503') ||
+         lowerMsg.includes('service unavailable') ||
          lowerMsg.includes('resource_exhausted') ||
          lowerMsg.includes('limit') ||
          lowerMsg.includes('exceeded') ||
@@ -3155,18 +3157,46 @@ export default function App() {
               if (!ai) {
                 throw new Error("AI service not initialized. Please set your API Key in Settings.");
               }
-              const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text: textToSpeak }] }],
-                config: {
-                  responseModalities: [Modality.AUDIO],
-                  speechConfig: {
-                    voiceConfig: {
-                      prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current },
+              let response;
+              let retries = 0;
+              const maxRetries = 2;
+              
+              while (retries <= maxRetries) {
+                try {
+                  response = await ai.models.generateContent({
+                    model: "gemini-2.5-flash-preview-tts",
+                    contents: [{ parts: [{ text: textToSpeak }] }],
+                    config: {
+                      responseModalities: [Modality.AUDIO],
+                      speechConfig: {
+                        voiceConfig: {
+                          prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current },
+                        },
+                      },
                     },
-                  },
-                },
-              });
+                  });
+                  break;
+                } catch (e: any) {
+                  const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
+                  const isRetryable = errStr.includes('503') || 
+                                      errStr.toLowerCase().includes('service unavailable') || 
+                                      errStr.toLowerCase().includes('busy') || 
+                                      errStr.toLowerCase().includes('traffic') ||
+                                      errStr.toLowerCase().includes('deadline_exceeded');
+                  
+                  if (isRetryable && retries < maxRetries) {
+                    retries++;
+                    const delay = Math.pow(2, retries) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    if (playingMessageIdRef.current !== messageId) return;
+                    continue;
+                  }
+                  throw e;
+                }
+              }
+
+              if (!response) throw new Error("No response from TTS service");
+
               const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
               if (rawAudio) {
                 const wavBase64 = createWavFromPcmBase64(rawAudio);
@@ -3175,13 +3205,15 @@ export default function App() {
               }
             } catch (e: any) {
               const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-              const isQuotaError = errStr.toLowerCase().includes('429') || 
-                                   errStr.toLowerCase().includes('quota') || 
-                                   errStr.includes('RESOURCE_EXHAUSTED') ||
-                                   errStr.toLowerCase().includes('limit') ||
-                                   errStr.toLowerCase().includes('exceeded');
+              const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                                 errStr.toLowerCase().includes('503') ||
+                                 errStr.toLowerCase().includes('service unavailable') ||
+                                 errStr.toLowerCase().includes('quota') || 
+                                 errStr.includes('RESOURCE_EXHAUSTED') ||
+                                 errStr.toLowerCase().includes('limit') ||
+                                 errStr.toLowerCase().includes('exceeded');
               
-              if (isQuotaError) {
+              if (isQuotaErr) {
                 console.warn("Premium voice quota exceeded, falling back to standard TTS.");
                 setError(t.premiumQuotaExceeded);
                 // Disable premium voice for 5 minutes
@@ -3582,11 +3614,46 @@ export default function App() {
         config.systemInstruction = systemInstruction;
       }
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: contents,
-        config: config
-      });
+      let response;
+      let retries = 0;
+      const maxRetries = 2;
+      
+      while (retries <= maxRetries) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: contents,
+            config: config
+          });
+          break;
+        } catch (e: any) {
+          if (abortController.signal.aborted) return;
+          
+          const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
+          const isRetryable = errStr.includes('503') || 
+                              errStr.toLowerCase().includes('service unavailable') || 
+                              errStr.toLowerCase().includes('busy') || 
+                              errStr.toLowerCase().includes('traffic') ||
+                              errStr.toLowerCase().includes('deadline_exceeded');
+          
+          if (isRetryable && retries < maxRetries) {
+            retries++;
+            const delay = Math.pow(2, retries) * 1000;
+            await new Promise(resolve => {
+              const timeout = setTimeout(resolve, delay);
+              abortController.signal.addEventListener('abort', () => {
+                clearTimeout(timeout);
+                resolve(null);
+              }, { once: true });
+            });
+            if (abortController.signal.aborted) return;
+            continue;
+          }
+          throw e;
+        }
+      }
+      
+      if (!response) return;
       
       if (abortController.signal.aborted) {
         return;
@@ -3612,7 +3679,9 @@ export default function App() {
         return;
       }
       const errStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
-      const isQuotaError = errStr.toLowerCase().includes('429') || 
+      const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                           errStr.toLowerCase().includes('503') ||
+                           errStr.toLowerCase().includes('service unavailable') ||
                            errStr.toLowerCase().includes('quota') || 
                            errStr.includes('RESOURCE_EXHAUSTED') ||
                            errStr.toLowerCase().includes('limit') ||
@@ -3620,7 +3689,7 @@ export default function App() {
                            errStr.toLowerCase().includes('safety') ||
                            errStr.toLowerCase().includes('blocked');
       
-      if (isQuotaError) {
+      if (isQuotaErr) {
         const quotaMsg = t.errorTraffic || "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later.";
         const errorId = newMsgId + '-error';
         setMessages(prev => [...prev, { id: errorId, role: 'model', text: quotaMsg }]);
@@ -4119,12 +4188,14 @@ export default function App() {
     } catch (e: any) {
       console.warn("Live Audio Error:", e);
       const errStr = typeof e === 'string' ? e : JSON.stringify(e);
-      const isQuotaError = errStr.toLowerCase().includes('429') || 
+      const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                           errStr.toLowerCase().includes('503') ||
+                           errStr.toLowerCase().includes('service unavailable') ||
                            errStr.toLowerCase().includes('quota') || 
                            errStr.includes('RESOURCE_EXHAUSTED') ||
                            errStr.toLowerCase().includes('limit') ||
                            errStr.toLowerCase().includes('exceeded');
-      if (isQuotaError) {
+      if (isQuotaErr) {
         setError(t.errorTraffic);
       } else {
         setError(t.errorTech);
