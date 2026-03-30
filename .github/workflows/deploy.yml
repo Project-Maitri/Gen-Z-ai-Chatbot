@@ -19,10 +19,9 @@ jobs:
         run: npm run build
         env:
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-          VITE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: dist # अब यह 'dist' फ़ोल्डर को सही से ढूँढ लेगा
   deploy:
     needs: build
     runs-on: ubuntu-latest
