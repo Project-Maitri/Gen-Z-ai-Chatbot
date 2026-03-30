@@ -2867,6 +2867,7 @@ export default function App() {
 
   // Live API Refs
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
+  const isSessionActiveRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -3836,9 +3837,17 @@ export default function App() {
             
             setLatestFrame(base64DataUrl);
             
-            sessionPromiseRef.current.then(s => {
-              s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
-            });
+            if (sessionPromiseRef.current && isSessionActiveRef.current) {
+              sessionPromiseRef.current.then(s => {
+                try {
+                  if (s && isSessionActiveRef.current) {
+                    s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
+                  }
+                } catch (e) {
+                  console.warn("Failed to send video frame:", e);
+                }
+              }).catch(() => {});
+            }
           } catch (err) {
             console.warn("Screen Capture error:", err);
           }
@@ -3871,9 +3880,17 @@ export default function App() {
             
             setLatestFrame(base64DataUrl);
             
-            sessionPromiseRef.current.then(s => {
-              s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
-            });
+            if (sessionPromiseRef.current && isSessionActiveRef.current) {
+              sessionPromiseRef.current.then(s => {
+                try {
+                  if (s && isSessionActiveRef.current) {
+                    s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
+                  }
+                } catch (e) {
+                  console.warn("Failed to send video frame:", e);
+                }
+              }).catch(() => {});
+            }
           } catch (err) {
             console.warn("DOM Capture error:", err);
           }
@@ -3988,10 +4005,16 @@ export default function App() {
         }
         const base64 = btoa(binary);
         
-        if (sessionPromiseRef.current && !isMicMutedRef.current) {
+        if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
           sessionPromiseRef.current.then(s => {
-             s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
-          });
+            try {
+              if (s && isSessionActiveRef.current) {
+                s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
+              }
+            } catch (err) {
+              console.warn("Failed to send audio input:", err);
+            }
+          }).catch(() => {});
         }
       };
       
@@ -4026,11 +4049,18 @@ export default function App() {
         callbacks: {
           onopen: () => {
              console.log("Live API connected");
+             isSessionActiveRef.current = true;
              nextAudioTimeRef.current = 0;
              if (sessionPromiseRef.current) {
                sessionPromiseRef.current.then(s => {
-                 s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${t.initialMessage}'` });
-               });
+                 try {
+                   if (s && isSessionActiveRef.current) {
+                     s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${t.initialMessage}'` });
+                   }
+                 } catch (e) {
+                   console.warn("Failed to send initial message:", e);
+                 }
+               }).catch(() => {});
              }
           },
           onmessage: async (message: LiveServerMessage) => {
@@ -4079,6 +4109,7 @@ export default function App() {
           },
           onclose: () => {
              console.log("Live API closed");
+             isSessionActiveRef.current = false;
              stopLiveAudio();
           }
         }
@@ -4157,6 +4188,7 @@ export default function App() {
   };
 
   const stopLiveAudio = () => {
+    isSessionActiveRef.current = false;
     stopScreenShare();
     activeAudioSourcesRef.current.forEach(source => {
       try { source.stop(); } catch (e) {}
