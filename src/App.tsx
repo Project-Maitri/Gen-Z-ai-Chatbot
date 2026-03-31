@@ -151,7 +151,13 @@ const initAI = (key: string | null) => {
 };
 
 const getApiKey = () => {
-  return process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  const key = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  if (!key) {
+    console.warn("Gemini API Key is missing in environment variables.");
+  } else {
+    console.log("Gemini API Key found (length: " + key.length + ")");
+  }
+  return key;
 };
 
 // Safe localStorage helper to prevent crashes in iframes with blocked third-party cookies
@@ -4198,6 +4204,9 @@ export default function App() {
     liveTranscriptRef.current = [];
 
     try {
+      const apiKey = getApiKey();
+      console.log("Starting Live Audio session with API Key status:", apiKey ? "Present" : "Missing");
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { 
           echoCancellation: true,
@@ -4256,6 +4265,7 @@ export default function App() {
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
+      source.connect(analyser);
       analyser.connect(audioCtx.destination);
       analyserRef.current = analyser;
       
@@ -4416,12 +4426,13 @@ export default function App() {
         },
         callbacks: {
           onopen: () => {
-             console.log("Live API connected");
+             console.log("Live API connected successfully. Session active.");
              isSessionActiveRef.current = true;
              nextAudioTimeRef.current = 0;
              // Add a small delay before sending the initial message to ensure the connection is fully stable
              setTimeout(() => {
                if (sessionPromiseRef.current && isSessionActiveRef.current) {
+                 console.log("Sending initial Live API message...");
                  sessionPromiseRef.current.then(s => {
                    try {
                      if (s && isSessionActiveRef.current) {
@@ -4430,17 +4441,22 @@ export default function App() {
                        } else {
                          s.sendRealtimeInput({ text: `Hello, I'm back. Let's continue.` });
                        }
+                       console.log("Initial message sent to Live API.");
                      }
                    } catch (e) {
                      console.warn("Failed to send initial message:", e);
                    }
-                 }).catch(() => {});
+                 }).catch((err) => {
+                   console.error("Session promise rejected during initial message:", err);
+                 });
+               } else {
+                 console.warn("Session no longer active when trying to send initial message.");
                }
              }, 500);
           },
           onmessage: async (message: LiveServerMessage) => {
              if (message.serverContent) {
-               console.log("Live API message received:", message);
+               // console.log("Live API message received:", message);
              }
              if (message.serverContent?.interrupted) {
                nextAudioTimeRef.current = 0;
@@ -4486,12 +4502,21 @@ export default function App() {
              }
           },
           onclose: (event?: any) => {
-             console.log("Live API closed", event);
+             console.log("Live API connection closed.", {
+               wasClean: event?.wasClean,
+               code: event?.code,
+               reason: event?.reason,
+               event: event
+             });
              isSessionActiveRef.current = false;
              stopLiveAudio();
           },
           onerror: (err: any) => {
-             console.warn("Live API error details:", err);
+             console.error("Live API critical error:", {
+               message: err?.message,
+               stack: err?.stack,
+               error: err
+             });
              isSessionActiveRef.current = false;
              stopLiveAudio();
           }
