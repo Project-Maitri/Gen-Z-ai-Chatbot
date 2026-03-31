@@ -6,6 +6,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,13 +16,17 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      
       - name: Build
         run: npm run build
         env:
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist # अब यह 'dist' फ़ोल्डर को सही से ढूँढ लेगा
+          path: dist
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
