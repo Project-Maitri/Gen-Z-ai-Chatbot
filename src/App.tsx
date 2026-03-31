@@ -10,7 +10,7 @@ import html2canvas from 'html2canvas';
 // We define this at the top level to catch errors as early as possible
 let globalSetError: ((msg: string | null) => void) | null = null;
 
-const isQuotaError = (msg: string) => {
+const isSuppressedError = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
   return lowerMsg.includes('quota') || 
          lowerMsg.includes('429') || 
@@ -26,7 +26,8 @@ const isQuotaError = (msg: string) => {
          lowerMsg.includes('model output error') ||
          lowerMsg.includes('token limit') ||
          lowerMsg.includes('traffic') ||
-         lowerMsg.includes('busy');
+         lowerMsg.includes('busy') ||
+         lowerMsg.includes('ethereum');
 };
 
 const originalConsoleError = console.error;
@@ -40,8 +41,8 @@ console.error = (...args: any[]) => {
     }
   }).join(' ');
 
-  if (isQuotaError(msg)) {
-    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+  if (isSuppressedError(msg)) {
+    if (globalSetError && !msg.includes('ethereum')) globalSetError("Traffic limit exceeded. Please try again later.");
     return; // Suppress the actual console output
   }
   originalConsoleError.apply(console, args);
@@ -50,8 +51,8 @@ console.error = (...args: any[]) => {
 const originalOnError = window.onerror;
 window.onerror = (msg, url, line, col, error) => {
   const errorMsg = String(msg);
-  if (isQuotaError(errorMsg)) {
-    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+  if (isSuppressedError(errorMsg)) {
+    if (globalSetError && !errorMsg.includes('ethereum')) globalSetError("Traffic limit exceeded. Please try again later.");
     return true; // Suppress
   }
   if (originalOnError) {
@@ -62,18 +63,18 @@ window.onerror = (msg, url, line, col, error) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = (event.reason?.message || String(event.reason));
-  if (isQuotaError(reason)) {
+  if (isSuppressedError(reason)) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+    if (globalSetError && !reason.includes('ethereum')) globalSetError("Traffic limit exceeded. Please try again later.");
   }
 }, true);
 
 window.addEventListener('error', (event) => {
-  if (isQuotaError(event.message)) {
+  if (isSuppressedError(event.message)) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (globalSetError) globalSetError("Traffic limit exceeded. Please try again later.");
+    if (globalSetError && !event.message.includes('ethereum')) globalSetError("Traffic limit exceeded. Please try again later.");
   }
 }, true);
 
@@ -330,7 +331,7 @@ type SavedChat = {
 
 const translations: Record<string, any> = {
   en: {
-    title: "Gen-Z",
+    title: "Nard",
     subtitle: "AI Messenger, E-MAITRI.",
     you: "You",
     copy: "Copy",
@@ -339,8 +340,8 @@ const translations: Record<string, any> = {
     stop: "Stop",
     back: "Back",
     listenAgain: "Listen again",
-    speaking: "Gen-Z is speaking...",
-    listening: "Gen-Z is listening...",
+    speaking: "Nard is speaking...",
+    listening: "Nard is listening...",
     thinking: "is thinking...",
     liveChatOn: "Live Voice Chat is on: Please speak",
     stopVoiceChat: "Stop Voice Chat",
@@ -349,7 +350,7 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "Stop Voice Typing",
     speechNotSupported: "Speech recognition is not supported in this browser.",
     liveChat: "Live Chat",
-    typeMessage: "Type a message or use the mic! Talk directly to Gen-Z using the last voice chat button!",
+    typeMessage: "Type a message or use the mic! Talk directly to Nard using the last voice chat button!",
     typeMessages: [
       "Type your message here",
       "Send message by speaking into the mic",
@@ -369,6 +370,7 @@ const translations: Record<string, any> = {
     q3: "How does Booth Management work?",
     q4: "What is Family Alliance Movement?",
     initialMessage: "Hello Gen-Z! Welcome to the E-Maitri portal! Tell me friend, how can I help you? What information do you need?",
+    initialMessageWithName: "Hello Gen-Z!🙏 I am {botName}! Welcome to the E-Maitri portal!✨ How can I help you! What information do you need?👋",
     errorTraffic: "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later.",
     errorTech: "Sorry, a technical issue occurred. Please try again.",
     premiumQuotaExceeded: "Premium voice quota exceeded. Falling back to standard voice.",
@@ -407,11 +409,13 @@ const translations: Record<string, any> = {
     fenrirDesc: "Fenrir (Strong, Authoritative Male)",
     charonDesc: "Charon (Calm, Measured Male)",
     puckDesc: "Puck (Friendly, Energetic Male)",
+    koreDesc: "Kore (Calm, Measured Female)",
+    zephyrDesc: "Zephyr (Strong, Authoritative Female)",
     errorMicPermission: "Microphone permission denied. Please enable it in your browser settings.",
     errorMicNotFound: "No microphone found. Please connect a microphone and try again."
   },
   hi: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई मैसेंजर, ई-मैत्री.",
     you: "आप",
     copy: "कॉपी करें",
@@ -420,8 +424,8 @@ const translations: Record<string, any> = {
     stop: "रोकें",
     back: "वापस",
     listenAgain: "फिर से सुनें",
-    speaking: "जेन-जी बोल रहे हैं...",
-    listening: "जेन-जी सुन रहे हैं...",
+    speaking: "नॉर्ड बोल रहे हैं...",
+    listening: "नॉर्ड सुन रहे हैं...",
     thinking: "सोच रहे हैं...",
     liveChatOn: "लाइव वॉइस चैट चालू है: कृपया बोलें",
     stopVoiceChat: "वॉइस चैट बंद करें",
@@ -430,7 +434,7 @@ const translations: Record<string, any> = {
     stopVoiceTyping: "बोलना बंद करें",
     speechNotSupported: "आपके ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नहीं है।",
     liveChat: "लाइव चैट",
-    typeMessage: "संदेश टाइप करें या माइक से बोलकर टाइप करें! आप आखिरी वाइस चैट बटन से जेन-जी से सीधी बातचीत करें!",
+    typeMessage: "संदेश टाइप करें या माइक से बोलकर टाइप करें! आप आखिरी वाइस चैट बटन से नॉर्ड से सीधी बातचीत करें!",
     typeMessages: [
       "यहां अपना संदेश टाइप करें",
       "माइक से बोलकर संदेश भेजें",
@@ -450,6 +454,7 @@ const translations: Record<string, any> = {
     q3: "बूथ प्रबंधन कैसे काम करता है?",
     q4: "पारिवारिक गठबंधन आंदोलन क्या है?",
     initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टल में आपका स्वागत है! बताइए मित्र मैं आपको किस तरह से सहयोग कर सकता हूं? आपको क्या जानकारी चाहिए?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 मैं {botName} हूं! ई-मैत्री पोर्टल में आपका स्वागत है!✨ मैं आपको किस तरह से सहयोग कर सकता हूं! आपको क्या जानकारी चाहिए?👋",
     errorTraffic: "क्षमा करें, अभी अधिक ट्रैफिक है या कोटा समाप्त हो गया है। कृपया कुछ समय बाद पुनः प्रयास करें।",
     errorTech: "क्षमा करें, एक तकनीकी त्रुटि हुई। कृपया पुनः प्रयास करें।",
     premiumQuotaExceeded: "प्रीमियम वॉइस कोटा समाप्त हो गया है। मानक वॉइस पर स्विच किया जा रहा है।",
@@ -488,11 +493,13 @@ const translations: Record<string, any> = {
     fenrirDesc: "फेनरिर (मजबूत, आधिकारिक पुरुष)",
     charonDesc: "कैरन (शांत, नपा-तुला पुरुष)",
     puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)",
+    koreDesc: "कोरे (शांत, नपा-तुला महिला)",
+    zephyrDesc: "ज़ेफिर (मजबूत, आधिकारिक महिला)",
     errorMicPermission: "माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया अपने ब्राउज़र सेटिंग्स में इसे सक्षम करें।",
     errorMicNotFound: "कोई माइक्रोफ़ोन नहीं मिला। कृपया माइक्रोफ़ोन कनेक्ट करें और पुनः प्रयास करें।"
   },
   bho: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई मैसेंजर, ई-मैत्री.",
     you: "रउआ",
     copy: "कॉपी करीं",
@@ -501,8 +508,8 @@ const translations: Record<string, any> = {
     stop: "रोकीं",
     back: "पाछे",
     listenAgain: "फेरु से सुनीं",
-    speaking: "जेन-जी बोल रहल बाड़े...",
-    listening: "जेन-जी सुन रहल बाड़े...",
+    speaking: "नॉर्ड बोल रहल बाड़े...",
+    listening: "नॉर्ड सुन रहल बाड़े...",
     thinking: "सोच रहल बाड़े...",
     liveChatOn: "लाइव वॉइस चैट चालू बा: कृपया बोलीं",
     stopVoiceChat: "वॉइस चैट बंद करीं",
@@ -530,7 +537,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय संरचना के समझाईं।",
     q3: "बूथ मैनेजमेंट कइसे काम करेला?",
     q4: "पारिवारिक गठबंधन आंदोलन का ह?",
-    initialMessage: "हम जेन-जी हईं! ई-मैत्री पोर्टल में रउआ सभे के स्वागत बा! बताईं दोस्त, हम रउआ के कइसे मदद कर सकीले? रउआ के का जानकारी चाहीं?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टल में रउआ सभे के स्वागत बा! बताईं दोस्त, हम रउआ के कइसे मदद कर सकीले? रउआ के का जानकारी चाहीं?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 हम {botName} हईं! ई-मैत्री पोर्टल में रउआ सभे के स्वागत बा!✨ बताईं, हम रउआ के कइसे मदद कर सकीले! रउआ के का जानकारी चाहीं?👋",
     errorTraffic: "माफ करीं, अभी बहुत ट्रैफिक बा या कोटा खतम हो गइल बा। कृपया कुछ देर बाद फेरु से कोशिश करीं।",
     errorTech: "माफ करीं, एगो तकनीकी दिक्कत आ गइल बा। कृपया फेरु से कोशिश करीं।",
     premiumQuotaExceeded: "प्रीमियम वॉइस कोटा खतम हो गइल बा। स्टैंडर्ड वॉइस पर स्विच हो रहल बा।",
@@ -571,7 +579,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)"
   },
   bn: {
-    title: "জেন-জি",
+    title: "নর্ড",
     subtitle: "এআই মেসেঞ্জার, ই-মৈত্রী.",
     you: "আপনি",
     copy: "কপি করুন",
@@ -580,8 +588,8 @@ const translations: Record<string, any> = {
     stop: "থামান",
     back: "ফিরে যান",
     listenAgain: "আবার শুনুন",
-    speaking: "জেন-জি কথা বলছে...",
-    listening: "জেন-জি শুনছে...",
+    speaking: "নর্ড কথা বলছে...",
+    listening: "নর্ড শুনছে...",
     thinking: "চিন্তা করছে...",
     liveChatOn: "লাইভ ভয়েস চ্যাট চালু আছে: দয়া করে কথা বলুন",
     stopVoiceChat: "ভয়েস চ্যাট বন্ধ করুন",
@@ -608,7 +616,8 @@ const translations: Record<string, any> = {
     q2: "ত্রি-স্তরীয় কাঠামো ব্যাখ্যা করুন।",
     q3: "বুথ ম্যানেজমেন্ট কিভাবে কাজ করে?",
     q4: "ফ্যামিলি অ্যালায়েন্স মুভমেন্ট কি?",
-    initialMessage: "আমি জেন-জি! ই-মৈত্রী পোর্টালে আপনাকে স্বাগতম! বলুন বন্ধু, আমি আপনাকে কীভাবে সাহায্য করতে পারি? আপনার কী তথ্য দরকার?",
+    initialMessage: "নমস্কার জেন-জি! ই-মৈত্রী পোর্টালে আপনাকে স্বাগতম! বলুন বন্ধু, আমি আপনাকে কীভাবে সাহায্য করতে পারি? আপনার কী তথ্য দরকার?",
+    initialMessageWithName: "নমস্কার জেন-জি!🙏 আমি {botName}! ই-মৈত্রী পোর্টালে আপনাকে স্বাগতম!✨ আমি আপনাকে কীভাবে সাহায্য করতে পারি! আপনার কী তথ্য দরকার?👋",
     errorTraffic: "দুঃখিত, এই মুহূর্তে খুব বেশি ট্রাফিক আছে অথবা কোটা শেষ হয়ে গেছে। দয়া করে কিছুক্ষণ পরে আবার চেষ্টা করুন।",
     errorTech: "দুঃখিত, একটি প্রযুক্তিগত সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।",
     premiumQuotaExceeded: "প্রিমিয়াম ভয়েস কোটা শেষ হয়ে গেছে। স্ট্যান্ডার্ড ভয়েসে ফিরে যাচ্ছে।",
@@ -649,7 +658,7 @@ const translations: Record<string, any> = {
     puckDesc: "পাক (বন্ধুত্বপূর্ণ, উদ্যমী পুরুষ)"
   },
   ta: {
-    title: "ஜென்-ஜி",
+    title: "நார்ட்",
     subtitle: "AI மெசஞ்சர், இ-மைத்ரி.",
     you: "நீங்கள்",
     copy: "நகலெடு",
@@ -658,8 +667,8 @@ const translations: Record<string, any> = {
     stop: "நிறுத்து",
     back: "பின்னால்",
     listenAgain: "மீண்டும் கேட்க",
-    speaking: "ஜென்-ஜி பேசுகிறார்...",
-    listening: "ஜென்-ஜி கேட்கிறார்...",
+    speaking: "நார்ட் பேசுகிறார்...",
+    listening: "நார்ட் கேட்கிறார்...",
     thinking: "யோசிக்கிறார்...",
     liveChatOn: "நேரலை குரல் அரட்டை இயக்கத்தில் உள்ளது: தயவுசெய்து பேசவும்",
     stopVoiceChat: "குரல் அரட்டையை நிறுத்து",
@@ -686,7 +695,8 @@ const translations: Record<string, any> = {
     q2: "மூன்று அடுக்கு கட்டமைப்பை விளக்குங்கள்.",
     q3: "பூத் மேலாண்மை எவ்வாறு செயல்படுகிறது?",
     q4: "குடும்ப கூட்டணி இயக்கம் என்றால் என்ன?",
-    initialMessage: "நான் ஜென்-ஜி! இ-மைத்ரி போர்ட்டலுக்கு உங்களை வரவேற்கிறேன்! சொல்லுங்கள் நண்பரே, நான் உங்களுக்கு எப்படி உதவ முடியும்? உங்களுக்கு என்ன தகவல் வேண்டும்?",
+    initialMessage: "வணக்கம் ஜென்-ஜி! இ-மைத்ரி போர்ட்டலுக்கு உங்களை வரவேற்கிறேன்! சொல்லுங்கள் நண்பரே, நான் உங்களுக்கு எப்படி உதவ முடியும்? உங்களுக்கு என்ன தகவல் வேண்டும்?",
+    initialMessageWithName: "வணக்கம் ஜென்-ஜி!🙏 நான் {botName}! இ-மைத்ரி போர்ட்டலுக்கு உங்களை வரவேற்கிறேன்!✨ நான் உங்களுக்கு எப்படி உதவ முடியும்! உங்களுக்கு என்ன தகவல் வேண்டும்?👋",
     errorTraffic: "மன்னிக்கவும், தற்போது அதிக போக்குவரத்து உள்ளது அல்லது ஒதுக்கீடு தீர்ந்துவிட்டது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.",
     errorTech: "மன்னிக்கவும், ஒரு தொழில்நுட்ப சிக்கல் ஏற்பட்டது. மீண்டும் முயற்சிக்கவும்.",
     premiumQuotaExceeded: "பிரீமியம் குரல் ஒதுக்கீடு முடிந்தது. நிலையான குரலுக்கு மாறுகிறது.",
@@ -727,7 +737,7 @@ const translations: Record<string, any> = {
     puckDesc: "பக் (நட்பான, ஆற்றல்மிக்க ஆண்)"
   },
   te: {
-    title: "జెన్-జి",
+    title: "నార్డ్",
     subtitle: "ఏఐ మెసెంజర్, ఇ-మైత్రి.",
     you: "మీరు",
     copy: "కాపీ చేయండి",
@@ -736,8 +746,8 @@ const translations: Record<string, any> = {
     stop: "ఆపండి",
     back: "వెనుకకు",
     listenAgain: "మళ్ళీ వినండి",
-    speaking: "జెన్-జి మాట్లాడుతున్నారు...",
-    listening: "జెన్-జి వింటున్నారు...",
+    speaking: "నార్డ్ మాట్లాడుతున్నారు...",
+    listening: "నార్డ్ వింటున్నారు...",
     thinking: "ఆలోచిస్తున్నారు...",
     liveChatOn: "లైవ్ వాయిస్ చాట్ ఆన్‌లో ఉంది: దయచేసి మాట్లాడండి",
     stopVoiceChat: "వాయిస్ చాట్‌ను ఆపండి",
@@ -764,7 +774,8 @@ const translations: Record<string, any> = {
     q2: "మూడు అంచెల నిర్మాణాన్ని వివరించండి.",
     q3: "బూత్ మేనేజ్‌మెంట్ ఎలా పనిచేస్తుంది?",
     q4: "కుటుంబ కూటమి ఉద్యమం అంటే ఏమిటి?",
-    initialMessage: "నేను జెన్-జి! ఇ-మైత్రి పోర్టల్‌కు స్వాగతం! చెప్పండి మిత్రమా, నేను మీకు ఎలా సహాయం చేయగలను? మీకు ఏ సమాచారం కావాలి?",
+    initialMessage: "నమస్తే జెన్-జి! ఇ-మైత్రి పోర్టల్‌కు స్వాగతం! చెప్పండి మిత్రమా, నేను మీకు ఎలా సహాయం చేయగలను? మీకు ఏ సమాచారం కావాలి?",
+    initialMessageWithName: "నమస్తే జెన్-జి!🙏 నేను {botName}! ఇ-మైత్రి పోర్టల్‌కు స్వాగతం!✨ నేను మీకు ఎలా సహాయం చేయగలను! మీకు ఏ సమాచారం కావాలి?👋",
     errorTraffic: "క్షమించండి, ప్రస్తుతం ట్రాఫిక్ ఎక్కువగా ఉంది లేదా కోటా ముగిసింది. దయచేసి కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
     errorTech: "క్షమించండి, సాంకేతిక సమస్య ఏర్పడింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
     premiumQuotaExceeded: "ప్రీమియం వాయిస్ కోటా ముగిసింది. ప్రామాణిక వాయిస్‌కి మారుతోంది.",
@@ -805,7 +816,7 @@ const translations: Record<string, any> = {
     puckDesc: "పక్ (స్నేహపూర్వక, శక్తివంతమైన పురుషుడు)"
   },
   mr: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआय मेसेंजर, ई-मैत्री.",
     you: "तुम्ही",
     copy: "कॉपी करा",
@@ -814,8 +825,8 @@ const translations: Record<string, any> = {
     stop: "थांबवा",
     back: "मागे",
     listenAgain: "पुन्हा ऐका",
-    speaking: "जेन-जी बोलत आहेत...",
-    listening: "जेन-जी ऐकत आहेत...",
+    speaking: "नॉर्ड बोलत आहेत...",
+    listening: "नॉर्ड ऐकत आहेत...",
     thinking: "विचार करत आहेत...",
     liveChatOn: "लाइव्ह व्हॉइस चॅट चालू आहे: कृपया बोला",
     stopVoiceChat: "व्हॉइस चॅट थांबवा",
@@ -842,7 +853,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय रचना स्पष्ट करा.",
     q3: "बूथ व्यवस्थापन कसे काम करते?",
     q4: "कौटुंबिक आघाडी चळवळ म्हणजे काय?",
-    initialMessage: "मी जेन-जी आहे! ई-मैत्री पोर्टलवर आपले स्वागत आहे! सांगा मित्रा, मी तुम्हाला कशी मदत करू शकतो? तुम्हाला कोणती माहिती हवी आहे?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टलवर आपले स्वागत आहे! सांगा मित्रा, मी तुम्हाला कशी मदत करू शकतो? तुम्हाला कोणती माहिती हवी आहे?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 मी {botName} आहे! ई-मैत्री पोर्टलवर आपले स्वागत आहे!✨ मी तुम्हाला कशी मदत करू शकतो! तुम्हाला कोणती माहिती हवी आहे?👋",
     errorTraffic: "क्षमस्व, सध्या खूप ट्रॅफिक आहे किंवा कोटा संपला आहे. कृपया काही वेळानंतर पुन्हा प्रयत्न करा.",
     errorTech: "क्षमस्व, एक तांत्रिक समस्या आली. कृपया पुन्हा प्रयत्न करा.",
     premiumQuotaExceeded: "प्रीमियम व्हॉइस कोटा संपला आहे. मानक व्हॉइसवर स्विच करत आहे.",
@@ -920,7 +932,8 @@ const translations: Record<string, any> = {
     q2: "ત્રિ-સ્તરીય માળખું સમજાવો.",
     q3: "બૂથ મેનેજમેન્ટ કેવી રીતે કામ કરે છે?",
     q4: "કૌટુંબિક જોડાણ ચળવળ શું છે?",
-    initialMessage: "હું જેન-જી છું! ઈ-મૈત્રી પોર્ટલમાં તમારું સ્વાગત છે! કહો મિત્ર, હું તમને કેવી રીતે મદદ કરી શકું? તમારે કઈ માહિતી જોઈએ છે?",
+    initialMessage: "નમસ્તે જેન-જી! ઈ-મૈત્રી પોર્ટલમાં તમારું સ્વાગત છે! કહો મિત્ર, હું તમને કેવી રીતે મદદ કરી શકું? તમારે કઈ માહિતી જોઈએ છે?",
+    initialMessageWithName: "નમસ્તે જેન-જી!🙏 હું {botName} છું! ઈ-મૈત્રી પોર્ટલમાં તમારું સ્વાગત છે!✨ હું તમને કેવી રીતે મદદ કરી શકું! તમારે કઈ માહિતી જોઈએ છે?👋",
     errorTraffic: "માફ કરશો, અત્યારે ઘણો ટ્રાફિક છે અથવા ક્વોટા પૂરો થઈ ગયો છે. કૃપા કરીને થોડા સમય પછી ફરી પ્રયાસ કરો.",
     errorTech: "માફ કરશો, એક તકનીકી સમસ્યા આવી. કૃપા કરીને ફરી પ્રયાસ કરો.",
     premiumQuotaExceeded: "પ્રીમિયમ વૉઇસ ક્વોટા પૂરો થઈ ગયો છે. સ્ટાન્ડર્ડ વૉઇસ પર સ્વિચ કરી રહ્યાં છીએ.",
@@ -961,7 +974,7 @@ const translations: Record<string, any> = {
     puckDesc: "પક (મૈત્રીપૂર્ણ, મહેનતુ પુરુષ)"
   },
   kn: {
-    title: "ಜೆನ್-ಜಿ",
+    title: "ನಾರ್ಡ್",
     subtitle: "ಎಐ ಮೆಸೆಂಜರ್, ಇ-ಮೈತ್ರಿ.",
     you: "ನೀವು",
     copy: "ನಕಲಿಸಿ",
@@ -970,8 +983,8 @@ const translations: Record<string, any> = {
     stop: "ನಿಲ್ಲಿಸಿ",
     back: "ಹಿಂದೆ",
     listenAgain: "ಮತ್ತೆ ಆಲಿಸಿ",
-    speaking: "ಜೆನ್-ಜಿ ಮಾತನಾಡುತ್ತಿದ್ದಾರೆ...",
-    listening: "ಜೆನ್-ಜಿ ಆಲಿಸುತ್ತಿದ್ದಾರೆ...",
+    speaking: "ನಾರ್ಡ್ ಮಾತನಾಡುತ್ತಿದ್ದಾರೆ...",
+    listening: "ನಾರ್ಡ್ ಆಲಿಸುತ್ತಿದ್ದಾರೆ...",
     thinking: "ಯೋಚಿಸುತ್ತಿದ್ದಾರೆ...",
     liveChatOn: "ಲೈವ್ ವಾಯ್ಸ್ ಚಾಟ್ ಆನ್ ಆಗಿದೆ: ದಯವಿಟ್ಟು ಮಾತನಾಡಿ",
     stopVoiceChat: "ವಾಯ್ಸ್ ಚಾಟ್ ನಿಲ್ಲಿಸಿ",
@@ -999,7 +1012,8 @@ const translations: Record<string, any> = {
     q2: "ಮೂರು ಹಂತದ ರಚನೆಯನ್ನು ವಿವರಿಸಿ.",
     q3: "ಬೂತ್ ನಿರ್ವಹಣೆ ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ?",
     q4: "ಕುಟುಂಬ ಒಕ್ಕೂಟ ಚಳುವಳಿ ಎಂದರೇನು?",
-    initialMessage: "ನಾನು ಜೆನ್-ಜಿ! ಇ-ಮೈತ್ರಿ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ! ಹೇಳಿ ಸ್ನೇಹಿತರೆ, ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು? ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+    initialMessage: "ನಮಸ್ತೆ ಜೆನ್-ಜಿ! ಇ-ಮೈತ್ರಿ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ! ಹೇಳಿ ಸ್ನೇಹಿತರೆ, ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು? ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?",
+    initialMessageWithName: "ನಮಸ್ತೆ ಜೆನ್-ಜಿ!🙏 ನಾನು {botName}! ಇ-ಮೈತ್ರಿ ಪೋರ್ಟಲ್‌ಗೆ ಸುಸ್ವಾಗತ!✨ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು! ನಿಮಗೆ ಯಾವ ಮಾಹಿತಿ ಬೇಕು?👋",
     errorTraffic: "ಕ್ಷಮಿಸಿ, ಪ್ರಸ್ತುತ ಹೆಚ್ಚಿನ ಟ್ರಾಫಿಕ್ ಇದೆ ಅಥವಾ ಕೋಟಾ ಮುಗಿದಿದೆ. ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     errorTech: "ಕ್ಷಮಿಸಿ, ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಉಂಟಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     premiumQuotaExceeded: "ಪ್ರೀಮಿಯಂ ಧ್ವನಿ ಕೋಟಾ ಮುಗಿದಿದೆ. ಪ್ರಮಾಣಿತ ಧ್ವನಿಗೆ ಬದಲಾಯಿಸಲಾಗುತ್ತಿದೆ.",
@@ -1078,7 +1092,8 @@ const translations: Record<string, any> = {
     q2: "ത്രിതല ഘടന വിശദീകരിക്കുക.",
     q3: "ബൂത്ത് മാനേജ്മെന്റ് എങ്ങനെ പ്രവർത്തിക്കുന്നു?",
     q4: "കുടുംബ സഖ്യ പ്രസ്ഥാനം എന്നാൽ എന്ത്?",
-    initialMessage: "ഞാൻ ജെൻ-ജി! ഇ-മൈത്രി പോർട്ടലിലേക്ക് സ്വാഗതം! പറയൂ സുഹൃത്തേ, ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം? നിങ്ങൾക്ക് എന്ത് വിവരമാണ് വേണ്ടത്?",
+    initialMessage: "നമസ്കാരം ജെൻ-ജി! ഇ-മൈത്രി പോർട്ടലിലേക്ക് സ്വാഗതം! പറയൂ സുഹൃത്തേ, ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം? നിങ്ങൾക്ക് എന്ത് വിവരമാണ് വേണ്ടത്?",
+    initialMessageWithName: "നമസ്കാരം ജെൻ-ജി!🙏 ഞാൻ {botName} ആണ്! ഇ-മൈത്രി പോർട്ടലിലേക്ക് സ്വാഗതം!✨ ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം! നിങ്ങൾക്ക് എന്ത് വിവരമാണ് വേണ്ടത്?👋",
     errorTraffic: "ക്ഷമിക്കണം, ഇപ്പോൾ തിരക്ക് കൂടുതലാണ് അല്ലെങ്കിൽ ക്വാട്ട കഴിഞ്ഞു. ദയവായി കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.",
     errorTech: "ക്ഷമിക്കണം, ഒരു സാങ്കേതിക പ്രശ്നം ഉണ്ടായി. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
     premiumQuotaExceeded: "പ്രീമിയം വോയ്‌സ് ക്വാട്ട കഴിഞ്ഞു. സ്റ്റാൻഡേർഡ് വോയ്‌സിലേക്ക് മാറുന്നു.",
@@ -1119,7 +1134,7 @@ const translations: Record<string, any> = {
     puckDesc: "പക്ക് (സൗഹൃദമുള്ള, ഊർജ്ജസ്വലനായ പുരുഷൻ)"
   },
   or: {
-    title: "ଜେନ୍-ଜି",
+    title: "ନର୍ଡ",
     subtitle: "ଏଆଇ ମେସେଞ୍ଜର, ଇ-ମୈତ୍ରୀ.",
     you: "ଆପଣ",
     copy: "କପି କରନ୍ତୁ",
@@ -1128,8 +1143,8 @@ const translations: Record<string, any> = {
     stop: "ବନ୍ଦ କରନ୍ତୁ",
     back: "ପଛକୁ",
     listenAgain: "ପୁଣି ଶୁଣନ୍ତୁ",
-    speaking: "ଜେନ୍-ଜି କହୁଛନ୍ତି...",
-    listening: "ଜେନ୍-ଜି ଶୁଣୁଛନ୍ତି...",
+    speaking: "ନର୍ଡ କହୁଛନ୍ତି...",
+    listening: "ନର୍ଡ ଶୁଣୁଛନ୍ତି...",
     thinking: "ଭାବୁଛନ୍ତି...",
     liveChatOn: "ଲାଇଭ୍ ଭଏସ୍ ଚାଟ୍ ଅନ୍ ଅଛି: ଦୟାକରି କୁହନ୍ତୁ",
     stopVoiceChat: "ଭଏସ୍ ଚାଟ୍ ବନ୍ଦ କରନ୍ତୁ",
@@ -1157,7 +1172,8 @@ const translations: Record<string, any> = {
     q2: "ତ୍ରିସ୍ତରୀୟ ସଂରଚନା ବର୍ଣ୍ଣନା କରନ୍ତୁ।",
     q3: "ବୁଥ୍ ମ୍ୟାନେଜମେଣ୍ଟ କିପରି କାମ କରେ?",
     q4: "ପାରିବାରିକ ମେଣ୍ଟ ଆନ୍ଦୋଳନ କ'ଣ?",
-    initialMessage: "ମୁଁ ଜେନ୍-ଜି! ଇ-ମୈତ୍ରୀ ପୋର୍ଟାଲକୁ ସ୍ୱାଗତ! କୁହନ୍ତୁ ବନ୍ଧୁ, ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି? ଆପଣଙ୍କୁ କେଉଁ ସୂଚନା ଦରକାର?",
+    initialMessage: "ନମସ୍ତେ ଜେନ୍-ଜି! ଇ-ମୈତ୍ରୀ ପୋର୍ଟାଲକୁ ସ୍ୱାଗତ! କୁହନ୍ତୁ ବନ୍ଧୁ, ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି? ଆପଣଙ୍କୁ କେଉଁ ସୂଚନା ଦରକାର?",
+    initialMessageWithName: "ନମସ୍ତେ ଜେନ୍-ଜି!🙏 ମୁଁ {botName}! ଇ-ମୈତ୍ରୀ ପୋର୍ଟାଲକୁ ସ୍ୱାଗତ!✨ ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି! ଆପଣଙ୍କୁ କେଉଁ ସୂଚନା ଦରକାର?👋",
     errorTraffic: "କ୍ଷମା କରିବେ, ବର୍ତ୍ତମାନ ବହୁତ ଟ୍ରାଫିକ୍ ଅଛି କିମ୍ବା କୋଟା ସରିଯାଇଛି। ଦୟାକରି କିଛି ସମୟ ପରେ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
     errorTech: "କ୍ଷମା କରିବେ, ଏକ ବୈଷୟିକ ସମସ୍ୟା ଦେଖାଦେଇଛି। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
     premiumQuotaExceeded: "ପ୍ରିମିୟମ୍ ଭଏସ୍ କୋଟା ସରିଯାଇଛି। ଷ୍ଟାଣ୍ଡାର୍ଡ ଭଏସକୁ ଫେରୁଛି।",
@@ -1236,7 +1252,8 @@ const translations: Record<string, any> = {
     q2: "ਤਿੰਨ-ਪੱਧਰੀ ਢਾਂਚੇ ਦੀ ਵਿਆਖਿਆ ਕਰੋ।",
     q3: "ਬੂਥ ਪ੍ਰਬੰਧਨ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ?",
     q4: "ਪਰਿਵਾਰਕ ਗਠਜੋੜ ਅੰਦੋਲਨ ਕੀ ਹੈ?",
-    initialMessage: "ਮੈਂ ਜੇਨ-ਜੀ ਹਾਂ! ਈ-ਮੈਤਰੀ ਪੋਰਟਲ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ! ਦੱਸੋ ਦੋਸਤ, ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ? ਤੁਹਾਨੂੰ ਕਿਹੜੀ ਜਾਣਕਾਰੀ ਚਾਹੀਦੀ ਹੈ?",
+    initialMessage: "ਨਮਸਤੇ ਜੇਨ-ਜੀ! ਈ-ਮੈਤਰੀ ਪੋਰਟਲ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ! ਦੱਸੋ ਦੋਸਤ, ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ? ਤੁਹਾਨੂੰ ਕਿਹੜੀ ਜਾਣਕਾਰੀ ਚਾਹੀਦੀ ਹੈ?",
+    initialMessageWithName: "ਨਮਸਤੇ ਜੇਨ-ਜੀ!🙏 ਮੈਂ {botName} ਹਾਂ! ਈ-ਮੈਤਰੀ ਪੋਰਟਲ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ!✨ ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ! ਤੁਹਾਨੂੰ ਕਿਹੜੀ ਜਾਣਕਾਰੀ ਚਾਹੀਦੀ ਹੈ?👋",
     errorTraffic: "ਮੁਆਫ ਕਰਨਾ, ਇਸ ਸਮੇਂ ਬਹੁਤ ਟ੍ਰੈਫਿਕ ਹੈ ਜਾਂ ਕੋਟਾ ਖਤਮ ਹੋ ਗਿਆ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਕੁਝ ਸਮੇਂ ਬਾਅਦ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
     errorTech: "ਮੁਆਫ ਕਰਨਾ, ਇੱਕ ਤਕਨੀਕੀ ਸਮੱਸਿਆ ਆਈ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
     premiumQuotaExceeded: "ਪ੍ਰੀਮੀਅਮ ਵੌਇਸ ਕੋਟਾ ਖਤਮ ਹੋ ਗਿਆ ਹੈ। ਸਟੈਂਡਰਡ ਵੌਇਸ 'ਤੇ ਸਵਿਚ ਕਰ ਰਿਹਾ ਹੈ।",
@@ -1277,7 +1294,7 @@ const translations: Record<string, any> = {
     puckDesc: "ਪੱਕ (ਦੋਸਤਾਨਾ, ਊਰਜਾਵਾਨ ਪੁਰਸ਼)"
   },
   ur: {
-    title: "جین-جی",
+    title: "نارڈ",
     subtitle: "اے آئی میسنجر، ای-میتری.",
     you: "آپ",
     copy: "کاپی کریں",
@@ -1286,8 +1303,8 @@ const translations: Record<string, any> = {
     stop: "روکیں",
     back: "پیچھے",
     listenAgain: "دوبارہ سنیں",
-    speaking: "جین-جی بول رہے ہیں...",
-    listening: "جین-جی سن رہے ہیں...",
+    speaking: "نارڈ بول رہے ہیں...",
+    listening: "نارڈ سن رہے ہیں...",
     thinking: "سوچ رہے ہیں...",
     liveChatOn: "لائیو وائس چیٹ آن ہے: براہ کرم بولیں",
     stopVoiceChat: "وائس چیٹ بند کریں",
@@ -1315,7 +1332,8 @@ const translations: Record<string, any> = {
     q2: "تین درجاتی ڈھانچے کی وضاحت کریں۔",
     q3: "بوتھ مینجمنٹ کیسے کام کرتا ہے؟",
     q4: "خاندانی اتحاد کی تحریک کیا ہے؟",
-    initialMessage: "میں جین-جی ہوں! ای-میتری پورٹل میں خوش آمدید! بتائیں دوست، میں آپ کی کیسے مدد کر سکتا ہوں؟ آپ کو کیا معلومات چاہیے؟",
+    initialMessage: "ہیلو جین-جی! ای-میتری پورٹل میں خوش آمدید! بتائیں دوست، میں آپ کی کیسے مدد کر سکتا ہوں؟ آپ کو کیا معلومات چاہیے؟",
+    initialMessageWithName: "ہیلو جین-جی!🙏 میں {botName} ہوں! ای-میتری پورٹل میں خوش آمدید!✨ میں آپ کی کیسے مدد کر سکتا ہوں! آپ کو کیا معلومات چاہیے؟👋",
     errorTraffic: "معذرت، اس وقت بہت ٹریفک ہے یا کوٹہ ختم ہو گیا ہے۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔",
     errorTech: "معذرت، ایک تکنیکی مسئلہ پیش آیا ہے۔ براہ کرم دوبارہ کوشش کریں۔",
     premiumQuotaExceeded: "پریمیم وائس کوٹہ ختم ہو گیا ہے۔ معیاری وائس پر سوئچ کر رہا ہے۔",
@@ -1356,7 +1374,7 @@ const translations: Record<string, any> = {
     puckDesc: "پک (دوستانہ، توانا مرد)"
   },
   as: {
-    title: "জেন-জি",
+    title: "নর্ড",
     subtitle: "এআই মেছেঞ্জাৰ, ই-মৈত্ৰী.",
     you: "আপুনি",
     copy: "কপি কৰক",
@@ -1365,8 +1383,8 @@ const translations: Record<string, any> = {
     stop: "বন্ধ কৰক",
     back: "উভতি যাওক",
     listenAgain: "আকৌ শুনক",
-    speaking: "জেন-জিয়ে কথা পাতি আছে...",
-    listening: "জেন-জিয়ে শুনি আছে...",
+    speaking: "নর্ডয়ে কথা পাতি আছে...",
+    listening: "নর্ডয়ে শুনি আছে...",
     thinking: "ভাবি আছে...",
     liveChatOn: "লাইভ ভইচ চেট অন আছে: অনুগ্ৰহ কৰি কওক",
     stopVoiceChat: "ভইচ চেট বন্ধ কৰক",
@@ -1394,7 +1412,8 @@ const translations: Record<string, any> = {
     q2: "ত্ৰি-স্তৰীয় গাঁথনি বৰ্ণনা কৰক।",
     q3: "বুথ পৰিচালনা কেনেকৈ কাম কৰে?",
     q4: "পাৰিবাৰিক মিত্ৰতা আন্দোলন কি?",
-    initialMessage: "মই জেন-জি! ই-মৈত্ৰী পোৰ্টেললৈ স্বাগতম! কওক বন্ধু, মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ? আপোনাক কি তথ্য লাগে?",
+    initialMessage: "নমস্কাৰ জেন-জি! ই-মৈত্ৰী পোৰ্টেললৈ স্বাগতম! কওক বন্ধু, মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ? আপোনাক কি তথ্য লাগে?",
+    initialMessageWithName: "নমস্কাৰ জেন-জি!🙏 মই {botName}! ই-মৈত্ৰী পোৰ্টেললৈ স্বাগতম!✨ মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ! আপোনাক কি তথ্য লাগে?👋",
     errorTraffic: "ক্ষমা কৰিব, বৰ্তমান বহুত ট্ৰেফিক আছে বা কোটা শেষ হৈ গৈছে। অনুগ্ৰহ কৰি কিছু সময় পিছত পুনৰ চেষ্টা কৰক।",
     errorTech: "ক্ষমা কৰিব, এটা কাৰিকৰী সমস্যা হৈছে। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।",
     premiumQuotaExceeded: "প্ৰিমিয়াম ভইচ কোটা শেষ হৈছে। ষ্টেণ্ডাৰ্ড ভইচলৈ সলনি কৰা হৈছে।",
@@ -1435,7 +1454,7 @@ const translations: Record<string, any> = {
     puckDesc: "পাক (বন্ধুত্বপূৰ্ণ, উদ্যমী পুৰুষ)"
   },
   ne: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई मेसेन्जर, ई-मैत्री।",
     you: "तपाईं",
     copy: "कपी गर्नुहोस्",
@@ -1444,8 +1463,8 @@ const translations: Record<string, any> = {
     stop: "रोक्नुहोस्",
     back: "पछाडि",
     listenAgain: "फेरि सुन्नुहोस्",
-    speaking: "जेन-जी बोल्दै हुनुहुन्छ...",
-    listening: "जेन-जी सुन्दै हुनुहुन्छ...",
+    speaking: "नॉर्ड बोल्दै हुनुहुन्छ...",
+    listening: "नॉर्ड सुन्दै हुनुहुन्छ...",
     thinking: "सोच्दै हुनुहुन्छ...",
     liveChatOn: "लाइभ भ्वाइस च्याट अन छ: कृपया बोल्नुहोस्",
     stopVoiceChat: "भ्वाइस च्याट रोक्नुहोस्",
@@ -1473,7 +1492,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय संरचना व्याख्या गर्नुहोस्।",
     q3: "बुथ व्यवस्थापनले कसरी काम गर्छ?",
     q4: "पारिवारिक गठबन्धन आन्दोलन के हो?",
-    initialMessage: "म जेन-जी हुँ! ई-मैत्री पोर्टलमा स्वागत छ! भन्नुहोस् साथी, म तपाईंलाई कसरी मद्दत गर्न सक्छु? तपाईंलाई के जानकारी चाहिन्छ?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टलमा स्वागत छ! भन्नुहोस् साथी, म तपाईंलाई कसरी मद्दत गर्न सक्छु? तपाईंलाई के जानकारी चाहिन्छ?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 म {botName} हुँ! ई-मैत्री पोर्टलमा स्वागत छ!✨ म तपाईंलाई कसरी मद्दत गर्न सक्छु! तपाईंलाई के जानकारी चाहिन्छ?👋",
     errorTraffic: "माफ गर्नुहोस्, अहिले धेरै ट्राफिक छ वा कोटा सकिएको छ। कृपया पछि फेरि प्रयास गर्नुहोस्।",
     errorTech: "माफ गर्नुहोस्, प्राविधिक समस्या आयो। कृपया फेरि प्रयास गर्नुहोस्।",
     premiumQuotaExceeded: "प्रिमियम भ्वाइस कोटा नाघ्यो। मानक आवाजमा फर्किदै।",
@@ -1514,7 +1534,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (मैत्रीपूर्ण, ऊर्जावान पुरुष)"
   },
   mai: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई मैसेंजर, ई-मैत्री।",
     you: "अहाँ",
     copy: "कॉपी करू",
@@ -1523,8 +1543,8 @@ const translations: Record<string, any> = {
     stop: "रोकू",
     back: "पाछाँ",
     listenAgain: "फेर सँ सुनू",
-    speaking: "जेन-जी बाजि रहल छथि...",
-    listening: "जेन-जी सुनि रहल छथि...",
+    speaking: "नॉर्ड बाजि रहल छथि...",
+    listening: "नॉर्ड सुनि रहल छथि...",
     thinking: "सोचि रहल छथि...",
     liveChatOn: "लाइव वॉयस चैट ऑन अछि: कृपया बाजू",
     stopVoiceChat: "वॉयस चैट रोकू",
@@ -1552,7 +1572,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय संरचना केँ बुझाउ।",
     q3: "बूथ प्रबंधन कोना काज करैत अछि?",
     q4: "पारिवारिक गठबंधन आंदोलन की थिक?",
-    initialMessage: "हम जेन-जी छी! ई-मैत्री पोर्टल मे अहाँक स्वागत अछि! कहू मित्र, हम अहाँक कोना मदद क सकैत छी? अहाँ केँ की जानकारी चाही?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टल मे अहाँक स्वागत अछि! कहू मित्र, हम अहाँक कोना मदद क सकैत छी? अहाँ केँ की जानकारी चाही?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 हम {botName} छी! ई-मैत्री पोर्टल मे अहाँक स्वागत अछि!✨ हम अहाँक कोना मदद क सकैत छी! अहाँ केँ की जानकारी चाही?👋",
     errorTraffic: "क्षमा करू, अखन बहुत बेसी ट्रैफिक अछि वा कोटा खतम भ गेल अछि। कृपया बाद मे फेर सँ प्रयास करू।",
     errorTech: "क्षमा करू, तकनीकी समस्या आबि गेल। कृपया फेर सँ प्रयास करू।",
     premiumQuotaExceeded: "प्रीमियम वॉयस कोटा पार भ गेल। मानक आवाज पर वापस जा रहल अछि।",
@@ -1593,7 +1614,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)"
   },
   sd: {
-    title: "جين-جي",
+    title: "نارڊ",
     subtitle: "اي آءِ ميسينجر، اي-ميتري.",
     you: "توهان",
     copy: "ڪاپي ڪريو",
@@ -1602,8 +1623,8 @@ const translations: Record<string, any> = {
     stop: "روڪيو",
     back: "واپس",
     listenAgain: "ٻيهر ٻڌو",
-    speaking: "جين-جي ڳالهائي رهيو آهي...",
-    listening: "جين-جي ٻڌي رهيو آهي...",
+    speaking: "نارڊ ڳالهائي رهيو آهي...",
+    listening: "نارڊ ٻڌي رهيو آهي...",
     thinking: "سوچي رهيو آهي...",
     liveChatOn: "لائيو وائس چيٽ آن آهي: مهرباني ڪري ڳالهايو",
     stopVoiceChat: "وائس چيٽ روڪيو",
@@ -1631,7 +1652,8 @@ const translations: Record<string, any> = {
     q2: "ٽي-سطحي ڍانچي جي وضاحت ڪريو.",
     q3: "بوٿ مئنيجمينٽ ڪيئن ڪم ڪندو آهي؟",
     q4: "فيملي الائنس موومينٽ ڇا آهي؟",
-    initialMessage: "مان جين-جي آهيان! اي-ميتري پورٽل ۾ ڀليڪار! ٻڌايو دوست، مان توهان جي ڪيئن مدد ڪري سگهان ٿو؟ توهان کي ڪهڙي ڄاڻ گهرجي؟",
+    initialMessage: "هيلو جين-جي! اي-ميتري پورٽل ۾ ڀليڪار! ٻڌايو دوست، مان توهان جي ڪيئن مدد ڪري سگهان ٿو؟ توهان کي ڪهڙي ڄاڻ گهرجي؟",
+    initialMessageWithName: "هيلو جين-جي!🙏 مان {botName} آهيان! اي-ميتري پورٽل ۾ ڀليڪار!✨ مان توهان جي ڪيئن مدد ڪري سگهان ٿو! توهان کي ڪهڙي ڄاڻ گهرجي؟👋",
     errorTraffic: "معاف ڪجو، هن وقت تمام گهڻي ٽرئفڪ آهي يا ڪوٽا ختم ٿي وئي آهي. مهرباني ڪري بعد ۾ ٻيهر ڪوشش ڪريو.",
     errorTech: "معاف ڪجو، هڪ ٽيڪنيڪل مسئلو پيش آيو. مهرباني ڪري ٻيهر ڪوشش ڪريو.",
     premiumQuotaExceeded: "پريميئم وائس ڪوٽا ختم ٿي وئي. معياري آواز ڏانهن واپس.",
@@ -1672,7 +1694,7 @@ const translations: Record<string, any> = {
     puckDesc: "پڪ (دوستانه، توانائي وارو مرد)"
   },
   kok: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआय मेसेंजर, ई-मैत्री.",
     you: "तुमी",
     copy: "कॉपी करात",
@@ -1681,8 +1703,8 @@ const translations: Record<string, any> = {
     stop: "रावयात",
     back: "फाटीं",
     listenAgain: "परत आयकात",
-    speaking: "जेन-जी उलयता...",
-    listening: "जेन-जी आयकता...",
+    speaking: "नॉर्ड उलयता...",
+    listening: "नॉर्ड आयकता...",
     thinking: "विचार करता...",
     liveChatOn: "लायव्ह व्हॉइस चॅट चालू आसा: उपकार करून उलय",
     stopVoiceChat: "व्हॉइस चॅट रावयात",
@@ -1710,7 +1732,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय रचना स्पश्ट करात.",
     q3: "बूथ मॅनेजमेंट कशें काम करता?",
     q4: "फॅमिली अलायंस मूव्हमेंट किदें आसा?",
-    initialMessage: "हांव जेन-जी! ई-मैत्री पोर्टलांत येवकार! सांगा इश्टा, हांव तुमची कशी मजत करूं शकता? तुमकां खंयची म्हायती जाय?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टलांत येवकार! सांगा इश्टा, हांव तुमची कशी मजत करूं शकता? तुमकां खंयची म्हायती जाय?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 हांव {botName}! ई-मैत्री पोर्टलांत येवकार!✨ हांव तुमची कशी मजत करूं शकता! तुमकां खंयची म्हायती जाय?👋",
     errorTraffic: "माफ करात, सद्या खूब ट्रॅफिक आसा वा कोटा सोंपला. उपकार करून मागीर परत यत्न करात.",
     errorTech: "माफ करात, तांत्रिक अडचण आयल्या. उपकार करून परत यत्न करात.",
     premiumQuotaExceeded: "प्रीमियम व्हॉइस कोटा सोंपला. स्टँडर्ड आवाजाचेर परत वता.",
@@ -1751,7 +1774,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (इश्टागतीचो, ऊर्जावान दादलो)"
   },
   doi: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई मैसेंजर, ई-मैत्री।",
     you: "तुस",
     copy: "कापी करो",
@@ -1760,8 +1783,8 @@ const translations: Record<string, any> = {
     stop: "रोको",
     back: "पिच्छें",
     listenAgain: "परतियै सुनो",
-    speaking: "जेन-जी गल्ल करदा ऐ...",
-    listening: "जेन-जी सुनदा ऐ...",
+    speaking: "नॉर्ड गल्ल करदा ऐ...",
+    listening: "नॉर्ड सुनदा ऐ...",
     thinking: "सोचदा ऐ...",
     liveChatOn: "लाइव वॉयस चैट ऑन ऐ: किरपा करियै गल्ल करो",
     stopVoiceChat: "वॉयस चैट रोको",
@@ -1789,7 +1812,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय संरचना दी व्याख्या करो।",
     q3: "बूथ मैनेजमेंट कियां कम्म करदा ऐ?",
     q4: "फैमिली अलायंस मूवमेंट केह् ऐ?",
-    initialMessage: "मैं जेन-जी आं! ई-मैत्री पोर्टल च तुंदा स्वागत ऐ! दस्सो दोस्त, मैं तुंदी केह् मदद करी सकनां? तुसेंगी केह् जानकारी लोड़िदी ऐ?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री पोर्टल च तुंदा स्वागत ऐ! दस्सो दोस्त, मैं तुंदी केह् मदद करी सकनां? तुसेंगी केह् जानकारी लोड़िदी ऐ?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 मैं {botName} आं! ई-मैत्री पोर्टल च तुंदा स्वागत ऐ!✨ मैं तुंदी केह् मदद करी सकनां! तुसेंगी केह् जानकारी लोड़िदी ऐ?👋",
     errorTraffic: "माफ करना, इसलै मते लोक इस्तेमाल करदे न जां कोटा मुक्की गेआ ऐ। किरपा करियै बाद च परतियै कोशिश करो।",
     errorTech: "माफ करना, कोई तकनीकी खराबी आई गेई ऐ। किरपा करियै परतियै कोशिश करो।",
     premiumQuotaExceeded: "प्रीमियम वॉयस कोटा मुक्की गेआ ऐ। स्टैंडर्ड अवाज पर वापस जा करदे आं।",
@@ -1830,7 +1854,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (दोस्ताना, ऊर्जावान मर्द)"
   },
   ks: {
-    title: "جین-جی",
+    title: "نارڈ",
     subtitle: "اے آئی میسنجر، ای-میتری۔",
     you: "تُہۍ",
     copy: "کأپی کٔرِو",
@@ -1839,8 +1863,8 @@ const translations: Record<string, any> = {
     stop: "رُکِو",
     back: "واپس",
     listenAgain: "دوبارٕ بوزِو",
-    speaking: "جین-جی چھُ بولان...",
-    listening: "جین-جی چھُ بوزان...",
+    speaking: "نارڈ چھُ بولان...",
+    listening: "نارڈ چھُ بوزان...",
     thinking: "سوچان چھُ...",
     liveChatOn: "لائیو وائس چیٹ چھُ آن: مہربٲنی کٔرِتھ کَتھ کٔرِو",
     stopVoiceChat: "وائس چیٹ رُکٲوِو",
@@ -1868,7 +1892,8 @@ const translations: Record<string, any> = {
     q2: "ترٛے سطحٕچ ساختٕچ وضاحت کٔرِو۔",
     q3: "بوتھ مینجمنٹ کِتھ کٔنۍ چھُ کٲم کران؟",
     q4: "فیملی الائنس موومنٹ کیاہ چھُ؟",
-    initialMessage: "بہٕ چھُس جین-جی! ای-میتری پورٹلس مَنٛز خۄش آمدید! ونِو دوست، بہٕ کِتھ کٔنۍ ہیکہٕ تُہنٛز مَدَتھ کٔرِتھ؟ تُہۍ کیاہ مولوٗمات چھِو یژھان؟",
+    initialMessage: "ہیلو جین-جی! ای-میتری پورٹلس مَنٛز خۄش آمدید! ونِو دوست، بہٕ کِتھ کٔنۍ ہیکہٕ تُہنٛز مَدَتھ کٔرِتھ؟ تُہۍ کیاہ مولوٗمات چھِو یژھان؟",
+    initialMessageWithName: "ہیلو جین-جی!🙏 بہٕ چھُس {botName}! ای-میتری پورٹلس مَنٛز خۄش آمدید!✨ بہٕ کِتھ کٔنۍ ہیکہٕ تُہنٛز مَدَتھ کٔرِتھ! تُہۍ کیاہ مولوٗمات چھِو یژھان؟👋",
     errorTraffic: "معاف کٔرِو، یِمہِ وِزِ چھُ واریاہ ٹریفک یا کوٹا چھُ خَتٕم گومُت۔ مہربٲنی کٔرِتھ پَتہٕ دوبارٕ کوٗشِش کٔرِو۔",
     errorTech: "معاف کٔرِو، اَکھ تکنیکی مسلٕہ آو۔ مہربٲنی کٔرِتھ دوبارٕ کوٗشِش کٔرِو۔",
     premiumQuotaExceeded: "پریمیم وائس کوٹا چھُ خَتٕم گومُت۔ سٹینڈرڈ آوازس پؠٹھ واپس گژھان۔",
@@ -1909,7 +1934,7 @@ const translations: Record<string, any> = {
     puckDesc: "پک (دوستانہ، توانا مرد)"
   },
   sa: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "एआई-सहायकः, ई-मैत्री।",
     you: "भवान्",
     copy: "प्रतिलिपिं करोतु",
@@ -1918,8 +1943,8 @@ const translations: Record<string, any> = {
     stop: "स्थगयतु",
     back: "पृष्ठतः",
     listenAgain: "पुनः शृणोतु",
-    speaking: "जेन-जी वदति...",
-    listening: "जेन-जी शृणोति...",
+    speaking: "नॉर्ड वदति...",
+    listening: "नॉर्ड शृणोति...",
     thinking: "चिन्तयति...",
     liveChatOn: "सजीव-संवादः आरब्धः: कृपया वदतु",
     stopVoiceChat: "ध्वनि-संवादं स्थगयतु",
@@ -1947,7 +1972,8 @@ const translations: Record<string, any> = {
     q2: "त्रि-स्तरीय-संरचनां स्पष्टीकरोतु।",
     q3: "बूथ-प्रबन्धनं कथं कार्यं करोति?",
     q4: "पारिवारिक-गठबन्धन-आन्दोलनं किम् अस्ति?",
-    initialMessage: "अहं जेन-जी अस्मि! ई-मैत्री-पोर्टल् मध्ये भवतः स्वागतम्! वदतु मित्र, अहं भवतः कथं साहाय्यं कर्तुं शक्नोमि? भवान् काम् सूचनाम् इच्छति?",
+    initialMessage: "नमस्ते जेन-जी! ई-मैत्री-पोर्टल् मध्ये भवतः स्वागतम्! वदतु मित्र, अहं भवतः कथं साहाय्यं कर्तुं शक्नोमि? भवान् काम् सूचनाम् इच्छति?",
+    initialMessageWithName: "नमस्ते जेन-जी!🙏 अहं {botName} अस्मि! ई-मैत्री-पोर्टल् मध्ये भवतः स्वागतम्!✨ अहं भवतः कथं साहाय्यं कर्तुं शक्नोमि! भवान् काम् सूचनाम् इच्छति?👋",
     errorTraffic: "क्षम्यताम्, इदानीम् अत्यधिकः यातायात-भारः अस्ति अथवा कोटा समाप्तः। कृपया किञ्चित्कालानन्तरं पुनः प्रयतताम्।",
     errorTech: "क्षम्यताम्, काचित् तकनीकी समस्या अस्ति। कृपया पुनः प्रयतताम्।",
     premiumQuotaExceeded: "प्रीमियम-ध्वनि-कोटा समाप्तः। सामान्य-ध्वनौ प्रत्यागच्छति।",
@@ -1988,7 +2014,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (मैत्रीपूर्णः, ऊर्जावान् पुरुषः)"
   },
   sat: {
-    title: "ᱡᱮᱱ-ᱡᱤ",
+    title: "ᱱᱚᱨᱰ",
     subtitle: "ᱮᱟᱭᱤ ᱢᱮᱥᱮᱱᱡᱟᱨ, ᱤ-ᱢᱟᱭᱛᱨᱤ᱾",
     you: "ᱟᱢ",
     copy: "ᱱᱚᱠᱚᱞ ᱢᱮ",
@@ -1997,8 +2023,8 @@ const translations: Record<string, any> = {
     stop: "ᱛᱤᱸᱜᱩ ᱢᱮ",
     back: "ᱛᱟᱭᱚᱢ",
     listenAgain: "ᱟᱨᱦᱚᱸ ᱟᱸᱡᱚᱢ ᱢᱮ",
-    speaking: "ᱡᱮᱱ-ᱡᱤ ᱨᱚᱲ ᱮᱫᱟᱭ...",
-    listening: "ᱡᱮᱱ-ᱡᱤ ᱟᱸᱡᱚᱢ ᱮᱫᱟᱭ...",
+    speaking: "ᱱᱚᱨᱰ ᱨᱚᱲ ᱮᱫᱟᱭ...",
+    listening: "ᱱᱚᱨᱰ ᱟᱸᱡᱚᱢ ᱮᱫᱟᱭ...",
     thinking: "ᱩᱭᱦᱟᱹᱨ ᱮᱫᱟᱭ...",
     liveChatOn: "ᱞᱟᱭᱤᱵᱽ ᱨᱚᱯᱚᱲ ᱮᱦᱚᱵ ᱮᱱᱟ: ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱨᱚᱲ ᱢᱮ",
     stopVoiceChat: "ᱟᱲᱟᱝ ᱨᱚᱯᱚᱲ ᱛᱤᱸᱜᱩ ᱢᱮ",
@@ -2026,7 +2052,8 @@ const translations: Record<string, any> = {
     q2: "ᱯᱮ-ᱛᱷᱚᱠ ᱨᱮᱭᱟᱜ ᱜᱚᱲᱦᱚᱱ ᱵᱩᱡᱷᱟᱹᱣ ᱢᱮ᱾",
     q3: "ᱵᱩᱛᱷ ᱢᱮᱱᱮᱡᱽᱢᱮᱱᱴ ᱪᱮᱫ ᱞᱮᱠᱟ ᱠᱟᱹᱢᱤᱭᱟ?",
     q4: "ᱯᱷᱮᱢᱤᱞᱤ ᱮᱞᱟᱭᱮᱱᱥ ᱢᱩᱵᱷᱢᱮᱱᱴ ᱫᱚ ᱪᱮᱫ ᱠᱟᱱᱟ?",
-    initialMessage: "ᱤᱧ ᱫᱚ ᱡᱮᱱ-ᱡᱤ ᱠᱟᱹᱱᱟᱹᱧ! ᱤ-ᱢᱟᱭᱛᱨᱤ ᱯᱚᱨᱴᱟᱞ ᱨᱮ ᱟᱢᱟᱜ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ! ᱞᱟᱹᱭ ᱢᱮ ᱜᱟᱛᱮ, ᱤᱧ ᱪᱮᱫ ᱞᱮᱠᱟᱧ ᱜᱚᱲᱚ ᱫᱟᱲᱮᱭᱟᱢᱟ? ᱟᱢ ᱪᱮᱫ ᱵᱟᱰᱟᱭ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ?",
+    initialMessage: "ᱡᱚᱦᱟᱨ ᱡᱮᱱ-ᱡᱤ! ᱤ-ᱢᱟᱭᱛᱨᱤ ᱯᱚᱨᱴᱟᱞ ᱨᱮ ᱟᱢᱟᱜ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ! ᱞᱟᱹᱭ ᱢᱮ ᱜᱟᱛᱮ, ᱤᱧ ᱪᱮᱫ ᱞᱮᱠᱟᱧ ᱜᱚᱲᱚ ᱫᱟᱲᱮᱭᱟᱢᱟ? ᱟᱢ ᱪᱮᱫ ᱵᱟᱰᱟᱭ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ?",
+    initialMessageWithName: "ᱡᱚᱦᱟᱨ ᱡᱮᱱ-ᱡᱤ!🙏 ᱤᱧ ᱫᱚ {botName} ᱠᱟᱹᱱᱟᱹᱧ! ᱤ-ᱢᱟᱭᱛᱨᱤ ᱯᱚᱨᱴᱟᱞ ᱨᱮ ᱟᱢᱟᱜ ᱥᱟᱹᱜᱩᱱ ᱫᱟᱨᱟᱢ!✨ ᱤᱧ ᱪᱮᱫ ᱞᱮᱠᱟᱧ ᱜᱚᱲᱚ ᱫᱟᱲᱮᱭᱟᱢᱟ! ᱟᱢ ᱪᱮᱫ ᱵᱟᱰᱟᱭ ᱥᱟᱱᱟᱭᱮᱫ ᱢᱮᱭᱟ?👋",
     errorTraffic: "ᱤᱠᱟᱹ ᱠᱟᱹᱧ ᱢᱮ, ᱱᱤᱛᱚᱜ ᱟᱹᱰᱤ ᱡᱟᱹᱥᱛᱤ ᱴᱨᱟᱯᱷᱤᱠ ᱢᱮᱱᱟᱜᱼᱟ ᱥᱮ ᱠᱳᱴᱟ ᱪᱟᱵᱟ ᱟᱠᱟᱱᱟ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱛᱟᱭᱚᱢ ᱛᱮ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
     errorTech: "ᱤᱠᱟᱹ ᱠᱟᱹᱧ ᱢᱮ, ᱢᱤᱫᱴᱟᱝ ᱴᱮᱠᱱᱤᱠᱟᱞ ᱮᱴᱠᱮᱴᱚᱬᱮ ᱦᱩᱭ ᱮᱱᱟ᱾ ᱫᱟᱭᱟ ᱠᱟᱛᱮ ᱟᱨᱦᱚᱸ ᱪᱮᱥᱴᱟᱭ ᱢᱮ᱾",
     premiumQuotaExceeded: "ᱯᱨᱤᱢᱤᱭᱟᱢ ᱟᱲᱟᱝ ᱠᱳᱴᱟ ᱪᱟᱵᱟ ᱟᱠᱟᱱᱟ᱾ ᱥᱴᱮᱱᱰᱟᱨᱰ ᱟᱲᱟᱝ ᱛᱮ ᱨᱩᱣᱟᱹᱲ ᱠᱟᱱᱟ᱾",
@@ -2067,7 +2094,7 @@ const translations: Record<string, any> = {
     puckDesc: "ᱯᱟᱠ (ᱜᱟᱛᱮ ᱞᱮᱠᱟ, ᱮᱱᱟᱨᱡᱮᱴᱤᱠ ᱠᱚᱲᱟ)"
   },
   brx: {
-    title: "जेन-जी",
+    title: "नॉर्ड",
     subtitle: "AI मेसेंजर, ई-मैत्री।",
     you: "नोंथां",
     copy: "कपि खालाम",
@@ -2076,8 +2103,8 @@ const translations: Record<string, any> = {
     stop: "थाद'",
     back: "उनथिं",
     listenAgain: "फिन खोनासं",
-    speaking: "जेन-जी बुंगासिनो दं...",
-    listening: "जेन-जी खोनासं-गासिनो दं...",
+    speaking: "नॉर्ड बुंगासिनो दं...",
+    listening: "नॉर्ड खोनासं-गासिनो दं...",
     thinking: "सानगासिनो दं...",
     liveChatOn: "लाइभ गारां सावरायनाय जागायबाय: अननानै बुं",
     stopVoiceChat: "गारां सावरायनायखौ थाद'हो",
@@ -2105,7 +2132,8 @@ const translations: Record<string, any> = {
     q2: "थाम-थाखोआरि दाथायखौ बेखेव।",
     q3: "बुथ सामलायनाया माबोरै खामानि मावो?",
     q4: "नखर आफाद आन्दोलनआ मा?",
-    initialMessage: "आं जेन-जी! ई-मैत्री पोर्टेलाव नोंथांखौ बरायबाय! बुं लोगो, आं नोंथांखौ माबोरै हेफाजाब खालामनो हागोन? नोंथांनो मा फोरमायथि नांगौ?",
+    initialMessage: "खुलुमबाय जेन-जी! ई-मैत्री पोर्टेलाव नोंथांखौ बरायबाय! बुं लोगो, आं नोंथांखौ माबोरै हेफाजाब खालामनो हागोन? नोंथांनो मा फोरमायथि नांगौ?",
+    initialMessageWithName: "खुलुमबाय जेन-जी!🙏 आं {botName}! ई-मैत्री पोर्टेलाव नोंथांखौ बरायबाय!✨ आं नोंथांखौ माबोरै हेफाजाब खालामनो हागोन! नोंथांनो मा फोरमायथि नांगौ?👋",
     errorTraffic: "निमाहा हो, दा गोबां ट्राफिक दं एबा कोटा जोबबाय। अननानै उनाव नाजाफिन।",
     errorTech: "निमाहा हो, माबा मोनसे जेंना जादों। अननानै नाजाफिन।",
     premiumQuotaExceeded: "प्रिमियाम गारां कोटा जोबबाय। स्ट्यान्डार्ड गारांआव थांफिनबाय।",
@@ -2146,7 +2174,7 @@ const translations: Record<string, any> = {
     puckDesc: "पाक (लोगोआरि, गोख्रै हौवा)"
   },
   mni: {
-    title: "জেন-জি",
+    title: "নর্ড",
     subtitle: "AI মেসেঞ্জার, ই-মৈত্রী।",
     you: "নহাক",
     copy: "কপি তৌবিয়ু",
@@ -2155,8 +2183,8 @@ const translations: Record<string, any> = {
     stop: "লেপ্পিয়ু",
     back: "হন্দোকপিয়ু",
     listenAgain: "অমুক হন্না তাবিয়ু",
-    speaking: "জেন-জি ঙাংলি...",
-    listening: "জেন-জি তালি...",
+    speaking: "নর্ড ঙাংলি...",
+    listening: "নর্ড তালি...",
     thinking: "খল্লি...",
     liveChatOn: "লাইভ ভোইস চ্যাট ওন তৌরে: চানবীদুনা ঙাংবিয়ু",
     stopVoiceChat: "ভোইস চ্যাট লেপ্পিয়ু",
@@ -2184,7 +2212,8 @@ const translations: Record<string, any> = {
     q2: "থ্রি-টিয়ার স্ট্রাকচরগী মরমদা তাকপিয়ু।",
     q3: "বুথ ম্যানেজমেন্টনা করম্না থবক তৌবগে?",
     q4: "ফ্যামিলি এলায়েন্স মুভমেন্ট হায়বসি করিনো?",
-    initialMessage: "ঐ জেন-জি নি! ই-মৈত্রী পোর্টেলদা তরাম্না ওকচরি! হায়বিয়ু মরুপ, ঐনা নহাক্কী করম্না মতেং পাংবা ঙমগনি? নহাক্না করি ইনফরমেশন পাম্বিগে?",
+    initialMessage: "খুরুমজরি জেন-জি! ই-মৈত্রী পোর্টেলদা তরাম্না ওকচরি! হায়বিয়ু মরুপ, ঐনা নহাক্কী করম্না মতেং পাংবা ঙমগনি? নহাক্না করি ইনফরমেশন পাম্বিগে?",
+    initialMessageWithName: "খুরুমজরি জেন-জি!🙏 ঐ {botName} নি! ই-মৈত্রী পোর্টেলদা তরাম্না ওকচরি!✨ ঐনা নহাক্কী করম্না মতেং পাংবা ঙমগনি! নহাক্না করি ইনফরমেশন পাম্বিগে?👋",
     errorTraffic: "ঙাকপিয়ু, হৌজিক য়াম্না ট্রাফিক লৈ নত্রগা কোটা লোইরে। চানবীদুনা মতুংদা অমুক হন্না হোত্নবিয়ু।",
     errorTech: "ঙাকপিয়ু, টেকনিকেল ওইবা অৱাবা অমা লৈরে। চানবীদুনা অমুক হন্না হোত্নবিয়ু।",
     premiumQuotaExceeded: "প্রিমিয়াম ভোইস কোটা লোইরে। স্ট্যান্ডার্ড ভোইসতা হন্দোক্লে।",
@@ -2266,6 +2295,31 @@ const VirtualNetworkBackground = () => {
   );
 };
 
+const guessGender = (name: string): 'M' | 'F' => {
+  if (!name) return 'M';
+  const lowerName = name.trim().toLowerCase();
+  
+  const femaleSuffixes = [
+    'a', 'i', 'ee', 'ya', 'na', 'ta', 'ra', 'la', 'ka', 'sa', 'ha', 'ma', 'wati', 'vati', 'devi', 'bai', 'kumari', 'kaur', 'ben', 'bibi', 'bano', 'begum', 'khatoon', 'nisa',
+    'ा', 'ि', 'ी', '्या', 'ना', 'ता', 'रा', 'ला', 'का', 'सा', 'हा', 'मा', 'वती', 'देवी', 'बाई', 'कुमारी', 'कौर', 'बेन', 'बीबी', 'बानो', 'बेगम', 'खातून', 'निसा'
+  ];
+  
+  const maleExceptions = [
+    'shiva', 'krishna', 'aditya', 'rama', 'rishi', 'ravi', 'hari', 'murali', 'gopi', 'kavi', 'mani', 'swami', 'yogi', 'bhai', 'singh', 'kumar', 'nath', 'das', 'ram', 'raj', 'ji', 'rahul', 'amit', 'suresh', 'ramesh', 'mahesh', 'dinesh', 'prasad',
+    'शिवा', 'कृष्णा', 'आदित्य', 'रामा', 'ऋषि', 'रवि', 'हरि', 'मुरली', 'गोपी', 'कवि', 'मणि', 'स्वामी', 'योगी', 'भाई', 'सिंह', 'कुमार', 'नाथ', 'दास', 'राम', 'राज', 'जी', 'राहुल', 'अमित', 'सुरेश', 'रमेश', 'महेश', 'दिनेश', 'प्रसाद'
+  ];
+  
+  for (const exc of maleExceptions) {
+    if (lowerName.endsWith(exc) || lowerName === exc) return 'M';
+  }
+  
+  for (const suf of femaleSuffixes) {
+    if (lowerName.endsWith(suf)) return 'F';
+  }
+  
+  return 'M';
+};
+
 export default function App() {
   const [uiLang, setUiLang] = useState(() => {
     try {
@@ -2307,11 +2361,78 @@ export default function App() {
 
   const [setupName, setSetupName] = useState('');
 
-  const displayBotName = userName || (uiLang === 'hi' ? 'नारद' : 'Nard');
+  const displayBotName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+
+  const getGenderAdjustedText = (text: string, lang: string, name: string) => {
+    let replaced = text.replace(/Nard|नॉर्ड|নর্ড|நார்ட்|నార్డ్|નોર્ડ|ನಾರ್ಡ್|നോർഡ്|ନର୍ଡ|ਨਾਰਡ|نارڈ|نارڊ|ᱱᱚᱨᱰ|જેન-જી|ജെൻ-ജി|ਜੇਨ-ਜੀ/gi, name);
+    const gender = guessGender(name);
+    
+    if (gender === 'F') {
+      if (lang === 'hi') {
+        replaced = replaced.replace(/रहे हैं/g, 'रही हैं');
+      } else if (lang === 'bho') {
+        replaced = replaced.replace(/रहल बाड़े/g, 'रहल बाड़ी');
+      } else if (lang === 'gu') {
+        replaced = replaced.replace(/રહ્યા છે/g, 'રહી છે');
+      } else if (lang === 'pa') {
+        replaced = replaced.replace(/ਰਹੇ ਹਨ/g, 'ਰਹੀ ਹੈ');
+      } else if (lang === 'ur') {
+        replaced = replaced.replace(/رہے ہیں/g, 'رہی ہیں');
+      } else if (lang === 'sd') {
+        replaced = replaced.replace(/رهيو آهي/g, 'رهي آهي');
+      } else if (lang === 'doi') {
+        replaced = replaced.replace(/करदा ऐ/g, 'करदी ऐ')
+                           .replace(/सुनदा ऐ/g, 'सुनदी ऐ')
+                           .replace(/सोचदा ऐ/g, 'सोचदी ऐ');
+      }
+    }
+    return replaced;
+  };
 
   const getInitialMessage = (lang: string, name: string) => {
     const trans = translations[lang] || translations['en'];
-    return trans.initialMessage;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      const defaultName = lang === 'hi' ? 'नॉर्ड' : 'Nard';
+      let msg = trans.initialMessageWithName.replace(/\{botName\}/g, defaultName);
+      const gender = guessGender(defaultName);
+      
+      if (gender === 'F') {
+        if (lang === 'hi') {
+          msg = msg.replace('सकता हूं', 'सकती हूं');
+        } else if (lang === 'mr') {
+          msg = msg.replace('शकतो', 'शकते');
+        } else if (lang === 'pa') {
+          msg = msg.replace('ਸਕਦਾ ਹਾਂ', 'ਸਕਦੀ ਹਾਂ');
+        } else if (lang === 'ur') {
+          msg = msg.replace('سکتا ہوں', 'سکتی ہوں');
+        } else if (lang === 'sd') {
+          msg = msg.replace('سگهان ٿو', 'سگهان ٿي');
+        } else if (lang === 'doi') {
+          msg = msg.replace('सकनां', 'सकनी आं');
+        }
+      }
+      return msg;
+    }
+    let msg = trans.initialMessageWithName.replace(/\{botName\}/g, trimmedName);
+    const gender = guessGender(trimmedName);
+    
+    if (gender === 'F') {
+      if (lang === 'hi') {
+        msg = msg.replace('सकता हूं', 'सकती हूं');
+      } else if (lang === 'mr') {
+        msg = msg.replace('शकतो', 'शकते');
+      } else if (lang === 'pa') {
+        msg = msg.replace('ਸਕਦਾ ਹਾਂ', 'ਸਕਦੀ ਹਾਂ');
+      } else if (lang === 'ur') {
+        msg = msg.replace('سکتا ہوں', 'سکتی ہوں');
+      } else if (lang === 'sd') {
+        msg = msg.replace('سگهان ٿو', 'سگهان ٿي');
+      } else if (lang === 'doi') {
+        msg = msg.replace('सकनां', 'सकनी आं');
+      }
+    }
+    return msg;
   };
 
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -2332,21 +2453,8 @@ export default function App() {
   // Update initial message when language or bot name changes if it's the only message
   useEffect(() => {
     setMessages(prev => {
-      if (prev.length === 1) {
-        // Check if the current message is some version of the initial message
-        const isInitial = Object.values(translations).some(lang => {
-          const baseMsg = lang.initialMessage;
-          const currentBotName = userName.trim() || (uiLang === 'hi' ? 'नारद' : 'Nard');
-          // Could be the original or the replaced version
-          return prev[0].text === baseMsg || 
-                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, currentBotName) ||
-                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, 'Nard') ||
-                 prev[0].text === baseMsg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, 'नारद');
-        });
-        
-        if (isInitial) {
-          return [{ ...prev[0], text: getInitialMessage(uiLang, userName) }];
-        }
+      if (prev.length === 1 && (prev[0].id === '1' || prev[0].id === '1-model')) {
+        return [{ ...prev[0], text: getInitialMessage(uiLang, userName) }];
       }
       return prev;
     });
@@ -2367,7 +2475,7 @@ export default function App() {
     let timeoutId: NodeJS.Timeout;
 
     const messages = (t.typeMessages || [t.typeMessage]).map((msg: string) => 
-      msg.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName)
+      msg.replace(/Nard|नॉर्ड|নর্ড|நார்ட்|నార్డ్|નોર્ડ|ನಾರ್ಡ್|നോർഡ്|ନର୍ଡ|ਨਾਰਡ|نارڈ|نارڊ|ᱱᱚᱨᱰ/gi, displayBotName)
     );
 
     const typeWriter = () => {
@@ -2514,9 +2622,49 @@ export default function App() {
   const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
   const [premiumVoice, setPremiumVoice] = useState(() => {
     const saved = safeStorage.getItem('premiumVoice');
-    const femaleVoices = ['Kore', 'Zephyr'];
-    return (saved && !femaleVoices.includes(saved)) ? saved : 'Fenrir';
+    if (saved) return saved;
+    let initialName = '';
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBotName = urlParams.get('botName');
+      if (urlBotName) {
+        initialName = urlBotName;
+      } else {
+        const savedName = safeStorage.getItem('userName');
+        if (savedName) initialName = savedName;
+      }
+    } catch (e) {
+      console.error('Error reading initial name for voice:', e);
+    }
+    const displayInitialName = initialName || (safeStorage.getItem('uiLang') === 'hi' ? 'नॉर्ड' : 'Nard');
+    const gender = guessGender(displayInitialName);
+    return gender === 'F' ? 'Zephyr' : 'Charon';
   });
+
+  // Auto-sync voice with bot name
+  useEffect(() => {
+    const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+    const gender = guessGender(currentName);
+    const expectedVoice = gender === 'F' ? 'Zephyr' : 'Charon';
+    
+    // Only update if the current voice doesn't match the expected gender
+    // This allows users to manually select a different voice of the SAME gender if they want,
+    // but ensures a female name gets a female voice and a male name gets a male voice.
+    const isCurrentVoiceFemale = ['Zephyr', 'Kore'].includes(premiumVoice);
+    const isExpectedVoiceFemale = gender === 'F';
+    
+    if (isCurrentVoiceFemale !== isExpectedVoiceFemale) {
+      setPremiumVoice(expectedVoice);
+      safeStorage.setItem('premiumVoice', expectedVoice);
+    }
+  }, [userName, uiLang, premiumVoice]);
+
+  // Clear setupName when userName is cleared so the setup box is empty when it reappears
+  useEffect(() => {
+    if (!userName) {
+      setSetupName('');
+    }
+  }, [userName]);
 
   // Link global setError to the component state
   useEffect(() => {
@@ -2607,7 +2755,7 @@ export default function App() {
 
   const handleNewChat = () => {
     stopMessageAudio();
-    setMessages([{ id: '1', role: 'model', text: t.initialMessage }]);
+    setMessages([{ id: '1', role: 'model', text: getInitialMessage(uiLang, userName) }]);
     setCurrentChatId(null);
     setIsHistoryOpen(false);
   };
@@ -2696,16 +2844,39 @@ export default function App() {
     if (!window.speechSynthesis) return;
     const loadVoices = () => {
       const allVoices = window.speechSynthesis.getVoices();
-      // Filter out voices that are explicitly labeled as female
-      const maleVoices = allVoices.filter(v => {
+      const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+      const gender = guessGender(currentName);
+      
+      const femaleNames = [
+        'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
+        'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
+        '-standard-a', '-standard-d', '-standard-e', '-standard-f',
+        '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
+        '-neural-a', '-neural-d', '-neural-e', '-neural-f',
+        '-neural2-a', '-neural2-d', '-neural2-e', '-neural2-f'
+      ];
+
+      const filteredVoices = allVoices.filter(v => {
         const name = v.name.toLowerCase();
-        return !name.includes('female') && !name.includes('woman') && !name.includes('girl');
+        const isFemale = femaleNames.some(f => name.includes(f));
+        return gender === 'F' ? isFemale : !isFemale;
       });
-      setAvailableVoices(maleVoices);
+      
+      const voicesToSet = filteredVoices.length > 0 ? filteredVoices : allVoices;
+      setAvailableVoices(voicesToSet);
+      
+      // If the currently selected voice is no longer in the filtered list, clear it
+      if (selectedVoiceURIRef.current) {
+        const stillExists = voicesToSet.some(v => v.voiceURI === selectedVoiceURIRef.current);
+        if (!stillExists) {
+          setSelectedVoiceURI('');
+          selectedVoiceURIRef.current = '';
+        }
+      }
     };
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-  }, []);
+  }, [userName, uiLang]);
 
   // Save selected voice
   useEffect(() => {
@@ -3413,41 +3584,76 @@ export default function App() {
         const langPrefix = detectedLang.split('-')[0];
         const matchingVoices = voices.filter(v => v.lang.toLowerCase().includes(langPrefix) || v.lang.toLowerCase().includes(detectedLang.toLowerCase()));
         
-        // 1. Look for Charon-like calm, measured male voices first
-        selectedVoice = matchingVoices.find(v => {
-          const name = v.name.toLowerCase();
-          return name.includes('google uk english male') ||
-                 name.includes('daniel') ||
-                 name.includes('arthur') ||
-                 name.includes('hi-in-x-hie-local') ||
-                 name.includes('hi-in-x-hie') ||
-                 name.includes('-wavenet-b') ||
-                 name.includes('-neural2-b');
-        }) || null;
+        const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+        const gender = guessGender(currentName);
+        
+        const femaleNames = [
+          'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
+          'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
+          '-standard-a', '-standard-d', '-standard-e', '-standard-f',
+          '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
+          '-neural-a', '-neural-d', '-neural-e', '-neural-f',
+          '-neural2-a', '-neural2-d', '-neural2-e', '-neural2-f'
+        ];
 
-        // 1.5. Look for other known male voices
-        if (!selectedVoice) {
+        if (gender === 'F') {
+          // Look for female voices
           selectedVoice = matchingVoices.find(v => {
             const name = v.name.toLowerCase();
-            return name.includes('hemant') || 
-                   name.includes('rishi') || 
-                   name.includes('male') ||
-                   name.includes('-standard-b') || 
-                   name.includes('-standard-c') || 
-                   name.includes('-wavenet-c');
+            return femaleNames.some(f => name.includes(f));
           }) || null;
-        }
+          
+          // Fallback to any female voice in all voices if not found in matching language
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => {
+              const name = v.name.toLowerCase();
+              return femaleNames.some(f => name.includes(f));
+            }) || null;
+          }
+        } else {
+          // 1. Look for Charon-like calm, measured male voices first
+          selectedVoice = matchingVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('google uk english male') ||
+                   name.includes('daniel') ||
+                   name.includes('arthur') ||
+                   name.includes('hi-in-x-hie-local') ||
+                   name.includes('hi-in-x-hie') ||
+                   name.includes('-wavenet-b') ||
+                   name.includes('-neural2-b');
+          }) || null;
 
-        // 2. If no explicit male voice found, try to avoid known female voices
-        if (!selectedVoice) {
-          const femaleNames = [
-            'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
-            'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
-            '-standard-a', '-standard-d', '-standard-e', '-standard-f',
-            '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
-            '-neural-a', '-neural-d', '-neural-e', '-neural-f'
-          ];
-          selectedVoice = matchingVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f))) || null;
+          // 1.5. Look for other known male voices
+          if (!selectedVoice) {
+            selectedVoice = matchingVoices.find(v => {
+              const name = v.name.toLowerCase();
+              return name.includes('hemant') || 
+                     name.includes('rishi') || 
+                     name.includes('male') ||
+                     name.includes('-standard-b') || 
+                     name.includes('-standard-c') || 
+                     name.includes('-wavenet-c');
+            }) || null;
+          }
+
+          // 2. If no explicit male voice found, try to avoid known female voices
+          if (!selectedVoice) {
+            selectedVoice = matchingVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f))) || null;
+          }
+          
+          // 5. Try to find the specific Charon-like male voice requested by user if we are speaking Hindi or as a strong fallback
+          if (!selectedVoice) {
+            const preferredCharonVoice = voices.find(v => {
+              const name = v.name.toLowerCase();
+              return name.includes('google uk english male') ||
+                     name.includes('daniel') ||
+                     name.includes('hi-in-x-hie-local') ||
+                     name.includes('hi-in-x-hie');
+            });
+            if (preferredCharonVoice) {
+              selectedVoice = preferredCharonVoice;
+            }
+          }
         }
 
         // 3. Fallback to the first available voice in that language
@@ -3458,18 +3664,6 @@ export default function App() {
         // 4. Ultimate fallback to any voice if language not found
         if (!selectedVoice && voices.length > 0) {
           selectedVoice = voices[0];
-        }
-
-        // 5. Try to find the specific Charon-like male voice requested by user if we are speaking Hindi or as a strong fallback
-        const preferredCharonVoice = voices.find(v => {
-          const name = v.name.toLowerCase();
-          return name.includes('google uk english male') ||
-                 name.includes('daniel') ||
-                 name.includes('hi-in-x-hie-local') ||
-                 name.includes('hi-in-x-hie');
-        });
-        if (preferredCharonVoice) {
-          selectedVoice = preferredCharonVoice;
         }
       }
 
@@ -3610,8 +3804,14 @@ export default function App() {
 
       const config: any = {};
       let systemInstruction = String(SYSTEM_INSTRUCTION);
-      if (displayBotName) {
-        systemInstruction += `\n\nCRITICAL: Your name is ${displayBotName}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      
+      if (userName.trim()) {
+        const currentBotName = userName.trim();
+        if (currentMessages.length <= 2) {
+          systemInstruction += `\n\nCRITICAL: Your name is ${currentBotName}. You must introduce yourself in your first response and refer to yourself using this name instead of Nard. Adopt the appropriate gender and persona matching the name '${currentBotName}', especially when speaking in languages with gendered grammar like Hindi.`;
+        } else {
+          systemInstruction += `\n\nCRITICAL: Your name is ${currentBotName}. DO NOT mention your name or introduce yourself again unless the user explicitly asks for it. Adopt the appropriate gender and persona matching the name '${currentBotName}'.`;
+        }
       }
       
       if (systemInstruction && systemInstruction.trim() !== '') {
@@ -4018,6 +4218,7 @@ export default function App() {
       
       await audioCtx.resume();
       audioContextRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
       
       const actualSampleRate = audioCtx.sampleRate;
       console.log("AudioContext sample rate:", actualSampleRate);
@@ -4058,86 +4259,147 @@ export default function App() {
       analyser.connect(audioCtx.destination);
       analyserRef.current = analyser;
       
-      const source = audioCtx.createMediaStreamSource(stream);
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
+      // Use AudioWorklet if available, fallback to ScriptProcessor
+      let processor: any;
       
-      processor.onaudioprocess = (e) => {
-        // Mute all output channels to prevent local echo
-        for (let c = 0; c < e.outputBuffer.numberOfChannels; c++) {
-          e.outputBuffer.getChannelData(c).fill(0);
-        }
-
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Simple downsampling if sample rate is not 16000
-        let processedData = inputData;
-        const currentRate = e.inputBuffer.sampleRate;
-        
-        if (currentRate !== 16000) {
-          const ratio = currentRate / 16000;
-          const newLength = Math.round(inputData.length / ratio);
-          const resampledData = new Float32Array(newLength);
-          for (let i = 0; i < newLength; i++) {
-            resampledData[i] = inputData[Math.round(i * ratio)];
-          }
-          processedData = resampledData;
-        }
-
-        const pcm16 = new Int16Array(processedData.length);
-        for (let i = 0; i < processedData.length; i++) {
-          let s = Math.max(-1, Math.min(1, processedData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        
-        const buffer = new ArrayBuffer(pcm16.length * 2);
-        const view = new DataView(buffer);
-        for (let i = 0; i < pcm16.length; i++) {
-          view.setInt16(i * 2, pcm16[i], true);
-        }
-        
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        const base64 = btoa(binary);
-        
-        if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
-          sessionPromiseRef.current.then(s => {
-            try {
-              // Check if session is still active and if the underlying WebSocket is open (if possible)
-              if (s && isSessionActiveRef.current) {
-                s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
-              }
-            } catch (err: any) {
-              // Only log if it's not a "WebSocket is closed" error to reduce noise
-              const errMsg = err?.message || String(err);
-              if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
-                console.warn("Failed to send audio input:", err);
-              } else {
-                // If we hit a closed socket, ensure we stop the session locally
-                isSessionActiveRef.current = false;
+      try {
+        if (audioCtx.audioWorklet) {
+          const workletCode = `
+            class PCMProcessor extends AudioWorkletProcessor {
+              process(inputs, outputs, parameters) {
+                const input = inputs[0];
+                if (input && input.length > 0) {
+                  const pcmData = input[0];
+                  this.port.postMessage(pcmData);
+                }
+                return true;
               }
             }
-          }).catch(() => {});
+            registerProcessor('pcm-processor', PCMProcessor);
+          `;
+          const workletBlob = new Blob([workletCode], { type: 'application/javascript' });
+          const workletUrl = URL.createObjectURL(workletBlob);
+          await audioCtx.audioWorklet.addModule(workletUrl);
+          processor = new AudioWorkletNode(audioCtx, 'pcm-processor');
+          
+          processor.port.onmessage = (event: MessageEvent) => {
+            const pcmData = event.data;
+            // Downsample from 44.1kHz/48kHz to 16kHz
+            const ratio = audioCtx.sampleRate / 16000;
+            const newLength = Math.round(pcmData.length / ratio);
+            const result = new Int16Array(newLength);
+            let offset = 0;
+            for (let i = 0; i < newLength; i++) {
+              const nextOffset = Math.round((i + 1) * ratio);
+              let sum = 0;
+              let count = 0;
+              for (let j = offset; j < nextOffset && j < pcmData.length; j++) {
+                sum += pcmData[j];
+                count++;
+              }
+              result[i] = Math.min(1, Math.max(-1, sum / count)) * 0x7FFF;
+              offset = nextOffset;
+            }
+            
+            // Convert to base64
+            const bytes = new Uint8Array(result.buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            
+            if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
+              sessionPromiseRef.current.then(s => {
+                try {
+                  if (s && isSessionActiveRef.current) {
+                    s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
+                  }
+                } catch (err: any) {
+                  const errMsg = err?.message || String(err);
+                  if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
+                    console.warn("Failed to send audio input:", err);
+                  } else {
+                    isSessionActiveRef.current = false;
+                  }
+                }
+              }).catch(() => {});
+            }
+          };
+          
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+        } else {
+          throw new Error("AudioWorklet not supported");
         }
-      };
-      
-      source.connect(processor);
-      // Connect to a MediaStreamDestination to ensure onaudioprocess fires without playing audio back to speakers
-      const dummyDest = audioCtx.createMediaStreamDestination();
-      processor.connect(dummyDest);
+      } catch (workletErr) {
+        console.warn("AudioWorklet failed, falling back to ScriptProcessor:", workletErr);
+        processor = audioCtx.createScriptProcessor(4096, 1, 1);
+        processor.onaudioprocess = (e: any) => {
+          const pcmData = e.inputBuffer.getChannelData(0);
+          // Downsample from 44.1kHz/48kHz to 16kHz
+          const ratio = audioCtx.sampleRate / 16000;
+          const newLength = Math.round(pcmData.length / ratio);
+          const result = new Int16Array(newLength);
+          let offset = 0;
+          for (let i = 0; i < newLength; i++) {
+            const nextOffset = Math.round((i + 1) * ratio);
+            let sum = 0;
+            let count = 0;
+            for (let j = offset; j < nextOffset && j < pcmData.length; j++) {
+              sum += pcmData[j];
+              count++;
+            }
+            result[i] = Math.min(1, Math.max(-1, sum / count)) * 0x7FFF;
+            offset = nextOffset;
+          }
+          
+          // Convert to base64
+          const bytes = new Uint8Array(result.buffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+          
+          if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
+            sessionPromiseRef.current.then(s => {
+              try {
+                if (s && isSessionActiveRef.current) {
+                  s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
+                }
+              } catch (err: any) {
+                const errMsg = err?.message || String(err);
+                if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
+                  console.warn("Failed to send audio input:", err);
+                } else {
+                  isSessionActiveRef.current = false;
+                }
+              }
+            }).catch(() => {});
+          }
+        };
+        source.connect(processor);
+        const dummyDest = audioCtx.createMediaStreamDestination();
+        processor.connect(dummyDest);
+      }
+      processorRef.current = processor;
       
       if (!ai) {
         initAI(getApiKey());
       }
       if (!ai) {
-        throw new Error("AI service not initialized. Please set your API Key in Settings.");
+        throw new Error("AI service not initialized. Please ensure your Gemini API key is correctly configured in the environment.");
       }
       let liveInstruction = SYSTEM_INSTRUCTION;
-      if (displayBotName) {
-        liveInstruction += `\n\nCRITICAL: Your name is ${displayBotName}. You must introduce yourself and refer to yourself using this name instead of Gen-Z.`;
+      
+      if (userName.trim()) {
+        const currentBotName = userName.trim();
+        if (messages.length <= 2) {
+          liveInstruction += `\n\nCRITICAL: Your name is ${currentBotName}. You must introduce yourself in your first response and refer to yourself using this name instead of Nard. Adopt the appropriate gender and persona matching the name '${currentBotName}', especially when speaking in languages with gendered grammar like Hindi.`;
+        } else {
+          liveInstruction += `\n\nCRITICAL: Your name is ${currentBotName}. DO NOT mention your name or introduce yourself again unless the user explicitly asks for it. Adopt the appropriate gender and persona matching the name '${currentBotName}'.`;
+        }
       }
       liveInstruction += "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.";
 
@@ -4147,7 +4409,7 @@ export default function App() {
           responseModalities: [Modality.AUDIO],
           systemInstruction: liveInstruction,
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Charon' } }
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current } }
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {}
@@ -4157,19 +4419,29 @@ export default function App() {
              console.log("Live API connected");
              isSessionActiveRef.current = true;
              nextAudioTimeRef.current = 0;
-             if (sessionPromiseRef.current) {
-               sessionPromiseRef.current.then(s => {
-                 try {
-                   if (s && isSessionActiveRef.current) {
-                     s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${t.initialMessage}'` });
+             // Add a small delay before sending the initial message to ensure the connection is fully stable
+             setTimeout(() => {
+               if (sessionPromiseRef.current && isSessionActiveRef.current) {
+                 sessionPromiseRef.current.then(s => {
+                   try {
+                     if (s && isSessionActiveRef.current) {
+                       if (messages.length <= 2) {
+                         s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${getInitialMessage(uiLang, userName)}'` });
+                       } else {
+                         s.sendRealtimeInput({ text: `Hello, I'm back. Let's continue.` });
+                       }
+                     }
+                   } catch (e) {
+                     console.warn("Failed to send initial message:", e);
                    }
-                 } catch (e) {
-                   console.warn("Failed to send initial message:", e);
-                 }
-               }).catch(() => {});
-             }
+                 }).catch(() => {});
+               }
+             }, 500);
           },
           onmessage: async (message: LiveServerMessage) => {
+             if (message.serverContent) {
+               console.log("Live API message received:", message);
+             }
              if (message.serverContent?.interrupted) {
                nextAudioTimeRef.current = 0;
                activeAudioSourcesRef.current.forEach(source => {
@@ -4213,13 +4485,13 @@ export default function App() {
                setLiveTranscript([...liveTranscriptRef.current]);
              }
           },
-          onclose: () => {
-             console.log("Live API closed");
+          onclose: (event?: any) => {
+             console.log("Live API closed", event);
              isSessionActiveRef.current = false;
              stopLiveAudio();
           },
           onerror: (err: any) => {
-             console.warn("Live API error:", err);
+             console.warn("Live API error details:", err);
              isSessionActiveRef.current = false;
              stopLiveAudio();
           }
@@ -4671,7 +4943,10 @@ export default function App() {
                     <input
                       type="text"
                       value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
+                      onChange={(e) => {
+                        const newName = e.target.value;
+                        setUserName(newName);
+                      }}
                       placeholder={t.userNamePlaceholder}
                       className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors w-full sm:w-auto"
                     />
@@ -4755,11 +5030,16 @@ export default function App() {
                         <select 
                           className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
                           value={premiumVoice}
-                          onChange={(e) => setPremiumVoice(e.target.value)}
+                          onChange={(e) => {
+                            setPremiumVoice(e.target.value);
+                            safeStorage.setItem('premiumVoice', e.target.value);
+                          }}
                         >
                           <option value="Fenrir" className="bg-zinc-800">{t.fenrirDesc}</option>
                           <option value="Charon" className="bg-zinc-800">{t.charonDesc}</option>
                           <option value="Puck" className="bg-zinc-800">{t.puckDesc}</option>
+                          <option value="Kore" className="bg-zinc-800">{(t as any).koreDesc || "Kore (Calm Female)"}</option>
+                          <option value="Zephyr" className="bg-zinc-800">{(t as any).zephyrDesc || "Zephyr (Strong Female)"}</option>
                         </select>
                       </div>
                     ) : (
@@ -5029,17 +5309,15 @@ export default function App() {
                         className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-400 transition-colors"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && setupName.trim()) {
-                            setUserName(setupName.trim());
+                            const newName = setupName.trim();
+                            setUserName(newName);
                           }
                         }}
                       />
                       <button
                         onClick={() => {
-                          if (setupName.trim()) {
-                            setUserName(setupName.trim());
-                          } else {
-                            setUserName(uiLang === 'hi' ? 'नारद' : 'Nard');
-                          }
+                          const newName = setupName.trim();
+                          setUserName(newName);
                         }}
                         className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                       >
@@ -5082,7 +5360,7 @@ export default function App() {
                 >
                   <div className="p-2 flex items-center gap-3">
                     <Loader2 size={18} className="animate-spin text-yellow-500" />
-                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {t.thinking}</span>
+                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {getGenderAdjustedText(t.thinking, uiLang, displayBotName)}</span>
                   </div>
                 </motion.div>
               )}
@@ -5129,7 +5407,7 @@ export default function App() {
                     )}
                   </AnimatePresence>
 
-                  {/* Gen-Z Realistic Robot Avatar */}
+                  {/* Nard Realistic Robot Avatar */}
                   <div 
                     ref={avatarContainerRef}
                     className="relative z-10 w-60 h-60 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300"
@@ -5249,8 +5527,8 @@ export default function App() {
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
                       <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
                         {isModelSpeaking 
-                          ? t.speaking.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName) 
-                          : t.listening.replace(/Gen-Z|जेन-जी|জেন-জি|ஜென்-ஜி|జెన్-జి|જેન-ઝી|ಜೆನ್-ಜಿ|ജെൻ-സി|ଜେନ୍-ଜି|ਜੇਨ-ਜ਼ੀ/gi, displayBotName)}
+                          ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
+                          : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
                       </span>
                     </motion.div>
 
