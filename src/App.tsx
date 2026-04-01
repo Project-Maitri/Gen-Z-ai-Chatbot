@@ -2366,8 +2366,13 @@ export default function App() {
   });
 
   const [setupName, setSetupName] = useState('');
+  const [isEditingBotName, setIsEditingBotName] = useState(false);
 
   const displayBotName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+
+  useEffect(() => {
+    document.title = userName ? `${userName} - E-MAITRI` : 'Gen-Z - AI Assistant, E-MAITRI';
+  }, [userName]);
 
   const getGenderAdjustedText = (text: string, lang: string, name: string) => {
     let replaced = text.replace(/Nard|नॉर्ड|নর্ড|நார்ட்|నార్డ్|નોર્ડ|ನಾರ್ಡ್|നോർഡ്|ନର୍ଡ|ਨਾਰਡ|نارڈ|نارڊ|ᱱᱚᱨᱰ|જેન-જી|ജെൻ-ജി|ਜੇਨ-ਜੀ/gi, name);
@@ -2871,12 +2876,48 @@ export default function App() {
       const voicesToSet = filteredVoices.length > 0 ? filteredVoices : allVoices;
       setAvailableVoices(voicesToSet);
       
-      // If the currently selected voice is no longer in the filtered list, clear it
+      // Auto-select the best voice if none is selected or the current one doesn't match the gender
+      let needsNewVoice = false;
       if (selectedVoiceURIRef.current) {
         const stillExists = voicesToSet.some(v => v.voiceURI === selectedVoiceURIRef.current);
         if (!stillExists) {
-          setSelectedVoiceURI('');
-          selectedVoiceURIRef.current = '';
+          needsNewVoice = true;
+        }
+      } else {
+        needsNewVoice = true;
+      }
+
+      if (needsNewVoice && voicesToSet.length > 0) {
+        const langPrefix = uiLang.split('-')[0];
+        const matchingVoices = voicesToSet.filter(v => v.lang.toLowerCase().includes(langPrefix) || v.lang.toLowerCase().includes(uiLang.toLowerCase()));
+        
+        let bestVoice = null;
+        if (gender === 'F') {
+          bestVoice = matchingVoices[0] || voicesToSet[0];
+        } else {
+          bestVoice = matchingVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('google uk english male') ||
+                   name.includes('daniel') ||
+                   name.includes('arthur') ||
+                   name.includes('hi-in-x-hie-local') ||
+                   name.includes('hi-in-x-hie') ||
+                   name.includes('-wavenet-b') ||
+                   name.includes('-neural2-b');
+          }) || matchingVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('hemant') || 
+                   name.includes('rishi') || 
+                   name.includes('male') ||
+                   name.includes('-standard-b') || 
+                   name.includes('-standard-c') || 
+                   name.includes('-wavenet-c');
+          }) || matchingVoices[0] || voicesToSet[0];
+        }
+        
+        if (bestVoice) {
+          setSelectedVoiceURI(bestVoice.voiceURI);
+          selectedVoiceURIRef.current = bestVoice.voiceURI;
         }
       }
     };
@@ -4265,7 +4306,8 @@ export default function App() {
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
-      source.connect(analyser);
+      // Do NOT connect the microphone source to the analyser, as it will cause local echo
+      // source.connect(analyser);
       analyser.connect(audioCtx.destination);
       analyserRef.current = analyser;
       
@@ -4848,7 +4890,7 @@ export default function App() {
                 </div>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">{t.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">{displayBotName}</h1>
                 <p className="text-[10px] text-green-600 font-sans font-medium leading-none mt-0.5">{t.subtitle}</p>
               </div>
               
@@ -4965,16 +5007,55 @@ export default function App() {
                         <p className="text-gray-500 text-xs">{t.userNamePlaceholder}</p>
                       </div>
                     </div>
-                    <input
-                      type="text"
-                      value={userName}
-                      onChange={(e) => {
-                        const newName = e.target.value;
-                        setUserName(newName);
-                      }}
-                      placeholder={t.userNamePlaceholder}
-                      className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors w-full sm:w-auto"
-                    />
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      {isEditingBotName ? (
+                        <div className="flex items-center gap-2 w-full">
+                          <input
+                            type="text"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                            placeholder={t.userNamePlaceholder}
+                            className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors flex-1 sm:w-48"
+                            autoFocus
+                            onBlur={() => setIsEditingBotName(false)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') setIsEditingBotName(false);
+                            }}
+                          />
+                          <button 
+                            onClick={() => setIsEditingBotName(false)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Save"
+                          >
+                            <Check size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end bg-gray-50 px-4 py-2 rounded-lg border border-transparent hover:border-gray-200 transition-colors group">
+                          <span className="text-gray-900 font-medium truncate max-w-[150px]">
+                            {userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard')}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => setIsEditingBotName(true)}
+                              className="p-1.5 text-sky-600 hover:bg-sky-100 rounded-md transition-colors"
+                              title="Edit Name"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            {userName && (
+                              <button 
+                                onClick={() => setUserName('')}
+                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete/Reset Name"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -5084,8 +5165,8 @@ export default function App() {
                           onChange={(e) => setSelectedVoiceURI(e.target.value)}
                         >
                           <option value="" className="bg-zinc-800">{t.autoSelect}</option>
-                          {availableVoices.map(v => (
-                            <option key={v.voiceURI} value={v.voiceURI} className="bg-zinc-800">
+                          {availableVoices.map((v, index) => (
+                            <option key={`${v.voiceURI}-${index}`} value={v.voiceURI} className="bg-zinc-800">
                               {v.name} ({v.lang})
                             </option>
                           ))}
@@ -5325,13 +5406,13 @@ export default function App() {
                     <p className="text-sm text-gray-600 mb-4">
                       {uiLang === 'hi' ? 'आप मुझे क्या बुलाना चाहेंगे? आप अपने AI सहायक के लिए एक कस्टम नाम सेट कर सकते हैं। आप अपना नाम भी आजमा सकते हैं।' : 'What would you like to call me? You can set a custom name for your AI assistant. You can also try your own name.'}
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-3">
                       <input
                         type="text"
                         value={setupName}
                         onChange={(e) => setSetupName(e.target.value)}
                         placeholder={t.userNamePlaceholder}
-                        className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-400 transition-colors"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 h-8 text-sm outline-none focus:border-sky-400 transition-colors"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && setupName.trim()) {
                             const newName = setupName.trim();
@@ -5344,9 +5425,9 @@ export default function App() {
                           const newName = setupName.trim();
                           setUserName(newName);
                         }}
-                        className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        className="w-1/2 mx-auto bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                       >
-                        {setupName.trim() ? (uiLang === 'hi' ? 'सुरक्षित करें' : 'Save') : (uiLang === 'hi' ? 'डिफ़ॉल्ट नाम सेव करें' : 'Save Default Name')}
+                        {setupName.trim() ? (uiLang === 'hi' ? 'सुरक्षित करें' : 'Save') : (uiLang === 'hi' ? 'कस्टम नाम सेव करें' : 'Save Custom Name')}
                       </button>
                     </div>
                   </div>

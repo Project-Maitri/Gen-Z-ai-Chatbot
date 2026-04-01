@@ -6,20 +6,18 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // यह GitHub Actions से आने वाले environment variables को लोड करेगा
   const env = loadEnv(mode, process.cwd(), '');
-  
   return {
-    // GitHub Pages के लिए सही बेस पाथ
-    base: '/Gen-Z-ai-Chatbot/',
+    // GitHub Pages के लिए सापेक्ष पथ (Relative Path)
+    base: '',
 
     plugins: [react(), tailwindcss()],
     
     define: {
-      // यहाँ हम GitHub Secrets की वैल्यू को कोड में मैप कर रहे हैं
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ""),
-      'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ""),
+      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ""),
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY || ""),
     },
     
     resolve: {
@@ -28,8 +26,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     
+    server: {
+      port: 3000,
+      host: '0.0.0.0',
+      hmr: process.env.DISABLE_HMR !== 'true',
+    },
+    
     build: {
-      // इसे 'dist' रखें क्योंकि आपकी deploy.yml इसी फोल्डर को अपलोड कर रही है
       outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,
