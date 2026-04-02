@@ -2326,6 +2326,75 @@ const guessGender = (name: string): 'M' | 'F' => {
   return 'M';
 };
 
+const isFemaleVoice = (v: SpeechSynthesisVoice) => {
+  const n = v.name.toLowerCase();
+  const u = v.voiceURI.toLowerCase();
+  
+  const femaleTerms = [
+    'female', 'woman', 'girl', 'lady', 
+    'महिला', 'स्त्री', 'लड़की', 'नारी', // Hindi, Marathi, Nepali, etc.
+    'સ્ત્રી', 'છોકરી', // Gujarati
+    'ਔਰਤ', 'ਕੁੜੀ', // Punjabi
+    'பெண்', // Tamil
+    'స్త్రీ', 'ఆడ', // Telugu
+    'ಮಹಿಳೆ', 'ಹುಡುಗಿ', // Kannada
+    'സ്ത്രീ', 'പെൺകുട്ടി', // Malayalam
+    'ନାରୀ', 'ଝିଅ', // Odia
+    'عورت', 'لڑکی', 'خاتون' // Urdu, Kashmiri, Sindhi
+  ];
+
+  if (femaleTerms.some(term => n.includes(term) || u.includes(term))) return true;
+  
+  const femaleIdentifiers = [
+    'kalpana', 'lekha', 'aditi', 'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
+    '-standard-a', '-standard-d', '-wavenet-a', '-wavenet-d', '-neural2-a', '-neural2-d',
+    '-hia', '-hic', '-ena', '-enc', 'cfn', 'hif'
+  ];
+  return femaleIdentifiers.some(id => n.includes(id) || u.includes(id));
+};
+
+const isMaleVoice = (v: SpeechSynthesisVoice) => {
+  const n = v.name.toLowerCase();
+  const u = v.voiceURI.toLowerCase();
+  
+  const femaleTerms = [
+    'female', 'woman', 'girl', 'lady', 
+    'महिला', 'स्त्री', 'लड़की', 'नारी',
+    'સ્ત્રી', 'છોકરી',
+    'ਔਰਤ', 'ਕੁੜੀ',
+    'பெண்',
+    'స్త్రీ', 'ఆడ',
+    'ಮಹಿಳೆ', 'ಹುಡುಗಿ',
+    'സ്ത്രീ', 'പെൺകുട്ടി',
+    'ନାରୀ', 'ଝିଅ',
+    'عورت', 'لڑکی', 'خاتون'
+  ];
+  
+  if (femaleTerms.some(term => n.includes(term) || u.includes(term))) return false;
+  
+  const maleTerms = [
+    'male', 'boy', 'पुरुष', 'पुल्लिंग', 'लड़का', 'आदमी', 'नर', // Hindi, Marathi, Nepali, etc.
+    'પુરુષ', 'છોકરો', // Gujarati
+    'ਆਦਮੀ', 'ਮੁੰਡਾ', // Punjabi
+    'ஆண்', // Tamil
+    'పురుషుడు', 'మగ', // Telugu
+    'ಪುರುಷ', 'ಹುಡುಗ', // Kannada
+    'പുരുഷൻ', 'ആൺകുട്ടി', // Malayalam
+    'ପୁରୁଷ', 'ପୁଅ', // Odia
+    'مرد', 'لڑکا' // Urdu, Kashmiri, Sindhi
+  ];
+
+  if (maleTerms.some(term => n.includes(term) || u.includes(term))) return true;
+  if ((n.includes('man') && !n.includes('samantha')) || (u.includes('man') && !u.includes('samantha'))) return true;
+  
+  const maleIdentifiers = [
+    'david', 'arthur', 'daniel', 'hemant', 'rishi', 'mark', 'paul', 'ravi', 'amit', 'kumar',
+    '-hie', '-hid', '-end', '-ene', '-standard-b', '-standard-c', '-wavenet-b', '-wavenet-c', '-neural2-b', '-neural2-c',
+    'cme', 'him'
+  ];
+  return maleIdentifiers.some(id => n.includes(id) || u.includes(id));
+};
+
 export default function App() {
   const [uiLang, setUiLang] = useState(() => {
     try {
@@ -2630,7 +2699,21 @@ export default function App() {
   const [speechPitch, setSpeechPitch] = useState(() => parseFloat(safeStorage.getItem('speechPitch_v4') || '1.0'));
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => safeStorage.getItem('selectedVoiceURI') || '');
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium');
+  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => {
+    if (!navigator.onLine) return 'standard';
+    return (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium';
+  });
+
+  // Auto-switch to standard voice engine when offline
+  useEffect(() => {
+    const handleOffline = () => {
+      setVoiceEngine('standard');
+      safeStorage.setItem('voiceEngine_v3', 'standard');
+    };
+    
+    window.addEventListener('offline', handleOffline);
+    return () => window.removeEventListener('offline', handleOffline);
+  }, []);
   const [premiumVoice, setPremiumVoice] = useState(() => {
     const saved = safeStorage.getItem('premiumVoice');
     if (saved) return saved;
@@ -2670,6 +2753,25 @@ export default function App() {
     }
   }, [userName, uiLang, premiumVoice]);
 
+  const lastPitchGenderRef = useRef<'M' | 'F' | null>(null);
+
+  // Auto-sync offline speech pitch with bot gender
+  useEffect(() => {
+    const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+    const gender = guessGender(currentName);
+    
+    // Only auto-update if the gender actually changed, OR if it's the first load and no pitch is saved
+    if (lastPitchGenderRef.current !== gender) {
+      const hasSavedPitch = !!safeStorage.getItem('speechPitch_v4');
+      if (lastPitchGenderRef.current !== null || !hasSavedPitch) {
+        const newPitch = gender === 'F' ? 0.8 : 0.5;
+        setSpeechPitch(newPitch);
+        safeStorage.setItem('speechPitch_v4', newPitch.toString());
+      }
+    }
+    lastPitchGenderRef.current = gender;
+  }, [userName, uiLang]);
+
   // Clear setupName when userName is cleared so the setup box is empty when it reappears
   useEffect(() => {
     if (!userName) {
@@ -2704,6 +2806,7 @@ export default function App() {
   const speechRateRef = useRef(speechRate);
   const speechPitchRef = useRef(speechPitch);
   const selectedVoiceURIRef = useRef(selectedVoiceURI);
+  const lastGenderRef = useRef<'M' | 'F' | null>(null);
   const voiceEngineRef = useRef(voiceEngine);
   const premiumVoiceRef = useRef(premiumVoice);
   const premiumAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -2855,75 +2958,113 @@ export default function App() {
     if (!window.speechSynthesis) return;
     const loadVoices = () => {
       const allVoices = window.speechSynthesis.getVoices();
+      if (allVoices.length === 0) return;
+
+      setAvailableVoices(allVoices);
+
       const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
       const gender = guessGender(currentName);
-      
-      const femaleNames = [
-        'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
-        'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
-        '-standard-a', '-standard-d', '-standard-e', '-standard-f',
-        '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
-        '-neural-a', '-neural-d', '-neural-e', '-neural-f',
-        '-neural2-a', '-neural2-d', '-neural2-e', '-neural2-f'
-      ];
+      let shouldResetVoice = false;
 
-      const filteredVoices = allVoices.filter(v => {
-        const name = v.name.toLowerCase();
-        const isFemale = femaleNames.some(f => name.includes(f));
-        return gender === 'F' ? isFemale : !isFemale;
-      });
-      
-      const voicesToSet = filteredVoices.length > 0 ? filteredVoices : allVoices;
-      setAvailableVoices(voicesToSet);
-      
-      // Auto-select the best voice if none is selected or the current one doesn't match the gender
-      let needsNewVoice = false;
-      if (selectedVoiceURIRef.current) {
-        const stillExists = voicesToSet.some(v => v.voiceURI === selectedVoiceURIRef.current);
-        if (!stillExists) {
-          needsNewVoice = true;
+      if (lastGenderRef.current !== null && lastGenderRef.current !== gender) {
+        shouldResetVoice = true;
+      } else if (selectedVoiceURIRef.current) {
+        // On initial load or anytime, check if the explicitly selected voice contradicts the current gender
+        const currentVoice = allVoices.find(v => v.voiceURI === selectedVoiceURIRef.current);
+        if (currentVoice) {
+          if (gender === 'F' && isMaleVoice(currentVoice) && !isFemaleVoice(currentVoice)) {
+            shouldResetVoice = true;
+          } else if (gender === 'M' && isFemaleVoice(currentVoice) && !isMaleVoice(currentVoice)) {
+            shouldResetVoice = true;
+          }
         }
-      } else {
-        needsNewVoice = true;
       }
 
-      if (needsNewVoice && voicesToSet.length > 0) {
-        const langPrefix = uiLang.split('-')[0];
-        const matchingVoices = voicesToSet.filter(v => v.lang.toLowerCase().includes(langPrefix) || v.lang.toLowerCase().includes(uiLang.toLowerCase()));
-        
-        let bestVoice = null;
-        if (gender === 'F') {
-          bestVoice = matchingVoices[0] || voicesToSet[0];
-        } else {
-          bestVoice = matchingVoices.find(v => {
-            const name = v.name.toLowerCase();
-            return name.includes('google uk english male') ||
-                   name.includes('daniel') ||
-                   name.includes('arthur') ||
-                   name.includes('hi-in-x-hie-local') ||
-                   name.includes('hi-in-x-hie') ||
-                   name.includes('-wavenet-b') ||
-                   name.includes('-neural2-b');
-          }) || matchingVoices.find(v => {
-            const name = v.name.toLowerCase();
-            return name.includes('hemant') || 
-                   name.includes('rishi') || 
-                   name.includes('male') ||
-                   name.includes('-standard-b') || 
-                   name.includes('-standard-c') || 
-                   name.includes('-wavenet-c');
-          }) || matchingVoices[0] || voicesToSet[0];
-        }
-        
-        if (bestVoice) {
-          setSelectedVoiceURI(bestVoice.voiceURI);
-          selectedVoiceURIRef.current = bestVoice.voiceURI;
-        }
+      if (shouldResetVoice) {
+        // If gender changed or contradicts the selected voice, reset to Auto Select
+        setSelectedVoiceURI('');
+        selectedVoiceURIRef.current = '';
+        safeStorage.setItem('selectedVoiceURI', '');
       }
+
+      lastGenderRef.current = gender;
     };
     loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-  }, [userName, uiLang]);
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    };
+  }, [userName, uiLang, selectedVoiceURI]);
+
+  // "Jugaadu" (Hack) to trigger native OS voice downloads for required languages
+  useEffect(() => {
+    if (!window.speechSynthesis) return;
+
+    let hasTriggered = false;
+
+    const triggerVoiceDownloads = () => {
+      if (hasTriggered) return;
+      hasTriggered = true;
+
+      const langPrefix = uiLang.split('-')[0];
+      
+      // Map UI lang to standard TTS locales
+      const localeMap: Record<string, string> = {
+        'hi': 'hi-IN', 'en': 'en-IN', 'bn': 'bn-IN', 'ta': 'ta-IN', 'te': 'te-IN',
+        'mr': 'mr-IN', 'gu': 'gu-IN', 'kn': 'kn-IN', 'ml': 'ml-IN', 'ur': 'ur-PK',
+        'pa': 'pa-IN', 'ne': 'ne-NP', 'si': 'si-LK', 'bho': 'hi-IN', 'mai': 'hi-IN',
+        'sa': 'hi-IN', 'kok': 'hi-IN', 'doi': 'hi-IN', 'brx': 'hi-IN', 'as': 'bn-IN',
+        'mni': 'bn-IN', 'ks': 'ur-PK', 'sd': 'ur-PK'
+      };
+      
+      const targetLocale = localeMap[langPrefix] || `${langPrefix}-IN`;
+      const localesToTrigger = [targetLocale];
+      
+      // Always ensure Hindi and English are triggered as fallbacks
+      if (targetLocale !== 'hi-IN') localesToTrigger.push('hi-IN');
+      if (targetLocale !== 'en-IN') localesToTrigger.push('en-IN');
+
+      // Filter out duplicates just in case
+      const uniqueLocales = Array.from(new Set(localesToTrigger));
+
+      // Force load voices to ensure the engine is awake
+      window.speechSynthesis.getVoices();
+
+      uniqueLocales.forEach(locale => {
+        // Create a nearly silent utterance with a space
+        // This forces the OS TTS engine to initialize the language,
+        // which triggers a background download if the voice is missing but supported.
+        // Must be triggered by a user interaction to bypass browser autoplay blocks.
+        const utterance = new SpeechSynthesisUtterance(' ');
+        utterance.lang = locale;
+        utterance.volume = 0.01; // Almost silent
+        utterance.rate = 10; // Extremely fast
+        utterance.pitch = 1;
+        
+        // Catch errors silently
+        utterance.onerror = () => {};
+        
+        window.speechSynthesis.speak(utterance);
+      });
+
+      // Clean up listeners after first trigger
+      window.removeEventListener('click', triggerVoiceDownloads);
+      window.removeEventListener('touchstart', triggerVoiceDownloads);
+      window.removeEventListener('keydown', triggerVoiceDownloads);
+    };
+
+    // Browsers strictly block SpeechSynthesis without user interaction.
+    // We attach the trigger to the first user interaction anywhere on the screen.
+    window.addEventListener('click', triggerVoiceDownloads, { once: true });
+    window.addEventListener('touchstart', triggerVoiceDownloads, { once: true });
+    window.addEventListener('keydown', triggerVoiceDownloads, { once: true });
+
+    return () => {
+      window.removeEventListener('click', triggerVoiceDownloads);
+      window.removeEventListener('touchstart', triggerVoiceDownloads);
+      window.removeEventListener('keydown', triggerVoiceDownloads);
+    };
+  }, [uiLang]);
 
   // Save selected voice
   useEffect(() => {
@@ -3027,10 +3168,10 @@ export default function App() {
     };
 
     setupVoices();
-    window.speechSynthesis.onvoiceschanged = setupVoices;
+    window.speechSynthesis.addEventListener('voiceschanged', setupVoices);
 
     return () => {
-      window.speechSynthesis.onvoiceschanged = null;
+      window.speechSynthesis.removeEventListener('voiceschanged', setupVoices);
     };
   }, []);
 
@@ -3617,7 +3758,10 @@ export default function App() {
         startTimeRef.current = Date.now();
       };
       
-      const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      let voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      if (voices.length === 0) {
+        voices = availableVoices;
+      }
       
       // Check if user has explicitly selected a voice
       let selectedVoice = null;
@@ -3627,95 +3771,64 @@ export default function App() {
       
       // If no explicit voice selected or it wasn't found, use auto-selection logic
       if (!selectedVoice) {
-        // Filter voices based on detected language
-        const langPrefix = detectedLang.split('-')[0];
-        const matchingVoices = voices.filter(v => v.lang.toLowerCase().includes(langPrefix) || v.lang.toLowerCase().includes(detectedLang.toLowerCase()));
-        
         const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
         const gender = guessGender(currentName);
+
+        const langPrefix = detectedLang.split('-')[0];
         
-        const femaleNames = [
-          'kalpana', 'lekha', 'aditi', 'female', 'woman', 'girl', 'lady',
-          'neerja', 'pallavi', 'vani', 'swara', 'zira', 'samantha', 'victoria', 'hazel', 'susan',
-          '-standard-a', '-standard-d', '-standard-e', '-standard-f',
-          '-wavenet-a', '-wavenet-d', '-wavenet-e', '-wavenet-f',
-          '-neural-a', '-neural-d', '-neural-e', '-neural-f',
-          '-neural2-a', '-neural2-d', '-neural2-e', '-neural2-f'
-        ];
+        // Smart language fallback cascade for Indian languages
+        const getLanguageCascade = (langCode: string) => {
+          const cascade = [langCode];
+          const devanagariLangs = ['hi', 'bho', 'mr', 'ne', 'mai', 'kok', 'doi', 'sa', 'brx'];
+          if (devanagariLangs.includes(langCode) && langCode !== 'hi') cascade.push('hi');
+          const bengaliScriptLangs = ['bn', 'as', 'mni'];
+          if (bengaliScriptLangs.includes(langCode) && langCode !== 'bn') cascade.push('bn', 'hi');
+          const arabicScriptLangs = ['ur', 'ks', 'sd'];
+          if (arabicScriptLangs.includes(langCode) && langCode !== 'ur') cascade.push('ur', 'hi');
+          if (!cascade.includes('hi')) cascade.push('hi');
+          if (!cascade.includes('en')) cascade.push('en');
+          return cascade;
+        };
+
+        const langCascade = getLanguageCascade(langPrefix);
+        let candidateVoices: SpeechSynthesisVoice[] = [];
+        
+        for (const targetLang of langCascade) {
+          candidateVoices = voices.filter(v => 
+            v.lang.toLowerCase().startsWith(targetLang) || 
+            v.lang.toLowerCase().includes(`-${targetLang}-`) ||
+            v.lang.toLowerCase().includes(`_${targetLang}_`)
+          );
+          if (candidateVoices.length > 0) {
+            break;
+          }
+        }
+        
+        if (candidateVoices.length === 0) {
+          candidateVoices = voices;
+        }
 
         if (gender === 'F') {
-          // Look for female voices
-          selectedVoice = matchingVoices.find(v => {
-            const name = v.name.toLowerCase();
-            return femaleNames.some(f => name.includes(f));
-          }) || null;
-          
-          // Fallback to any female voice in all voices if not found in matching language
+          selectedVoice = candidateVoices.find(isFemaleVoice);
           if (!selectedVoice) {
-            selectedVoice = voices.find(v => {
-              const name = v.name.toLowerCase();
-              return femaleNames.some(f => name.includes(f));
-            }) || null;
+            // Fallback: find all voices that are NOT explicitly male
+            const possibleVoices = candidateVoices.filter(v => !isMaleVoice(v));
+            selectedVoice = possibleVoices.length > 0 ? possibleVoices[0] : candidateVoices[0];
           }
         } else {
-          // 1. Look for Charon-like calm, measured male voices first
-          selectedVoice = matchingVoices.find(v => {
-            const name = v.name.toLowerCase();
-            return name.includes('google uk english male') ||
-                   name.includes('daniel') ||
-                   name.includes('arthur') ||
-                   name.includes('hi-in-x-hie-local') ||
-                   name.includes('hi-in-x-hie') ||
-                   name.includes('-wavenet-b') ||
-                   name.includes('-neural2-b');
-          }) || null;
-
-          // 1.5. Look for other known male voices
+          selectedVoice = candidateVoices.find(isMaleVoice);
           if (!selectedVoice) {
-            selectedVoice = matchingVoices.find(v => {
-              const name = v.name.toLowerCase();
-              return name.includes('hemant') || 
-                     name.includes('rishi') || 
-                     name.includes('male') ||
-                     name.includes('-standard-b') || 
-                     name.includes('-standard-c') || 
-                     name.includes('-wavenet-c');
-            }) || null;
+            // Fallback: find all voices that are NOT explicitly female
+            const possibleVoices = candidateVoices.filter(v => !isFemaleVoice(v));
+            selectedVoice = possibleVoices.length > 1 ? possibleVoices[possibleVoices.length - 1] : (possibleVoices[0] || candidateVoices[candidateVoices.length - 1]);
           }
-
-          // 2. If no explicit male voice found, try to avoid known female voices
-          if (!selectedVoice) {
-            selectedVoice = matchingVoices.find(v => !femaleNames.some(f => v.name.toLowerCase().includes(f))) || null;
-          }
-          
-          // 5. Try to find the specific Charon-like male voice requested by user if we are speaking Hindi or as a strong fallback
-          if (!selectedVoice) {
-            const preferredCharonVoice = voices.find(v => {
-              const name = v.name.toLowerCase();
-              return name.includes('google uk english male') ||
-                     name.includes('daniel') ||
-                     name.includes('hi-in-x-hie-local') ||
-                     name.includes('hi-in-x-hie');
-            });
-            if (preferredCharonVoice) {
-              selectedVoice = preferredCharonVoice;
-            }
-          }
-        }
-
-        // 3. Fallback to the first available voice in that language
-        if (!selectedVoice && matchingVoices.length > 0) {
-          selectedVoice = matchingVoices[0];
-        }
-        
-        // 4. Ultimate fallback to any voice if language not found
-        if (!selectedVoice && voices.length > 0) {
-          selectedVoice = voices[0];
         }
       }
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
+        // Override detectedLang with the actual voice's lang to prevent browser from overriding voice
+        utterance.lang = selectedVoice.lang;
       }
 
       currentUtteranceRef.current = utterance;
@@ -5167,7 +5280,7 @@ export default function App() {
                           <option value="" className="bg-zinc-800">{t.autoSelect}</option>
                           {availableVoices.map((v, index) => (
                             <option key={`${v.voiceURI}-${index}`} value={v.voiceURI} className="bg-zinc-800">
-                              {v.name} ({v.lang})
+                              {v.name.replace(/_/g, '-')} ({v.lang.replace(/_/g, '-')})
                             </option>
                           ))}
                         </select>
@@ -5215,7 +5328,7 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <input 
                           type="range" 
-                          min="0.5" 
+                          min="0.1" 
                           max="2" 
                           step="0.1" 
                           value={speechPitch} 
