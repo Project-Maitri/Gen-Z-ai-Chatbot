@@ -2437,7 +2437,7 @@ export default function App() {
   const [setupName, setSetupName] = useState('');
   const [isEditingBotName, setIsEditingBotName] = useState(false);
 
-  const displayBotName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+  const displayBotName = userName || 'Nard';
 
   useEffect(() => {
     document.title = userName ? `${userName} - E-MAITRI` : 'Gen-Z - AI Assistant, E-MAITRI';
@@ -2473,7 +2473,7 @@ export default function App() {
     const trans = translations[lang] || translations['en'];
     const trimmedName = name.trim();
     if (!trimmedName) {
-      const defaultName = lang === 'hi' ? 'नॉर्ड' : 'Nard';
+      const defaultName = 'Nard';
       let msg = trans.initialMessageWithName.replace(/\{botName\}/g, defaultName);
       const gender = guessGender(defaultName);
       
@@ -2615,6 +2615,7 @@ export default function App() {
   const [chatNameInput, setChatNameInput] = useState('');
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingChatName, setEditingChatName] = useState('');
+  const [showOptionsId, setShowOptionsId] = useState<string | null>(null);
 
   useEffect(() => {
     safeStorage.setItem('savedChats_v1', JSON.stringify(savedChats));
@@ -2811,8 +2812,12 @@ export default function App() {
   const premiumVoiceRef = useRef(premiumVoice);
   const premiumAudioRef = useRef<HTMLAudioElement | null>(null);
   const premiumAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const premiumAudioQueueRef = useRef<{text: string, startIndex: number, audio?: string, failed?: boolean, isFetching?: boolean}[]>([]);
+  const isPlayingPremiumRef = useRef(false);
+  const isFetchingPremiumRef = useRef(false);
   const audioCacheRef = useRef<Record<string, string>>({});
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
+  const fallbackToStandardMessageIdRef = useRef<string | null>(null);
   
   // Avatar Animation values
   const PATH_CLOSED = "M 75 135 Q 100 155 125 135 Q 100 155 75 135";
@@ -3190,7 +3195,7 @@ export default function App() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${displayBotName} Response`,
+          title: `YOU🫵🏽 Response`,
           text: cleanText,
         });
       } catch (error) {
@@ -3409,6 +3414,8 @@ export default function App() {
       premiumAudioRef.current.pause();
       premiumAudioRef.current.currentTime = 0;
     }
+    premiumAudioQueueRef.current = [];
+    isPlayingPremiumRef.current = false;
     setPlayingMessageId(null);
     playingMessageIdRef.current = null;
     setIsPaused(false);
@@ -3439,12 +3446,369 @@ export default function App() {
     if (premiumAudioRef.current) {
       premiumAudioRef.current.pause();
     }
+    premiumAudioQueueRef.current = [];
+    isPlayingPremiumRef.current = false;
     setIsPaused(true);
     setIsModelSpeaking(false);
   };
 
+
+
+
+
+  const playNextPremiumChunk = (messageId: string) => {
+    if (isPlayingPremiumRef.current || premiumAudioQueueRef.current.length === 0) return;
+    if (playingMessageIdRef.current !== messageId && playingMessageIdRef.current !== null) {
+      premiumAudioQueueRef.current = [];
+      return;
+    }
+
+    const nextChunk = premiumAudioQueueRef.current[0];
+
+    if (nextChunk.failed) {
+      // Fallback this and all remaining chunks to standard TTS
+      const chunksToFallback = [...premiumAudioQueueRef.current];
+      premiumAudioQueueRef.current = [];
+      
+      // Stop any currently playing premium audio just in case
+      if (premiumAudioRef.current) {
+        premiumAudioRef.current.pause();
+      }
+      
+      chunksToFallback.forEach(c => {
+        queueAudioChunk(c.text, messageId, c.startIndex);
+      });
+      return;
+    }
+
+    if (!nextChunk.audio) {
+      // Still fetching, wait.
+      return;
+    }
+
+    // We have audio, play it
+    premiumAudioQueueRef.current.shift();
+    isPlayingPremiumRef.current = true;
+    
+    // Cancel any standard TTS that might be playing to prevent overlap
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    setPlayingMessageId(messageId);
+    playingMessageIdRef.current = messageId;
+    setIsModelSpeaking(true);
+    setIsPaused(false);
+    currentTextIndexRef.current = nextChunk.startIndex;
+    setPlayingTextIndex(nextChunk.startIndex);
+
+    if (premiumAudioRef.current) {
+      premiumAudioRef.current.src = `data:audio/wav;base64,${nextChunk.audio}`;
+      premiumAudioRef.current.playbackRate = speechRateRef.current;
+      
+      premiumAudioRef.current.onplay = () => {
+        startTimeRef.current = Date.now();
+        lastStartIndexRef.current = nextChunk.startIndex;
+      };
+      
+      premiumAudioRef.current.ontimeupdate = () => {
+        if (premiumAudioRef.current && premiumAudioRef.current.duration) {
+          const progress = premiumAudioRef.current.currentTime / premiumAudioRef.current.duration;
+          const estimatedIndex = nextChunk.startIndex + Math.floor(progress * nextChunk.text.length);
+          if (estimatedIndex > currentTextIndexRef.current) {
+            currentTextIndexRef.current = estimatedIndex;
+            setPlayingTextIndex(estimatedIndex);
+          }
+        }
+      };
+
+      premiumAudioRef.current.onended = () => {
+        isPlayingPremiumRef.current = false;
+        if (premiumAudioQueueRef.current.length > 0) {
+          playNextPremiumChunk(messageId);
+        } else {
+          setIsModelSpeaking(false);
+        }
+      };
+      
+      premiumAudioRef.current.play().catch(e => {
+        console.warn("Premium chunk play error", e);
+        isPlayingPremiumRef.current = false;
+        queueAudioChunk(nextChunk.text, messageId, nextChunk.startIndex);
+        playNextPremiumChunk(messageId);
+      });
+      
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+        }
+      }
+      if (audioContextRef.current && !analyserRef.current) {
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+      }
+      if (audioContextRef.current && analyserRef.current && premiumAudioRef.current && !premiumAudioSourceRef.current) {
+        try {
+          premiumAudioSourceRef.current = audioContextRef.current.createMediaElementSource(premiumAudioRef.current);
+          premiumAudioSourceRef.current.connect(analyserRef.current);
+          analyserRef.current.connect(audioContextRef.current.destination);
+        } catch (e) {
+          console.warn("Failed to connect audio source", e);
+        }
+      }
+      if (audioContextRef.current?.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    }
+  };
+
+  const processPremiumAudioQueue = async (messageId: string) => {
+    if (isFetchingPremiumRef.current) return;
+
+    const nextToFetch = premiumAudioQueueRef.current.find(c => !c.audio && !c.failed && !c.isFetching);
+    if (!nextToFetch) return;
+
+    isFetchingPremiumRef.current = true;
+    nextToFetch.isFetching = true;
+
+    let retries = 0;
+    const maxRetries = 4; // Try up to 5 times total
+    let success = false;
+
+    while (retries <= maxRetries && !success) {
+      try {
+        if (!ai) throw new Error("AI not initialized");
+        
+        // Rate limiting and exponential backoff to prevent 429 and 503 errors
+        if (retries > 0) {
+          // Exponential backoff: 1s, 2s, 4s, 8s
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries - 1) * 1000));
+        } else {
+          // Base delay to prevent burst requests
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: nextToFetch.text }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current },
+              },
+            },
+          },
+        });
+        
+        const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (rawAudio) {
+          nextToFetch.audio = createWavFromPcmBase64(rawAudio);
+          playNextPremiumChunk(messageId);
+          success = true;
+        } else {
+          throw new Error("No audio data");
+        }
+      } catch (e: any) {
+        console.warn(`Premium TTS chunk error (Attempt ${retries + 1})`, e);
+        
+        const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
+        const isRetryable = errStr.includes('429') || 
+                            errStr.includes('503') || 
+                            errStr.toLowerCase().includes('quota') || 
+                            errStr.includes('RESOURCE_EXHAUSTED') ||
+                            errStr.toLowerCase().includes('limit') ||
+                            errStr.toLowerCase().includes('exceeded') ||
+                            errStr.toLowerCase().includes('service unavailable') ||
+                            errStr.toLowerCase().includes('busy');
+        
+        if (isRetryable && retries < maxRetries) {
+          retries++;
+          console.log(`Retrying Premium TTS chunk... (${retries}/${maxRetries})`);
+        } else {
+          nextToFetch.failed = true;
+          fallbackToStandardMessageIdRef.current = messageId;
+          
+          const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                             errStr.toLowerCase().includes('quota') || 
+                             errStr.includes('RESOURCE_EXHAUSTED') ||
+                             errStr.toLowerCase().includes('limit') ||
+                             errStr.toLowerCase().includes('exceeded');
+          
+          if (isQuotaErr) {
+            // Silently fall back to standard voice without showing an error toast
+            console.warn("Premium voice quota exceeded, falling back to standard voice silently.");
+            premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
+          }
+          playNextPremiumChunk(messageId);
+          break;
+        }
+      }
+    }
+    
+    isFetchingPremiumRef.current = false;
+    // Process next chunk if available
+    processPremiumAudioQueue(messageId);
+  };
+
+  const queuePremiumAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
+    const cleanText = chunkText
+      .replace(/[*_#`\-<>]/g, ' ')
+      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
+      
+    if (cleanText.trim().length === 0) return;
+
+    if (fallbackToStandardMessageIdRef.current === messageId || Date.now() < premiumVoiceDisabledUntilRef.current) {
+      // Premium is disabled or we already fell back for this message.
+      // Push as a failed chunk so it gets routed to standard TTS in order.
+      premiumAudioQueueRef.current.push({ 
+        text: cleanText, 
+        startIndex: globalStartIndex, 
+        failed: true 
+      });
+      // Try to play in case nothing is playing
+      playNextPremiumChunk(messageId);
+      return;
+    }
+
+    const chunkObj = { text: cleanText, startIndex: globalStartIndex, audio: undefined, failed: false, isFetching: false };
+    premiumAudioQueueRef.current.push(chunkObj);
+
+    processPremiumAudioQueue(messageId);
+  };
+
+  const queueAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
+    const cleanText = chunkText
+      .replace(/[*_#`\-<>]/g, ' ')
+      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
+      
+    if (cleanText.trim().length === 0) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Detect language based on text content
+    let detectedLang = 'hi-IN'; // Default to Hindi
+    if (/[\u0900-\u097F]/.test(cleanText)) {
+      if (uiLang === 'mr') detectedLang = 'mr-IN';
+      else if (uiLang === 'bho') detectedLang = 'bho-IN';
+      else detectedLang = 'hi-IN';
+    } else if (/[\u0980-\u09FF]/.test(cleanText)) {
+      detectedLang = uiLang === 'as' ? 'as-IN' : 'bn-IN'; // Bengali/Assamese
+    } else if (/[\u0B80-\u0BFF]/.test(cleanText)) {
+      detectedLang = 'ta-IN'; // Tamil
+    } else if (/[\u0C00-\u0C7F]/.test(cleanText)) {
+      detectedLang = 'te-IN'; // Telugu
+    } else if (/[\u0A80-\u0AFF]/.test(cleanText)) {
+      detectedLang = 'gu-IN'; // Gujarati
+    } else if (/[\u0C80-\u0CFF]/.test(cleanText)) {
+      detectedLang = 'kn-IN'; // Kannada
+    } else if (/[\u0D00-\u0D7F]/.test(cleanText)) {
+      detectedLang = 'ml-IN'; // Malayalam
+    } else if (/[\u0A00-\u0A7F]/.test(cleanText)) {
+      detectedLang = 'pa-IN'; // Punjabi
+    } else if (/[\u0B00-\u0B7F]/.test(cleanText)) {
+      detectedLang = 'or-IN'; // Odia
+    } else if (/[\u0600-\u06FF]/.test(cleanText)) {
+      detectedLang = 'ur-IN'; // Urdu
+    } else if (/^[a-zA-Z0-9\s.,!?'"-]+$/.test(cleanText.trim())) {
+      detectedLang = 'en-IN'; // English (Indian accent)
+    }
+    
+    utterance.lang = detectedLang;
+    utterance.rate = speechRateRef.current;
+    utterance.pitch = speechPitchRef.current;
+    
+    utterance.onstart = () => {
+      setPlayingMessageId(messageId);
+      playingMessageIdRef.current = messageId;
+      setIsModelSpeaking(true);
+      setIsPaused(false);
+      currentTextIndexRef.current = globalStartIndex;
+      setPlayingTextIndex(globalStartIndex);
+    };
+    
+    utterance.onboundary = (event) => {
+      const newIndex = globalStartIndex + event.charIndex;
+      currentTextIndexRef.current = newIndex;
+      setPlayingTextIndex(newIndex);
+    };
+    
+    utterance.onend = () => {
+      // We don't call stopMessageAudio here because there might be more chunks in the queue
+      setIsModelSpeaking(false);
+    };
+    
+    let voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if (voices.length === 0) {
+      voices = availableVoices;
+    }
+    
+    let selectedVoice = null;
+    if (selectedVoiceURIRef.current) {
+      selectedVoice = voices.find(v => v.voiceURI === selectedVoiceURIRef.current) || null;
+    }
+    
+    if (!selectedVoice) {
+      const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
+      const gender = guessGender(currentName);
+      const langPrefix = detectedLang.split('-')[0];
+      
+      const getLanguageCascade = (langCode: string) => {
+        const cascade = [langCode];
+        const devanagariLangs = ['hi', 'bho', 'mr', 'ne', 'mai', 'kok', 'doi', 'sa', 'brx'];
+        if (devanagariLangs.includes(langCode) && langCode !== 'hi') cascade.push('hi');
+        const bengaliScriptLangs = ['bn', 'as', 'mni'];
+        if (bengaliScriptLangs.includes(langCode) && langCode !== 'bn') cascade.push('bn', 'hi');
+        const arabicScriptLangs = ['ur', 'ks', 'sd'];
+        if (arabicScriptLangs.includes(langCode) && langCode !== 'ur') cascade.push('ur', 'hi');
+        if (!cascade.includes('hi')) cascade.push('hi');
+        if (!cascade.includes('en')) cascade.push('en');
+        return cascade;
+      };
+
+      const langCascade = getLanguageCascade(langPrefix);
+      let candidateVoices: SpeechSynthesisVoice[] = [];
+      
+      for (const targetLang of langCascade) {
+        candidateVoices = voices.filter(v => 
+          v.lang.toLowerCase().startsWith(targetLang) || 
+          v.lang.toLowerCase().includes(`-${targetLang}-`) ||
+          v.lang.toLowerCase().replace('_', '-').startsWith(targetLang)
+        );
+        if (candidateVoices.length > 0) break;
+      }
+      
+      if (candidateVoices.length === 0) {
+        candidateVoices = voices;
+      }
+
+      let genderFilteredVoices = [];
+      if (gender === 'female') {
+        genderFilteredVoices = candidateVoices.filter(v => isFemaleVoice(v.name) || isFemaleVoice(v.voiceURI));
+      } else if (gender === 'male') {
+        genderFilteredVoices = candidateVoices.filter(v => isMaleVoice(v.name) || isMaleVoice(v.voiceURI));
+      }
+
+      if (genderFilteredVoices.length > 0) {
+        selectedVoice = genderFilteredVoices[0];
+      } else if (candidateVoices.length > 0) {
+        selectedVoice = candidateVoices[0];
+      }
+    }
+    
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    
+    if (window.speechSynthesis) {
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const playMessageAudio = async (text: string, messageId: string, startIndex: number = 0, forceRestart: boolean = false) => {
     let actualStartIndex = startIndex;
+    fallbackToStandardMessageIdRef.current = null;
 
     if (playingMessageId === messageId && startIndex === 0 && !forceRestart) {
       if (isPaused) {
@@ -3522,10 +3886,15 @@ export default function App() {
               }
               let response;
               let retries = 0;
-              const maxRetries = 2;
+              const maxRetries = 4;
               
               while (retries <= maxRetries) {
                 try {
+                  // Base delay to prevent burst requests
+                  if (retries === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                  
                   response = await ai.models.generateContent({
                     model: "gemini-2.5-flash-preview-tts",
                     contents: [{ parts: [{ text: textToSpeak }] }],
@@ -3541,7 +3910,12 @@ export default function App() {
                   break;
                 } catch (e: any) {
                   const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-                  const isRetryable = errStr.includes('503') || 
+                  const isRetryable = errStr.includes('429') || 
+                                      errStr.includes('503') || 
+                                      errStr.toLowerCase().includes('quota') || 
+                                      errStr.includes('RESOURCE_EXHAUSTED') ||
+                                      errStr.toLowerCase().includes('limit') ||
+                                      errStr.toLowerCase().includes('exceeded') ||
                                       errStr.toLowerCase().includes('service unavailable') || 
                                       errStr.toLowerCase().includes('busy') || 
                                       errStr.toLowerCase().includes('traffic') ||
@@ -3577,8 +3951,7 @@ export default function App() {
                                  errStr.toLowerCase().includes('exceeded');
               
               if (isQuotaErr) {
-                console.warn("Premium voice quota exceeded, falling back to standard TTS.");
-                setError(t.premiumQuotaExceeded);
+                console.warn("Premium voice quota exceeded, falling back to standard TTS silently.");
                 // Disable premium voice for 5 minutes
                 premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
               } else {
@@ -3887,6 +4260,7 @@ export default function App() {
 
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
     stopMessageAudio();
+    fallbackToStandardMessageIdRef.current = null;
     if (isVoiceTyping && recognitionRef.current) {
       // Clear the transcript ref so onend doesn't send it again
       voiceTypingTranscriptRef.current = '';
@@ -3962,7 +4336,9 @@ export default function App() {
           }
         });
 
-      const config: any = {};
+      const config: any = {
+        thinkingConfig: { thinkingLevel: useFastModel ? ThinkingLevel.MINIMAL : ThinkingLevel.HIGH }
+      };
       let systemInstruction = String(SYSTEM_INSTRUCTION);
       
       if (userName.trim()) {
@@ -3978,13 +4354,13 @@ export default function App() {
         config.systemInstruction = systemInstruction;
       }
 
-      let response;
+      let responseStream;
       let retries = 0;
       const maxRetries = 2;
       
       while (retries <= maxRetries) {
         try {
-          response = await ai.models.generateContent({
+          responseStream = await ai.models.generateContentStream({
             model: modelName,
             contents: contents,
             config: config
@@ -4017,24 +4393,83 @@ export default function App() {
         }
       }
       
-      if (!response) return;
+      if (!responseStream) return;
       
       if (abortController.signal.aborted) {
         return;
       }
       
-      const modelText = response.text || "";
-      
       const newModelMsgId = newMsgId + '-model-' + Date.now();
-      setMessages(prev => {
-        return [...prev, { id: newModelMsgId, role: 'model', text: modelText }];
-      });
+      setMessages(prev => [...prev, { id: newModelMsgId, role: 'model', text: '' }]);
       
-      if (autoPlayResponse && modelText) {
-        const { mainText } = parseMessage(modelText);
-        setTimeout(() => {
-          playMessageAudio(mainText, newModelMsgId);
-        }, 100);
+      let fullText = "";
+      let currentChunk = "";
+      let globalStartIndex = 0;
+      let hasStartedPlaying = false;
+      let firstChunkSent = false;
+      
+      for await (const chunk of responseStream) {
+        if (abortController.signal.aborted) return;
+        
+        const chunkText = chunk.text || "";
+        
+        // Render the chunk text smoothly to slow down the typing effect
+        // We split the chunk into smaller pieces (e.g., 2 characters at a time)
+        const chunkSize = 2;
+        for (let i = 0; i < chunkText.length; i += chunkSize) {
+          if (abortController.signal.aborted) return;
+          const textSlice = chunkText.substring(i, i + chunkSize);
+          fullText += textSlice;
+          currentChunk += textSlice;
+          setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
+          
+          if (autoPlayResponse && !firstChunkSent) {
+            const words = currentChunk.trim().split(/\s+/);
+            
+            let shouldChunk = false;
+            let splitIndex = currentChunk.length;
+
+            // Ignore punctuation for the first chunk, only trigger at 20 words
+            if (words.length > 20) {
+              shouldChunk = true;
+              const lastSpace = currentChunk.lastIndexOf(' ');
+              splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
+            }
+            
+            if (shouldChunk) {
+              const textToPlay = currentChunk.substring(0, splitIndex);
+              if (textToPlay.trim().length > 0) {
+                if (!hasStartedPlaying) {
+                  stopMessageAudio();
+                  hasStartedPlaying = true;
+                }
+                if (voiceEngineRef.current === 'premium') {
+                  queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                } else {
+                  queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                }
+                globalStartIndex += textToPlay.length;
+              }
+              
+              currentChunk = currentChunk.substring(splitIndex);
+              firstChunkSent = true;
+            }
+          }
+          
+          // 15ms delay per 2 characters gives a nice, readable typing speed
+          await new Promise(resolve => setTimeout(resolve, 15));
+        }
+      }
+      
+      if (autoPlayResponse && currentChunk.trim().length > 0) {
+        if (!hasStartedPlaying) {
+          stopMessageAudio();
+        }
+        if (voiceEngineRef.current === 'premium') {
+          queuePremiumAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
+        } else {
+          queueAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
+        }
       }
       
     } catch (error: any) {
@@ -4112,7 +4547,17 @@ export default function App() {
   };
 
   // Voice Typing Setup
-  const toggleVoiceTyping = () => {
+  const toggleVoiceTyping = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Blur active element to prevent keyboard from popping up
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     if (isVoiceTyping) {
       setIsVoiceTyping(false);
       if (recognitionRef.current) {
@@ -4558,6 +5003,15 @@ export default function App() {
       }
       let liveInstruction = SYSTEM_INSTRUCTION;
       
+      const langMapForInstruction: Record<string, string> = {
+        'hi': 'Hindi', 'en': 'English', 'bn': 'Bengali', 'ta': 'Tamil', 'te': 'Telugu',
+        'mr': 'Marathi', 'gu': 'Gujarati', 'kn': 'Kannada', 'ml': 'Malayalam', 'ur': 'Urdu',
+        'pa': 'Punjabi', 'as': 'Assamese', 'or': 'Odia', 'bho': 'Bhojpuri'
+      };
+      const currentLanguageName = langMapForInstruction[uiLang] || 'English';
+      
+      liveInstruction += `\n\nCRITICAL: The user has selected ${currentLanguageName} as their preferred language. You MUST speak and respond ONLY in ${currentLanguageName} unless the user explicitly asks you to speak in another language.`;
+      
       if (userName.trim()) {
         const currentBotName = userName.trim();
         if (messages.length <= 2) {
@@ -4594,7 +5048,7 @@ export default function App() {
                        if (messages.length <= 2) {
                          s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${getInitialMessage(uiLang, userName)}'` });
                        } else {
-                         s.sendRealtimeInput({ text: `Hello, I'm back. Let's continue.` });
+                         s.sendRealtimeInput({ text: `Please greet the user in ${currentLanguageName} and ask how you can help them continue.` });
                        }
                        console.log("Initial message sent to Live API.");
                      }
@@ -4966,7 +5420,7 @@ export default function App() {
 
       if (navigator.share) {
         await navigator.share({
-          title: displayBotName,
+          title: 'YOU🫵🏽',
           text: t.subtitle,
           url: shareUrl,
         });
@@ -4996,14 +5450,17 @@ export default function App() {
         {/* Header */}
           <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center mt-1.5">
-                <Flame size={38} className="text-orange-500 drop-shadow-sm relative z-10" />
-                <div className="absolute -top-1 right-2.5 z-20">
-                  <Sparkles size={14} className="text-blue-400 animate-pulse drop-shadow-sm" />
+              <div className="flex flex-col items-center">
+                <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center mt-1.5">
+                  <Flame size={38} className="text-orange-500 drop-shadow-sm relative z-10" />
+                  <div className="absolute -top-1 right-2.5 z-20">
+                    <Sparkles size={14} className="text-blue-400 animate-pulse drop-shadow-sm" />
+                  </div>
                 </div>
+                <span className="text-[10px] font-bold text-gray-600 leading-none -mt-1">Nard</span>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">{displayBotName}</h1>
+                <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">YOU🫵🏽</h1>
                 <p className="text-[10px] text-green-600 font-sans font-medium leading-none mt-0.5">{t.subtitle}</p>
               </div>
               
@@ -5017,7 +5474,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 relative" ref={moreMenuRef}>
+            <div className="flex items-center gap-1.5 relative mr-10" ref={moreMenuRef}>
               <button 
                 onClick={handleNewChat}
                 className="flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md transition-all"
@@ -5347,8 +5804,8 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
             <div className="flex-1 flex-shrink-0 min-h-[20px]"></div>
-            <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100">
-              {!isLive && messages.map((msg) => {
+            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-32'}`}>
+              {messages.map((msg) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 return (
                 <motion.div 
@@ -5504,7 +5961,7 @@ export default function App() {
                 </motion.div>
               )})}
               
-              {!isLive && messages.length === 1 && !userName && (
+              {messages.length === 1 && !userName && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -5547,7 +6004,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              {messages.length === 1 && !isLive && (
+              {messages.length === 1 && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -5579,7 +6036,7 @@ export default function App() {
                 >
                   <div className="p-2 flex items-center gap-3">
                     <Loader2 size={18} className="animate-spin text-yellow-500" />
-                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {getGenderAdjustedText(t.thinking, uiLang, displayBotName)}</span>
+                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">YOU🫵🏽</span> {getGenderAdjustedText(t.thinking, uiLang, 'YOU🫵🏽')}</span>
                   </div>
                 </motion.div>
               )}
@@ -5590,23 +6047,8 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden"
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-white/95 backdrop-blur-sm"
               >
-                {/* Virtual AI Background */}
-                <VirtualNetworkBackground />
-                {/* Circuit Background Pattern */}
-                <div className="absolute inset-0 opacity-20 pointer-events-none">
-                  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <pattern id="circuit" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                        <path d="M 0 50 L 100 50 M 50 0 L 50 100" stroke="#3b82f6" strokeWidth="0.5" opacity="0.3" />
-                        <circle cx="50" cy="50" r="2" fill="#3b82f6" opacity="0.5" />
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#circuit)" />
-                  </svg>
-                </div>
-
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48">
                   {/* Screen Share Preview */}
                   <AnimatePresence>
@@ -5746,8 +6188,8 @@ export default function App() {
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
                       <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
                         {isModelSpeaking 
-                          ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
-                          : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
+                          ? getGenderAdjustedText(t.speaking, uiLang, 'YOU🫵🏽') 
+                          : getGenderAdjustedText(t.listening, uiLang, 'YOU🫵🏽')}
                       </span>
                     </motion.div>
 
@@ -5839,8 +6281,8 @@ export default function App() {
                 </button>
               </motion.div>
             )}
-        <div className="max-w-3xl mx-auto relative flex items-end gap-2">
-          {!isLive && (
+        {!isLive && (
+          <div className="max-w-3xl mx-auto relative flex items-end gap-2">
             <div className="w-full relative flex flex-col bg-white shadow-md backdrop-blur-xl border border-gray-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-gray-100 shadow-md focus-within:border-gray-400 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
               {editMsgId && (
                 <div className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-1.5 mb-2 rounded-xl border border-blue-100 text-xs font-medium mx-2 mt-1">
@@ -5974,8 +6416,8 @@ export default function App() {
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         <div className="max-w-3xl mx-auto mt-2 text-center">
           <p className="text-xs text-blue-700/80 flex items-center justify-center gap-1">
             <Info size={12} />
@@ -6085,8 +6527,19 @@ export default function App() {
                   }).map(chat => (
                     <div
                       key={chat.id}
-                      onClick={() => handleLoadChat(chat)}
-                      className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors border ${
+                      onClick={() => {
+                        if (window.innerWidth < 640 && showOptionsId !== chat.id) {
+                          setShowOptionsId(chat.id);
+                        } else {
+                          handleLoadChat(chat);
+                          setShowOptionsId(null);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setShowOptionsId(chat.id);
+                      }}
+                      className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors border relative ${
                         currentChatId === chat.id 
                           ? 'bg-sky-100 border-sky-400 text-sky-800' 
                           : 'bg-white shadow-sm border-transparent hover:bg-white shadow-md text-gray-700 hover:text-gray-900'
@@ -6123,23 +6576,23 @@ export default function App() {
                               {new Date(chat.timestamp).toLocaleDateString()}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <div className={`flex items-center gap-1 transition-opacity ${showOptionsId === chat.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100'}`}>
                             <button
-                              onClick={(e) => handleTogglePin(e, chat.id)}
+                              onClick={(e) => { e.stopPropagation(); handleTogglePin(e, chat.id); setShowOptionsId(null); }}
                               className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-600 hover:bg-sky-400/10' : 'text-gray-400 hover:text-gray-900 hover:bg-white shadow-md'}`}
                               title={chat.isPinned ? t.unpinChat : t.pinChat}
                             >
                               <Pin size={14} className={chat.isPinned ? "fill-current" : ""} />
                             </button>
                             <button
-                              onClick={(e) => handleStartRename(e, chat)}
+                              onClick={(e) => { e.stopPropagation(); handleStartRename(e, chat); setShowOptionsId(null); }}
                               className="p-1.5 text-gray-400 hover:text-sky-600 hover:bg-sky-400/10 rounded-lg transition-colors"
                               title={t.renameChat}
                             >
                               <Edit2 size={14} />
                             </button>
                             <button
-                              onClick={(e) => handleDeleteChat(e, chat.id)}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteChat(e, chat.id); setShowOptionsId(null); }}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-400/10 rounded-lg transition-colors"
                               title={t.deleteChat}
                             >
