@@ -3303,25 +3303,17 @@ export default function App() {
         lastMessageCountRef.current = messages.length;
 
         if (isNewMessage) {
-          const lastMsg = messages[messages.length - 1];
-          if (lastMsg && lastMsg.role === 'model') {
-            // New model message: scroll to its header to keep it stable
-            setTimeout(() => {
-              const headerEl = document.getElementById(`message-header-${lastMsg.id}`);
-              if (headerEl) {
-                const headerRect = headerEl.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
-                const scrollPos = container.scrollTop + (headerRect.top - containerRect.top) - 16;
-                container.scrollTo({ top: scrollPos, behavior: 'smooth' });
-              }
-            }, 100);
-            return;
-          } else if (lastMsg && lastMsg.role === 'user') {
-            // New user message: scroll to bottom
-            setTimeout(() => {
-              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-            }, 100);
-            return;
+          setTimeout(() => {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+          }, 100);
+          return;
+        }
+        
+        if (isLoading) {
+          // Auto-scroll to bottom while typing if already near bottom
+          const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+          if (isNearBottom) {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }
         }
         
@@ -3336,22 +3328,6 @@ export default function App() {
       }
     }
   }, [messages, liveTranscript, playingMessageId, isLoading, isModelSpeaking, isLive]);
-
-  // Scroll to header when paused
-  useEffect(() => {
-    if (isPaused && playingMessageId) {
-      const headerEl = document.getElementById(`message-header-${playingMessageId}`);
-      const container = document.getElementById('main-scroll-container');
-      if (headerEl && container) {
-        setTimeout(() => {
-          const headerRect = headerEl.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          const scrollPos = container.scrollTop + (headerRect.top - containerRect.top) - 16;
-          container.scrollTo({ top: scrollPos, behavior: 'smooth' });
-        }, 100);
-      }
-    }
-  }, [isPaused, playingMessageId]);
 
   const lastScrollTimeRef = useRef<number>(0);
 
@@ -3585,11 +3561,11 @@ export default function App() {
           // Exponential backoff: 1s, 2s, 4s, 8s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries - 1) * 1000));
         } else {
-          // Base delay to prevent burst requests
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Small base delay to prevent burst requests when chunks arrive instantly
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
-        const response = await ai.models.generateContent({
+        const fetchPromise = ai.models.generateContent({
           model: "gemini-2.5-flash-preview-tts",
           contents: [{ parts: [{ text: nextToFetch.text }] }],
           config: {
@@ -3601,6 +3577,16 @@ export default function App() {
             },
           },
         });
+
+        // Prevent unhandled rejection if timeout wins
+        fetchPromise.catch(() => {});
+
+        // 15 second timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("TTS Request Timeout")), 15000)
+        );
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
         
         const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (rawAudio) {
@@ -3890,12 +3876,7 @@ export default function App() {
               
               while (retries <= maxRetries) {
                 try {
-                  // Base delay to prevent burst requests
-                  if (retries === 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                  }
-                  
-                  response = await ai.models.generateContent({
+                  const fetchPromise = ai.models.generateContent({
                     model: "gemini-2.5-flash-preview-tts",
                     contents: [{ parts: [{ text: textToSpeak }] }],
                     config: {
@@ -3907,6 +3888,16 @@ export default function App() {
                       },
                     },
                   });
+
+                  // Prevent unhandled rejection if timeout wins
+                  fetchPromise.catch(() => {});
+
+                  // 15 second timeout
+                  const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("TTS Request Timeout")), 15000)
+                  );
+
+                  response = await Promise.race([fetchPromise, timeoutPromise]) as any;
                   break;
                 } catch (e: any) {
                   const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
@@ -4414,26 +4405,37 @@ export default function App() {
         const chunkText = chunk.text || "";
         
         // Render the chunk text smoothly to slow down the typing effect
-        // We split the chunk into smaller pieces (e.g., 2 characters at a time)
+        // 15ms delay per 2 characters gives a nice, readable typing speed
         const chunkSize = 2;
         for (let i = 0; i < chunkText.length; i += chunkSize) {
           if (abortController.signal.aborted) return;
+          
           const textSlice = chunkText.substring(i, i + chunkSize);
           fullText += textSlice;
           currentChunk += textSlice;
+          
           setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
           
-          if (autoPlayResponse && !firstChunkSent) {
-            const words = currentChunk.trim().split(/\s+/);
-            
+          if (autoPlayResponse) {
             let shouldChunk = false;
             let splitIndex = currentChunk.length;
 
-            // Ignore punctuation for the first chunk, only trigger at 20 words
-            if (words.length > 20) {
-              shouldChunk = true;
-              const lastSpace = currentChunk.lastIndexOf(' ');
-              splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
+            // Accumulate at least 150 characters before chunking to minimize TTS API calls
+            if (currentChunk.length >= 150) {
+              // Find ALL punctuation marks in the accumulated chunk
+              const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
+              
+              if (matches.length > 0) {
+                // Split at the LAST punctuation mark to make the largest possible valid chunk
+                const lastMatch = matches[matches.length - 1];
+                splitIndex = lastMatch.index! + lastMatch[0].length;
+                shouldChunk = true;
+              } else if (currentChunk.length > 300) {
+                // Fallback if no punctuation for a very long time
+                shouldChunk = true;
+                const lastSpace = currentChunk.lastIndexOf(' ');
+                splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
+              }
             }
             
             if (shouldChunk) {
@@ -4452,11 +4454,9 @@ export default function App() {
               }
               
               currentChunk = currentChunk.substring(splitIndex);
-              firstChunkSent = true;
             }
           }
           
-          // 15ms delay per 2 characters gives a nice, readable typing speed
           await new Promise(resolve => setTimeout(resolve, 15));
         }
       }
@@ -5457,7 +5457,7 @@ export default function App() {
                     <Sparkles size={14} className="text-blue-400 animate-pulse drop-shadow-sm" />
                   </div>
                 </div>
-                <span className="text-[10px] font-bold text-gray-600 leading-none -mt-1">Nard</span>
+                <span className="text-[10px] font-bold text-gray-600 leading-none mt-0.5">Nard</span>
               </div>
               <div className="flex flex-col">
                 <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">YOU🫵🏽</h1>
@@ -5803,9 +5803,8 @@ export default function App() {
 
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
-            <div className="flex-1 flex-shrink-0 min-h-[20px]"></div>
             <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-32'}`}>
-              {messages.map((msg) => {
+              {!isLive && messages.map((msg) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 return (
                 <motion.div 
@@ -5961,7 +5960,7 @@ export default function App() {
                 </motion.div>
               )})}
               
-              {messages.length === 1 && !userName && (
+              {messages.length === 1 && !isLive && !userName && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -6004,7 +6003,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              {messages.length === 1 && (
+              {messages.length === 1 && !isLive && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -6188,8 +6187,8 @@ export default function App() {
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
                       <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
                         {isModelSpeaking 
-                          ? getGenderAdjustedText(t.speaking, uiLang, 'YOU🫵🏽') 
-                          : getGenderAdjustedText(t.listening, uiLang, 'YOU🫵🏽')}
+                          ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
+                          : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
                       </span>
                     </motion.div>
 
@@ -6353,7 +6352,7 @@ export default function App() {
                   onBlur={() => setIsInputFocused(false)}
                   placeholder=""
                   className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-2 focus:outline-none resize-none min-h-[56px] max-h-32 font-medium ${
-                    (isLoading || (input.trim() && !isVoiceTyping) || (!input.trim() && isVoiceTyping) || selectedImage)
+                    (isLoading || input.trim() || selectedImage || isVoiceTyping)
                       ? 'pr-[60px] sm:pr-[70px]' 
                       : 'pr-[110px] sm:pr-[120px]'
                   }`}
@@ -6361,7 +6360,7 @@ export default function App() {
                   disabled={isLoading}
                 />
                 <div className="absolute right-2 bottom-2 flex gap-2">
-                  {(!input.trim() && !selectedImage || isVoiceTyping) && !isLoading && (
+                  {(!input.trim() && !selectedImage) && !isLoading && (
                     <button
                       onClick={toggleVoiceTyping}
                       className={`flex items-center justify-center w-11 h-11 rounded-full transition-all transform active:scale-95 border group ${
