@@ -2530,14 +2530,24 @@ export default function App() {
     return [{ id: '1', role: 'model', text: getInitialMessage(uiLang, initialName) }];
   });
 
-  // Update initial message when language or bot name changes if it's the only message
+  // Update initial message when language or bot name changes
   useEffect(() => {
-    setMessages(prev => {
-      if (prev.length === 1 && (prev[0].id === '1' || prev[0].id === '1-model')) {
-        return [{ ...prev[0], text: getInitialMessage(uiLang, userName) }];
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === '1' || msg.id === '1-model') {
+        return { ...msg, text: getInitialMessage(uiLang, userName) };
       }
-      return prev;
-    });
+      return msg;
+    }));
+
+    setSavedChats(prev => prev.map(chat => ({
+      ...chat,
+      messages: chat.messages.map(msg => {
+        if (msg.id === '1' || msg.id === '1-model') {
+          return { ...msg, text: getInitialMessage(uiLang, userName) };
+        }
+        return msg;
+      })
+    })));
   }, [uiLang, userName]);
 
   useEffect(() => {
@@ -3210,7 +3220,8 @@ export default function App() {
   
   const parseMessage = (text: string) => {
     if (!text) return { mainText: '', questions: [] };
-    const parts = text.split('---SUGGESTED_QUESTIONS---');
+    const adjustedText = getGenderAdjustedText(text, uiLang, displayBotName);
+    const parts = adjustedText.split('---SUGGESTED_QUESTIONS---');
     // Ensure all single newlines become double newlines to force proper paragraph breaks,
     // but don't add extra newlines if there are already multiple.
     const mainText = parts[0].trim().replace(/(?<!\n)\r?\n(?!\r?\n)/g, '\n\n');
@@ -3269,6 +3280,8 @@ export default function App() {
   const lastMessageCountRef = useRef<number>(messages.length);
   const prevPlayingMessageIdRef = useRef<string | null>(null);
   const prevIsLoadingRef = useRef<boolean>(isLoading);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressFiredRef = useRef<boolean>(false);
 
   // Track previous playing message ID and scroll to top of message when audio finishes
   useEffect(() => {
@@ -6603,10 +6616,36 @@ export default function App() {
                   }).map(chat => (
                     <div
                       key={chat.id}
-                      onClick={() => {
-                        if (window.innerWidth < 640 && showOptionsId !== chat.id) {
+                      onTouchStart={() => {
+                        longPressFiredRef.current = false;
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = setTimeout(() => {
+                          longPressFiredRef.current = true;
                           setShowOptionsId(chat.id);
-                        } else {
+                        }, 500);
+                      }}
+                      onTouchEnd={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                      }}
+                      onTouchMove={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                      }}
+                      onMouseDown={() => {
+                        longPressFiredRef.current = false;
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = setTimeout(() => {
+                          longPressFiredRef.current = true;
+                          setShowOptionsId(chat.id);
+                        }, 500);
+                      }}
+                      onMouseUp={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                      }}
+                      onMouseLeave={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                      }}
+                      onClick={() => {
+                        if (!longPressFiredRef.current) {
                           handleLoadChat(chat);
                           setShowOptionsId(null);
                         }
@@ -6645,14 +6684,20 @@ export default function App() {
                         <>
                           <div className="flex flex-col overflow-hidden flex-1">
                             <div className="flex items-center gap-2">
-                              {chat.isPinned && <Pin size={12} className="text-sky-600 flex-shrink-0 fill-current" />}
                               <span className="font-medium truncate">{chat.name}</span>
                             </div>
                             <span className="text-xs opacity-60">
                               {new Date(chat.timestamp).toLocaleDateString()}
                             </span>
                           </div>
-                          <div className={`flex items-center gap-1 transition-opacity ${showOptionsId === chat.id ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-100'}`}>
+                          
+                          {chat.isPinned && showOptionsId !== chat.id && (
+                            <div className="flex items-center justify-center p-1.5 text-sky-600 sm:group-hover:hidden">
+                              <Pin size={14} className="fill-current" />
+                            </div>
+                          )}
+
+                          <div className={`items-center gap-1 transition-opacity ${showOptionsId === chat.id ? 'flex opacity-100' : 'hidden sm:flex opacity-0 sm:group-hover:opacity-100'}`}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleTogglePin(e, chat.id); setShowOptionsId(null); }}
                               className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-600 hover:bg-sky-400/10' : 'text-gray-400 hover:text-gray-900 hover:bg-white shadow-md'}`}
