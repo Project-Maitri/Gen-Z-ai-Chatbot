@@ -5550,7 +5550,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 relative mr-10" ref={moreMenuRef}>
+            <div className="flex items-center gap-1.5 relative" ref={moreMenuRef}>
               <button 
                 onClick={handleNewChat}
                 className="flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md transition-all"
