@@ -2443,6 +2443,21 @@ export default function App() {
     document.title = userName ? `${userName} - E-MAITRI` : 'Gen-Z - AI Assistant, E-MAITRI';
   }, [userName]);
 
+  // Request microphone permission on page load
+  useEffect(() => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          console.log('Nard को माइक मिल गया!');
+          // Stop the stream immediately as we only wanted to trigger the permission prompt
+          stream.getTracks().forEach(track => track.stop());
+        })
+        .catch((err) => {
+          console.log('माइक एरर: ' + err);
+        });
+    }
+  }, []);
+
   const getGenderAdjustedText = (text: string, lang: string, name: string) => {
     let replaced = text.replace(/Nard|नॉर्ड|নর্ড|நார்ட்|నార్డ్|નોર્ડ|ನಾರ್ಡ್|നോർഡ്|ନର୍ଡ|ਨਾਰਡ|نارڈ|نارڊ|ᱱᱚᱨᱰ|જેન-જી|ജെൻ-ജി|ਜੇਨ-ਜੀ/gi, name);
     const gender = guessGender(name);
