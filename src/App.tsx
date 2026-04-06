@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
 import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -3268,19 +3268,39 @@ export default function App() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessageCountRef = useRef<number>(messages.length);
   const prevPlayingMessageIdRef = useRef<string | null>(null);
+  const prevIsLoadingRef = useRef<boolean>(isLoading);
 
-  // Scroll to bottom when audio finishes
+  // Track previous playing message ID and scroll to top of message when audio finishes
   useEffect(() => {
     if (prevPlayingMessageIdRef.current !== null && playingMessageId === null) {
+      const msgId = prevPlayingMessageIdRef.current;
       const container = document.getElementById('main-scroll-container');
-      if (container) {
+      const msgEl = document.getElementById(`message-${msgId}`);
+      if (container && msgEl) {
         setTimeout(() => {
-          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+          msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       }
     }
     prevPlayingMessageIdRef.current = playingMessageId;
   }, [playingMessageId]);
+
+  // Scroll to top of last message when generation finishes
+  useEffect(() => {
+    if (prevIsLoadingRef.current === true && isLoading === false) {
+      const container = document.getElementById('main-scroll-container');
+      if (container && messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        const msgEl = document.getElementById(`message-${lastMsg.id}`);
+        if (msgEl) {
+          setTimeout(() => {
+            msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
+      }
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, messages]);
 
   // Scroll to bottom when exiting live chat
   useEffect(() => {
@@ -3288,39 +3308,63 @@ export default function App() {
       const container = document.getElementById('main-scroll-container');
       if (container) {
         setTimeout(() => {
-          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+          if (messages.length <= 1) {
+            container.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            const lastMsg = messages[messages.length - 1];
+            const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
+            if (lastMsgEl) {
+              const containerRect = container.getBoundingClientRect();
+              const msgRect = lastMsgEl.getBoundingClientRect();
+              if (msgRect.height > containerRect.height * 0.7) {
+                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } else {
+                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+              }
+            } else {
+              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }
+          }
         }, 100);
       }
     }
-  }, [isLive]);
+  }, [isLive, messages]);
 
   // Scroll logic
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!playingMessageId) {
       const container = document.getElementById('main-scroll-container');
       if (container) {
         const isNewMessage = messages.length > lastMessageCountRef.current;
+        const isNewChat = messages.length < lastMessageCountRef.current;
         lastMessageCountRef.current = messages.length;
 
-        if (isNewMessage) {
-          setTimeout(() => {
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-          }, 100);
-          return;
-        }
-        
         if (isLoading) {
-          // Auto-scroll to bottom while typing if already near bottom
-          const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-          if (isNearBottom) {
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-          }
-        }
-        
-        // If we are NOT loading and NOT playing audio, we can scroll to bottom
-        // But only if we are already near the bottom, to prevent jumping when reading old messages.
-        // For simplicity, we just don't auto-scroll here unless it's a live transcript update
-        if (isLive) {
+          // Auto-scroll to bottom while typing
+          // Use direct assignment to prevent any smooth scroll polyfill interference and jitter
+          container.scrollTop = container.scrollHeight;
+        } else if (isNewMessage || isNewChat) {
+          // When a chat is loaded or a non-streaming message arrives
+          setTimeout(() => {
+            if (messages.length <= 1) {
+              container.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              const lastMsg = messages[messages.length - 1];
+              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
+              if (lastMsgEl) {
+                const containerRect = container.getBoundingClientRect();
+                const msgRect = lastMsgEl.getBoundingClientRect();
+                if (msgRect.height > containerRect.height * 0.7) {
+                  lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                  lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+              } else {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+              }
+            }
+          }, 100);
+        } else if (isLive) {
           setTimeout(() => {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }, 100);
@@ -3504,6 +3548,12 @@ export default function App() {
           playNextPremiumChunk(messageId);
         } else {
           setIsModelSpeaking(false);
+          // Only clear if we are not currently generating text or audio for this message
+          if (playingMessageIdRef.current === messageId && !abortControllerRef.current && isGeneratingAudio !== messageId) {
+            setPlayingMessageId(null);
+            playingMessageIdRef.current = null;
+            setIsPaused(false);
+          }
         }
       };
       
@@ -3723,6 +3773,15 @@ export default function App() {
     utterance.onend = () => {
       // We don't call stopMessageAudio here because there might be more chunks in the queue
       setIsModelSpeaking(false);
+      
+      // If this is the last chunk and generation is complete, clear the playing state
+      if (window.speechSynthesis && !window.speechSynthesis.pending && !abortControllerRef.current) {
+        if (playingMessageIdRef.current === messageId && isGeneratingAudio !== messageId) {
+          setPlayingMessageId(null);
+          playingMessageIdRef.current = null;
+          setIsPaused(false);
+        }
+      }
     };
     
     let voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
@@ -4097,6 +4156,22 @@ export default function App() {
             currentTextIndexRef.current = newIndex;
             setPlayingTextIndex(newIndex);
           }
+          
+          // Workaround for Chrome bug where onend doesn't fire for long texts
+          if (elapsedSeconds > 2 && window.speechSynthesis) {
+            if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && !isPaused) {
+              clearInterval(timerRef.current!);
+              timerRef.current = null;
+              if (currentUtteranceRef.current === utterance) {
+                setIsModelSpeaking(false);
+                if (playingMessageIdRef.current === messageId) {
+                  setPlayingMessageId(null);
+                  playingMessageIdRef.current = null;
+                  setIsPaused(false);
+                }
+              }
+            }
+          }
         }
       }, 100);
       
@@ -4247,6 +4322,7 @@ export default function App() {
       abortControllerRef.current = null;
     }
     setIsLoading(false);
+    stopMessageAudio();
   };
 
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
@@ -5802,12 +5878,13 @@ export default function App() {
           </AnimatePresence>
 
           {/* Chat Area */}
-          <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative">
-            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-32'}`}>
+          <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
+            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-2'}`}>
               {!isLive && messages.map((msg) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 return (
                 <motion.div 
+                  id={`message-${msg.id}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={msg.id} 
