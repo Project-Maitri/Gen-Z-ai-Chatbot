@@ -6117,18 +6117,6 @@ export default function App() {
                 </motion.div>
               )}
 
-              {isLoading && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-start"
-                >
-                  <div className="p-2 flex items-center gap-3">
-                    <Loader2 size={18} className="animate-spin text-yellow-500" />
-                    <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">YOU🫵🏽</span> {getGenderAdjustedText(t.thinking, uiLang, 'YOU🫵🏽')}</span>
-                  </div>
-                </motion.div>
-              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -6352,6 +6340,19 @@ export default function App() {
 
           {/* Input Area */}
           <footer className="p-4 pb-5 sm:pb-6 relative z-20">
+            {isLoading && !isLive && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="max-w-3xl mx-auto flex justify-start mb-2 px-2"
+              >
+                <div className="px-4 py-2 flex items-center gap-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200">
+                  <Loader2 size={16} className="animate-spin text-yellow-500" />
+                  <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {getGenderAdjustedText(t.thinking, uiLang, displayBotName)}</span>
+                </div>
+              </motion.div>
+            )}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
