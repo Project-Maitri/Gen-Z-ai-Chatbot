@@ -4665,7 +4665,7 @@ export default function App() {
           }
           
           // Delay based on token length to keep pacing natural, but reveal whole words
-          await new Promise(resolve => setTimeout(resolve, token.length * 15 + 10));
+          await new Promise(resolve => setTimeout(resolve, token.length * 35 + 20));
         }
       }
       
@@ -5505,8 +5505,8 @@ export default function App() {
           
           // Spawn new ripples
           const now = Date.now();
-          // Spawn rate: faster when speaking or loud
-          const spawnInterval = isSpeaking ? Math.max(100, 300 - currentReact * 100) : Math.max(300, 600 - currentReact * 150);
+          // Spawn rate: equal for speaking and listening, scales with audio reactivity
+          const spawnInterval = Math.max(150, 400 - currentReact * 150);
           
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
@@ -5514,7 +5514,7 @@ export default function App() {
               r: isSpeaking ? 30 : maxRadius * 0.8, // Start at center if speaking, edge if listening
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: (isSpeaking ? 4 : 1.5) + currentReact * 5,
+              speed: 3 + currentReact * 5, // Equal speed for both speaking and listening
               direction: direction
             });
             colorIndex++;
