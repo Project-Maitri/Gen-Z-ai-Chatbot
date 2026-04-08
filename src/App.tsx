@@ -5414,55 +5414,70 @@ export default function App() {
           const height = rect.height;
           const centerX = width / 2;
           const centerY = height / 2;
-          const radius = Math.min(width, height) / 4;
           
           ctx.clearRect(0, 0, width, height);
           
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(dataArray);
           
-          const bars = 64;
-          const step = Math.floor(dataArray.length / bars);
+          // Calculate frequency bands
+          let low = 0, mid = 0, high = 0;
+          for(let i=0; i<8; i++) low += dataArray[i];
+          for(let i=8; i<24; i++) mid += dataArray[i];
+          for(let i=24; i<64; i++) high += dataArray[i];
+          low /= 8; mid /= 16; high /= 40;
           
-          // Draw base circle
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-          ctx.strokeStyle = isModelSpeaking ? 'rgba(234, 179, 8, 0.2)' : 'rgba(59, 130, 246, 0.2)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
+          const nLow = low / 255;
+          const nMid = mid / 255;
+          const nHigh = high / 255;
           
-          // Draw frequency bars
-          for (let i = 0; i < bars; i++) {
-            const value = dataArray[i * step];
-            const percent = value / 255;
-            // Max bar height is roughly half the radius
-            const barHeight = radius + (percent * (radius * 0.8));
+          const time = Date.now() * 0.001;
+          
+          ctx.globalCompositeOperation = 'screen';
+          
+          // Base radius
+          const baseR = Math.min(width, height) * 0.25;
+          
+          const drawOrb = (angleOffset: number, speed: number, radiusMult: number, color: string, react: number) => {
+            const angle = time * speed + angleOffset;
+            // Orbit radius expands with audio
+            const orbitR = baseR * 0.3 * (1 + react * 0.4); 
+            const x = centerX + Math.cos(angle) * orbitR;
+            const y = centerY + Math.sin(angle) * orbitR;
             
-            // Start from top (-Math.PI/2) and go clockwise
-            const angle = (i * 2 * Math.PI) / bars - Math.PI / 2;
+            // Orb size expands with audio
+            const r = baseR * radiusMult * (1 + react * 0.6);
             
-            const x1 = centerX + Math.cos(angle) * radius;
-            const y1 = centerY + Math.sin(angle) * radius;
-            const x2 = centerX + Math.cos(angle) * barHeight;
-            const y2 = centerY + Math.sin(angle) * barHeight;
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+            gradient.addColorStop(0, color);
+            gradient.addColorStop(1, 'transparent');
             
             ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.strokeStyle = isModelSpeaking ? '#eab308' : '#3b82f6';
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-          }
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+          };
           
-          // Inner pulsing circle based on overall energy
-          const avgEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const pulseRadius = radius - 15 + (avgEnergy / 255) * 15;
+          // Gemini Live colors: Blue, Red, Yellow, Green
+          drawOrb(0, 1.2, 1.2, 'rgba(66, 133, 244, 0.9)', nLow);       // Blue
+          drawOrb(2, 0.8, 1.1, 'rgba(234, 67, 53, 0.8)', nMid);        // Red
+          drawOrb(4, 1.5, 1.0, 'rgba(251, 188, 5, 0.8)', nHigh);       // Yellow
+          drawOrb(1, 1.0, 1.3, 'rgba(52, 168, 83, 0.8)', (nLow+nHigh)/2); // Green
+          
+          // Add a central core that pulses
+          const coreReact = (nLow + nMid + nHigh) / 3;
+          const coreR = baseR * 0.8 * (1 + coreReact * 0.5);
+          const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreR);
+          coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+          coreGrad.addColorStop(0.2, 'rgba(255, 255, 255, 0.2)');
+          coreGrad.addColorStop(1, 'transparent');
           
           ctx.beginPath();
-          ctx.arc(centerX, centerY, pulseRadius, 0, 2 * Math.PI);
-          ctx.fillStyle = isModelSpeaking ? 'rgba(234, 179, 8, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+          ctx.arc(centerX, centerY, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = coreGrad;
           ctx.fill();
+          
+          ctx.globalCompositeOperation = 'source-over';
         }
       }
       
