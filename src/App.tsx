@@ -5437,8 +5437,8 @@ export default function App() {
           
           const time = Date.now() * 0.001;
           
-          // Use source-over for sharper, more solid colors instead of screen
-          ctx.globalCompositeOperation = 'source-over';
+          // Use screen for bright, overlapping solid colors
+          ctx.globalCompositeOperation = 'screen';
           
           // Base radius - use Math.max to ensure it fills tall/wide screens
           const baseR = Math.max(width, height) * 0.25;
@@ -5453,36 +5453,26 @@ export default function App() {
             // Orb size expands with audio
             const r = baseR * radiusMult * (1 + react * 0.6);
             
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-            // Construct sharper gradient stops
-            gradient.addColorStop(0, `rgba(${colorBase}, 0.95)`);
-            gradient.addColorStop(0.6, `rgba(${colorBase}, 0.8)`);
-            gradient.addColorStop(0.85, `rgba(${colorBase}, 0.3)`);
-            gradient.addColorStop(1, `rgba(${colorBase}, 0)`);
-            
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
+            // Solid color with slight transparency for overlapping effect, NO blur/gradient
+            ctx.fillStyle = `rgba(${colorBase}, 0.85)`;
             ctx.fill();
           };
           
-          // Gemini Live colors (RGB values for sharper gradients): Blue, Red, Yellow, Green
-          drawOrb(0, 1.2, 1.2, '66, 133, 244', nLow);       // Blue
-          drawOrb(2, 0.8, 1.1, '234, 67, 53', nMid);        // Red
-          drawOrb(4, 1.5, 1.0, '251, 188, 5', nHigh);       // Yellow
-          drawOrb(1, 1.0, 1.3, '52, 168, 83', (nLow+nHigh)/2); // Green
+          // Gemini Live colors (RGB values) - Equalized sizes (1.1) and varied but balanced speeds
+          drawOrb(0,           1.1, 1.1, '66, 133, 244', nLow);       // Blue
+          drawOrb(Math.PI/2,   0.9, 1.1, '234, 67, 53', nMid);        // Red
+          drawOrb(Math.PI,     1.2, 1.1, '251, 188, 5', nHigh);       // Yellow
+          drawOrb(Math.PI*1.5, 1.0, 1.1, '52, 168, 83', (nLow+nMid+nHigh)/3); // Green
           
-          // Add a central core that pulses
+          // Add a central core that pulses - Solid white
           const coreReact = (nLow + nMid + nHigh) / 3;
-          const coreR = baseR * 0.8 * (1 + coreReact * 0.5);
-          const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreR);
-          coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-          coreGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.4)');
-          coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          const coreR = baseR * 0.6 * (1 + coreReact * 0.5);
           
           ctx.beginPath();
           ctx.arc(centerX, centerY, coreR, 0, Math.PI * 2);
-          ctx.fillStyle = coreGrad;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
           ctx.fill();
         }
       }
