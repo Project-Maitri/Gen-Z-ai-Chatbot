@@ -4611,77 +4611,68 @@ export default function App() {
         const chunkText = chunk.text || "";
         
         // Render the chunk text smoothly to slow down the typing effect
-        // Split by words and spaces to reveal a few words at a time for a "manifesting" effect
+        // Split by words and spaces to reveal word-by-word for a "manifesting" effect
         const tokens = chunkText.split(/(\s+|[.,!?।]+)/);
-        let accumulatedTokens = "";
-        let wordCount = 0;
         
         for (let i = 0; i < tokens.length; i++) {
           const token = tokens[i];
           if (!token) continue;
           if (abortController.signal.aborted) return;
           
-          accumulatedTokens += token;
+          // If it's a pure word (no markdown symbols), wrap it in the animation span
+          const isPlainWord = /^[a-zA-Z0-9\u0900-\u097F]+$/.test(token);
+          const displayToken = isPlainWord ? `<span class="manifest-word">${token}</span>` : token;
           
-          // Check if token is a word (not just space or punctuation)
-          if (!/^[\s.,!?।]+$/.test(token)) {
-            wordCount++;
-          }
+          fullText += displayToken;
+          currentChunk += token; // Keep currentChunk clean for TTS
           
-          // Update UI every 2 words or if it's the last token in the chunk
-          if (wordCount >= 2 || i === tokens.length - 1) {
-            fullText += accumulatedTokens;
-            currentChunk += accumulatedTokens;
-            
-            setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
-            
-            if (autoPlayResponse) {
-              let shouldChunk = false;
-              let splitIndex = currentChunk.length;
+          setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
+          
+          if (autoPlayResponse) {
+            let shouldChunk = false;
+            let splitIndex = currentChunk.length;
 
-              // Accumulate at least 150 characters before chunking to minimize TTS API calls
-              if (currentChunk.length >= 150) {
-                // Find ALL punctuation marks in the accumulated chunk
-                const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
-                
-                if (matches.length > 0) {
-                  // Split at the LAST punctuation mark to make the largest possible valid chunk
-                  const lastMatch = matches[matches.length - 1];
-                  splitIndex = lastMatch.index! + lastMatch[0].length;
-                  shouldChunk = true;
-                } else if (currentChunk.length > 300) {
-                  // Fallback if no punctuation for a very long time
-                  shouldChunk = true;
-                  const lastSpace = currentChunk.lastIndexOf(' ');
-                  splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
-                }
-              }
+            // Accumulate at least 150 characters before chunking to minimize TTS API calls
+            if (currentChunk.length >= 150) {
+              // Find ALL punctuation marks in the accumulated chunk
+              const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
               
-              if (shouldChunk) {
-                const textToPlay = currentChunk.substring(0, splitIndex);
-                if (textToPlay.trim().length > 0) {
-                  if (!hasStartedPlaying) {
-                    stopMessageAudio();
-                    hasStartedPlaying = true;
-                  }
-                  if (voiceEngineRef.current === 'premium') {
-                    queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                  } else {
-                    queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                  }
-                  globalStartIndex += textToPlay.length;
-                }
-                
-                currentChunk = currentChunk.substring(splitIndex);
+              if (matches.length > 0) {
+                // Split at the LAST punctuation mark to make the largest possible valid chunk
+                const lastMatch = matches[matches.length - 1];
+                splitIndex = lastMatch.index! + lastMatch[0].length;
+                shouldChunk = true;
+              } else if (currentChunk.length > 300) {
+                // Fallback if no punctuation for a very long time
+                shouldChunk = true;
+                const lastSpace = currentChunk.lastIndexOf(' ');
+                splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
               }
             }
             
-            // Delay based on accumulated token length to keep pacing natural
-            await new Promise(resolve => setTimeout(resolve, accumulatedTokens.length * 20 + 10));
-            
-            accumulatedTokens = "";
-            wordCount = 0;
+            if (shouldChunk) {
+              const textToPlay = currentChunk.substring(0, splitIndex);
+              if (textToPlay.trim().length > 0) {
+                if (!hasStartedPlaying) {
+                  stopMessageAudio();
+                  hasStartedPlaying = true;
+                }
+                if (voiceEngineRef.current === 'premium') {
+                  queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                } else {
+                  queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                }
+                globalStartIndex += textToPlay.length;
+              }
+              
+              currentChunk = currentChunk.substring(splitIndex);
+            }
           }
+          
+          // Delay based on token length to keep pacing natural
+          // If it's a word, delay a bit more to let the animation play
+          const delay = isPlainWord ? token.length * 25 + 20 : 10;
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
