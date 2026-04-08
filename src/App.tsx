@@ -5506,7 +5506,7 @@ export default function App() {
           // Spawn new ripples
           const now = Date.now();
           // Spawn rate: equal for speaking and listening, scales with audio reactivity
-          const spawnInterval = Math.max(150, 400 - currentReact * 150);
+          const spawnInterval = Math.max(300, 700 - currentReact * 200);
           
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
@@ -5514,7 +5514,7 @@ export default function App() {
               r: isSpeaking ? 30 : maxRadius * 0.8, // Start at center if speaking, edge if listening
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: 3 + currentReact * 5, // Equal speed for both speaking and listening
+              speed: 1.2 + currentReact * 2.5, // Reduced equal speed for both speaking and listening
               direction: direction
             });
             colorIndex++;
