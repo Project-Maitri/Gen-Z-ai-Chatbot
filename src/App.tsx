@@ -5436,6 +5436,12 @@ export default function App() {
     
     let animationId: number;
     
+    // State for expanding ripples
+    let ripples: { r: number, color: string, opacity: number, speed: number }[] = [];
+    let colorIndex = 0;
+    const colors = ['66, 133, 244', '234, 67, 53', '251, 188, 5', '52, 168, 83'];
+    let lastSpawnTime = 0;
+    
     const updateVisualizer = () => {
       if (visualizerCanvasRef.current && analyserRef.current) {
         const canvas = visualizerCanvasRef.current;
@@ -5476,44 +5482,62 @@ export default function App() {
           const nMid = mid / 255;
           const nHigh = high / 255;
           
-          const time = Date.now() * 0.001;
+          const react = (nLow + nMid + nHigh) / 3;
+          const isSpeaking = isModelSpeakingRef.current;
+          
+          // Adjust reactivity based on state
+          // Listening: slight bounce. Speaking: big bounce.
+          const bounceMultiplier = isSpeaking ? 3.0 : 0.8;
+          const currentReact = react * bounceMultiplier;
+          
+          // Base radius - use Math.max to ensure it fills tall/wide screens
+          const maxRadius = Math.max(width, height);
+          
+          // Spawn new ripples
+          const now = Date.now();
+          // Spawn rate: faster when speaking or loud
+          const spawnInterval = isSpeaking ? Math.max(100, 300 - currentReact * 100) : Math.max(300, 600 - currentReact * 150);
+          
+          if (now - lastSpawnTime > spawnInterval) {
+            ripples.push({
+              r: 30, // Start just outside the center
+              color: colors[colorIndex % colors.length],
+              opacity: 1,
+              speed: (isSpeaking ? 4 : 1.5) + currentReact * 5
+            });
+            colorIndex++;
+            lastSpawnTime = now;
+          }
           
           // Use screen for bright, overlapping solid colors
           ctx.globalCompositeOperation = 'screen';
           
-          // Base radius - use Math.max to ensure it fills tall/wide screens
-          const baseR = Math.max(width, height) * 0.25;
-          
-          const drawOrb = (angleOffset: number, speed: number, radiusMult: number, colorBase: string, react: number) => {
-            const angle = time * speed + angleOffset;
-            // Orbit radius expands with audio
-            const orbitR = baseR * 0.3 * (1 + react * 0.4); 
-            const x = centerX + Math.cos(angle) * orbitR;
-            const y = centerY + Math.sin(angle) * orbitR;
+          // Draw ripples (oldest/largest first so newer ones climb on top)
+          for (let i = 0; i < ripples.length; i++) {
+            let rip = ripples[i];
+            rip.r += rip.speed;
             
-            // Orb size expands with audio
-            const r = baseR * radiusMult * (1 + react * 0.6);
+            // Fade out non-linearly as it expands
+            rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
+            
+            if (rip.opacity <= 0) {
+              ripples.splice(i, 1);
+              i--;
+              continue;
+            }
             
             ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, rip.r, 0, Math.PI * 2);
             // Solid color with slight transparency for overlapping effect, NO blur/gradient
-            ctx.fillStyle = `rgba(${colorBase}, 0.85)`;
+            ctx.fillStyle = `rgba(${rip.color}, ${rip.opacity * 0.85})`;
             ctx.fill();
-          };
+          }
           
-          // Gemini Live colors (RGB values) - Equalized sizes (1.1) and varied but balanced speeds
-          drawOrb(0,           1.1, 1.1, '66, 133, 244', nLow);       // Blue
-          drawOrb(Math.PI/2,   0.9, 1.1, '234, 67, 53', nMid);        // Red
-          drawOrb(Math.PI,     1.2, 1.1, '251, 188, 5', nHigh);       // Yellow
-          drawOrb(Math.PI*1.5, 1.0, 1.1, '52, 168, 83', (nLow+nMid+nHigh)/3); // Green
-          
-          // Add a central core that pulses - Solid white
-          const coreReact = (nLow + nMid + nHigh) / 3;
-          const coreR = baseR * 0.6 * (1 + coreReact * 0.5);
-          
+          // Draw stable center core
+          ctx.globalCompositeOperation = 'source-over';
           ctx.beginPath();
-          ctx.arc(centerX, centerY, coreR, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 1)';
           ctx.fill();
         }
       }
