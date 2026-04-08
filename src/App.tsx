@@ -5438,9 +5438,18 @@ export default function App() {
     let animationId: number;
     
     // State for expanding ripples
-    let ripples: { r: number, color: string, opacity: number, speed: number }[] = [];
+    let ripples: { r: number, color: string, opacity: number, speed: number, direction: number }[] = [];
     let colorIndex = 0;
-    const colors = ['66, 133, 244', '234, 67, 53', '251, 188, 5', '52, 168, 83'];
+    // 7 vibrant rainbow colors
+    const colors = [
+      '255, 0, 0',     // Red
+      '255, 128, 0',   // Orange
+      '255, 255, 0',   // Yellow
+      '0, 255, 0',     // Green
+      '0, 255, 255',   // Cyan
+      '0, 128, 255',   // Blue
+      '255, 0, 255'    // Magenta/Purple
+    ];
     let lastSpawnTime = 0;
     
     const updateVisualizer = () => {
@@ -5500,11 +5509,13 @@ export default function App() {
           const spawnInterval = isSpeaking ? Math.max(100, 300 - currentReact * 100) : Math.max(300, 600 - currentReact * 150);
           
           if (now - lastSpawnTime > spawnInterval) {
+            const direction = isSpeaking ? 1 : -1;
             ripples.push({
-              r: 30, // Start just outside the center
+              r: isSpeaking ? 30 : maxRadius * 0.8, // Start at center if speaking, edge if listening
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: (isSpeaking ? 4 : 1.5) + currentReact * 5
+              speed: (isSpeaking ? 4 : 1.5) + currentReact * 5,
+              direction: direction
             });
             colorIndex++;
             lastSpawnTime = now;
@@ -5516,21 +5527,36 @@ export default function App() {
           // Draw ripples (oldest/largest first so newer ones climb on top)
           for (let i = 0; i < ripples.length; i++) {
             let rip = ripples[i];
-            rip.r += rip.speed;
             
-            // Fade out non-linearly as it expands
-            rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
-            
-            if (rip.opacity <= 0) {
-              ripples.splice(i, 1);
-              i--;
-              continue;
+            if (rip.direction === 1) {
+              // Outward ripple
+              rip.r += rip.speed;
+              rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
+              
+              if (rip.opacity <= 0 || rip.r > maxRadius) {
+                ripples.splice(i, 1);
+                i--;
+                continue;
+              }
+            } else {
+              // Inward ripple
+              rip.r -= rip.speed;
+              // Fades in as it approaches the center
+              rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
+              
+              if (rip.r <= 30) {
+                ripples.splice(i, 1);
+                i--;
+                continue;
+              }
             }
+            
+            const safeOpacity = Math.max(0, Math.min(1, rip.opacity));
             
             ctx.beginPath();
             ctx.arc(centerX, centerY, rip.r, 0, Math.PI * 2);
             // Solid color with slight transparency for overlapping effect, NO blur/gradient
-            ctx.fillStyle = `rgba(${rip.color}, ${rip.opacity * 0.85})`;
+            ctx.fillStyle = `rgba(${rip.color}, ${safeOpacity * 0.85})`;
             ctx.fill();
           }
           
