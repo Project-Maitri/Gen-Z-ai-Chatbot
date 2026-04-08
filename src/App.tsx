@@ -501,7 +501,7 @@ const translations: Record<string, any> = {
     puckDesc: "पक (दोस्ताना, ऊर्जावान पुरुष)",
     koreDesc: "कोरे (शांत, नपा-तुला महिला)",
     zephyrDesc: "ज़ेफिर (मजबूत, आधिकारिक महिला)",
-    errorMicPermission: "माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया अपने ब्राउज़र सेटिंग्स में इसे सक्षम करें।",
+    errorMicPermission: "माइक्रोफ़ोन की अनुमति नहीं मिली। कृपया अपने ब्राउज़र सेटिंग्स में इसे सक्षम करें। (सुझाव: यदि आप प्रीव्यू में हैं, तो ऐप को नए टैब में खोलकर देखें)",
     errorMicNotFound: "कोई माइक्रोफ़ोन नहीं मिला। कृपया माइक्रोफ़ोन कनेक्ट करें और पुनः प्रयास करें।"
   },
   bho: {
@@ -2410,6 +2410,34 @@ export default function App() {
 
   const t = translations[uiLang] || translations['en'];
 
+  // पेज लोड होने के बाद पहले क्लिक/टच पर माइक की अनुमति मांगें ताकि ब्राउज़र इसे ऑटो-ब्लॉक न करे
+  useEffect(() => {
+    const requestMicPermission = () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(function(stream) {
+            console.log('Nard को माइक मिल गया!');
+            // Stop the tracks immediately so the recording indicator doesn't stay on
+            stream.getTracks().forEach(track => track.stop());
+          })
+          .catch(function(err) {
+            console.log('माइक एरर: ' + err);
+          });
+      }
+      // एक बार अनुमति मांगने के बाद इवेंट लिसनर हटा दें
+      document.removeEventListener('click', requestMicPermission);
+      document.removeEventListener('touchstart', requestMicPermission);
+    };
+
+    document.addEventListener('click', requestMicPermission);
+    document.addEventListener('touchstart', requestMicPermission, { passive: true });
+
+    return () => {
+      document.removeEventListener('click', requestMicPermission);
+      document.removeEventListener('touchstart', requestMicPermission);
+    };
+  }, []);
+
   const [input, setInput] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState('');
@@ -3944,7 +3972,7 @@ export default function App() {
               }
               let response;
               let retries = 0;
-              const maxRetries = 4;
+              const maxRetries = 1; // Reduce retries to prevent long delays
               
               while (retries <= maxRetries) {
                 try {
@@ -3964,30 +3992,35 @@ export default function App() {
                   // Prevent unhandled rejection if timeout wins
                   fetchPromise.catch(() => {});
 
-                  // 15 second timeout
+                  // 8 second timeout for faster fallback
                   const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("TTS Request Timeout")), 15000)
+                    setTimeout(() => reject(new Error("TTS Request Timeout")), 8000)
                   );
 
                   response = await Promise.race([fetchPromise, timeoutPromise]) as any;
                   break;
                 } catch (e: any) {
                   const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-                  const isRetryable = errStr.includes('429') || 
-                                      errStr.includes('503') || 
-                                      errStr.toLowerCase().includes('quota') || 
-                                      errStr.includes('RESOURCE_EXHAUSTED') ||
-                                      errStr.toLowerCase().includes('limit') ||
-                                      errStr.toLowerCase().includes('exceeded') ||
+                  const isQuotaErr = errStr.includes('429') || 
+                                     errStr.toLowerCase().includes('quota') || 
+                                     errStr.includes('RESOURCE_EXHAUSTED') ||
+                                     errStr.toLowerCase().includes('limit') ||
+                                     errStr.toLowerCase().includes('exceeded');
+                                     
+                  const isServerErr = errStr.includes('503') || 
                                       errStr.toLowerCase().includes('service unavailable') || 
                                       errStr.toLowerCase().includes('busy') || 
                                       errStr.toLowerCase().includes('traffic') ||
                                       errStr.toLowerCase().includes('deadline_exceeded');
                   
-                  if (isRetryable && retries < maxRetries) {
+                  // If it's a quota error, don't retry, fail fast to fallback
+                  if (isQuotaErr) {
+                    throw e;
+                  }
+                  
+                  if (isServerErr && retries < maxRetries) {
                     retries++;
-                    const delay = Math.pow(2, retries) * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Short 1.5s delay
                     if (playingMessageIdRef.current !== messageId) return;
                     continue;
                   }
@@ -4015,8 +4048,8 @@ export default function App() {
               
               if (isQuotaErr) {
                 console.warn("Premium voice quota exceeded, falling back to standard TTS silently.");
-                // Disable premium voice for 5 minutes
-                premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
+                // Disable premium voice for 15 minutes to prevent repeated slow failures
+                premiumVoiceDisabledUntilRef.current = Date.now() + (15 * 60 * 1000);
               } else {
                 console.warn("Failed to generate premium audio", e);
               }
@@ -5227,7 +5260,7 @@ export default function App() {
       let errorMsg = t.errorTech;
       
       if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-        errorMsg = t.errorMicPermission || "Microphone permission denied. Please enable it in your browser settings.";
+        errorMsg = (t.errorMicPermission || "Microphone permission denied. Please enable it in your browser settings.") + " (Tip: If you are in a preview window, try opening the app in a new tab.)";
       } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
         errorMsg = t.errorMicNotFound || "No microphone found. Please connect a microphone and try again.";
       } else {
@@ -5392,48 +5425,47 @@ export default function App() {
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
         analyserRef.current.getByteFrequencyData(dataArray);
         
-        // Vowel Formant Approximation
-        // Bins (approx 172Hz each for 44.1kHz / 256)
-        let low = 0, mid = 0, high = 0;
-        for (let i = 1; i < 3; i++) low += dataArray[i];   // ~172 - 516 Hz
-        for (let i = 3; i < 8; i++) mid += dataArray[i];   // ~516 - 1376 Hz
-        for (let i = 8; i < 18; i++) high += dataArray[i]; // ~1376 - 3096 Hz
+        // Vowel Formant Approximation for 24kHz sample rate
+        // fftSize = 256 -> frequencyBinCount = 128. Bin width = 12000 / 128 = 93.75 Hz
         
-        low /= 2;
-        mid /= 5;
-        high /= 10;
+        let f1Energy = 0; // F1 (Openness/Jaw Drop): ~300Hz to ~1000Hz (Bins 3-11)
+        let f2Energy = 0; // F2 (Front/Back/Lip Rounding): ~1000Hz to ~2500Hz (Bins 11-27)
+        let totalEnergy = 0;
         
-        const totalEnergy = low + mid + high;
+        for (let i = 3; i <= 11; i++) f1Energy += dataArray[i];
+        for (let i = 11; i <= 27; i++) f2Energy += dataArray[i];
+        for (let i = 1; i <= 48; i++) totalEnergy += dataArray[i]; // Up to ~4.5kHz
         
-        if (totalEnergy > 15) { // Speaking threshold
-          // Calculate ratios to determine vowel characteristics
-          const hmRatio = high / (mid + 1);
-          const mlRatio = mid / (low + 1);
+        f1Energy /= 9;
+        f2Energy /= 17;
+        totalEnergy /= 48;
+        
+        if (totalEnergy > 5) { // Speaking threshold
+          const f1Norm = f1Energy / 255;
+          const f2Norm = f2Energy / 255;
           
-          if (totalEnergy < 30) {
-            // Low energy sounds (nasals, breathy, short)
-            if (hmRatio > 1.2) nextPath = PATH_I; // इ
-            else if (mlRatio > 1.2) nextPath = PATH_A_SHORT; // अ
-            else if (hmRatio < 0.5) nextPath = PATH_U; // उ
-            else nextPath = PATH_AM; // अं
-          } else if (totalEnergy < 60) {
-            // Medium energy
-            if (hmRatio > 1.5) nextPath = PATH_II; // ई
-            else if (hmRatio > 1.0) nextPath = PATH_E; // ए
-            else if (mlRatio > 1.5) nextPath = PATH_AH; // अः
-            else if (mlRatio > 1.0) nextPath = PATH_O; // ओ
-            else nextPath = PATH_UU; // ऊ
+          if (f1Norm > 0.45) {
+            // Very open mouth (AA, AI, AU)
+            if (f2Norm > 0.4) nextPath = PATH_AI; // Front open
+            else if (f2Norm < 0.2) nextPath = PATH_AU; // Back open
+            else nextPath = PATH_AA; // Central open
+          } else if (f1Norm > 0.25) {
+            // Mid open mouth (A, E, O)
+            if (f2Norm > 0.35) nextPath = PATH_E; // Front mid
+            else if (f2Norm < 0.2) nextPath = PATH_O; // Back mid
+            else nextPath = PATH_A_SHORT; // Central mid
           } else {
-            // High energy (wide open)
-            if (hmRatio > 1.2) nextPath = PATH_AI; // ऐ
-            else if (mlRatio > 1.2) nextPath = PATH_AA; // आ
-            else nextPath = PATH_AU; // औ
+            // Close mouth (I, U, AM)
+            if (f2Norm > 0.3) nextPath = PATH_II; // Front close
+            else if (f2Norm < 0.15) nextPath = PATH_UU; // Back close
+            else nextPath = PATH_AM; // Central close
           }
         }
       }
       
       if (nextPath !== lastPath) {
-        animate(mouthPath, nextPath, { duration: 0.15, ease: "easeOut" });
+        // Reduced duration from 0.15 to 0.06 for much snappier, realistic lip sync
+        animate(mouthPath, nextPath, { duration: 0.06, ease: "easeOut" });
         lastPath = nextPath;
       }
       
