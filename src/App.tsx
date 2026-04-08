@@ -4611,60 +4611,77 @@ export default function App() {
         const chunkText = chunk.text || "";
         
         // Render the chunk text smoothly to slow down the typing effect
-        // Split by words and spaces to reveal word-by-word for a "manifesting" effect
+        // Split by words and spaces to reveal a few words at a time for a "manifesting" effect
         const tokens = chunkText.split(/(\s+|[.,!?।]+)/);
-        for (const token of tokens) {
+        let accumulatedTokens = "";
+        let wordCount = 0;
+        
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
           if (!token) continue;
           if (abortController.signal.aborted) return;
           
-          fullText += token;
-          currentChunk += token;
+          accumulatedTokens += token;
           
-          setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
+          // Check if token is a word (not just space or punctuation)
+          if (!/^[\s.,!?।]+$/.test(token)) {
+            wordCount++;
+          }
           
-          if (autoPlayResponse) {
-            let shouldChunk = false;
-            let splitIndex = currentChunk.length;
+          // Update UI every 2 words or if it's the last token in the chunk
+          if (wordCount >= 2 || i === tokens.length - 1) {
+            fullText += accumulatedTokens;
+            currentChunk += accumulatedTokens;
+            
+            setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
+            
+            if (autoPlayResponse) {
+              let shouldChunk = false;
+              let splitIndex = currentChunk.length;
 
-            // Accumulate at least 150 characters before chunking to minimize TTS API calls
-            if (currentChunk.length >= 150) {
-              // Find ALL punctuation marks in the accumulated chunk
-              const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
+              // Accumulate at least 150 characters before chunking to minimize TTS API calls
+              if (currentChunk.length >= 150) {
+                // Find ALL punctuation marks in the accumulated chunk
+                const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
+                
+                if (matches.length > 0) {
+                  // Split at the LAST punctuation mark to make the largest possible valid chunk
+                  const lastMatch = matches[matches.length - 1];
+                  splitIndex = lastMatch.index! + lastMatch[0].length;
+                  shouldChunk = true;
+                } else if (currentChunk.length > 300) {
+                  // Fallback if no punctuation for a very long time
+                  shouldChunk = true;
+                  const lastSpace = currentChunk.lastIndexOf(' ');
+                  splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
+                }
+              }
               
-              if (matches.length > 0) {
-                // Split at the LAST punctuation mark to make the largest possible valid chunk
-                const lastMatch = matches[matches.length - 1];
-                splitIndex = lastMatch.index! + lastMatch[0].length;
-                shouldChunk = true;
-              } else if (currentChunk.length > 300) {
-                // Fallback if no punctuation for a very long time
-                shouldChunk = true;
-                const lastSpace = currentChunk.lastIndexOf(' ');
-                splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
+              if (shouldChunk) {
+                const textToPlay = currentChunk.substring(0, splitIndex);
+                if (textToPlay.trim().length > 0) {
+                  if (!hasStartedPlaying) {
+                    stopMessageAudio();
+                    hasStartedPlaying = true;
+                  }
+                  if (voiceEngineRef.current === 'premium') {
+                    queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                  } else {
+                    queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
+                  }
+                  globalStartIndex += textToPlay.length;
+                }
+                
+                currentChunk = currentChunk.substring(splitIndex);
               }
             }
             
-            if (shouldChunk) {
-              const textToPlay = currentChunk.substring(0, splitIndex);
-              if (textToPlay.trim().length > 0) {
-                if (!hasStartedPlaying) {
-                  stopMessageAudio();
-                  hasStartedPlaying = true;
-                }
-                if (voiceEngineRef.current === 'premium') {
-                  queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                } else {
-                  queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                }
-                globalStartIndex += textToPlay.length;
-              }
-              
-              currentChunk = currentChunk.substring(splitIndex);
-            }
+            // Delay based on accumulated token length to keep pacing natural
+            await new Promise(resolve => setTimeout(resolve, accumulatedTokens.length * 20 + 10));
+            
+            accumulatedTokens = "";
+            wordCount = 0;
           }
-          
-          // Delay based on token length to keep pacing natural, but reveal whole words
-          await new Promise(resolve => setTimeout(resolve, token.length * 35 + 20));
         }
       }
       
@@ -6129,9 +6146,15 @@ export default function App() {
                           {highlightMarkdown(mainText, playingTextIndex)}
                         </ReactMarkdown>
                       ) : (
-                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                          {mainText}
-                        </ReactMarkdown>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                            {mainText}
+                          </ReactMarkdown>
+                        </motion.div>
                       )}
                     </div>
                     {msg.role === 'model' && (
