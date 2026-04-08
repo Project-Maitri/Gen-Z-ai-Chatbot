@@ -2857,21 +2857,21 @@ export default function App() {
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
   const fallbackToStandardMessageIdRef = useRef<string | null>(null);
   
-  // Avatar Animation values
-  const PATH_CLOSED = "M 75 135 Q 100 155 125 135 Q 100 155 75 135";
+  // Avatar Animation values (Realistic Lip Style, Smaller Size)
+  const PATH_CLOSED = "M 85 135 Q 92 132 100 134 Q 108 132 115 135 Q 108 138 100 136 Q 92 138 85 135";
   // 12 Hindi Vowels
-  const PATH_A_SHORT = "M 75 135 Q 100 160 125 135 Q 100 137 75 135"; // अ
-  const PATH_AA = "M 75 135 Q 100 200 125 135 Q 100 133 75 135"; // आ
-  const PATH_I = "M 70 135 Q 100 155 130 135 Q 100 136 70 135"; // इ
-  const PATH_II = "M 65 135 Q 100 150 135 135 Q 100 133 65 135"; // ई
-  const PATH_U = "M 85 135 Q 100 160 115 135 Q 100 133 85 135"; // उ
-  const PATH_UU = "M 90 135 Q 100 155 110 135 Q 100 133 90 135"; // ऊ
-  const PATH_E = "M 70 135 Q 100 165 130 135 Q 100 133 70 135"; // ए
-  const PATH_AI = "M 65 135 Q 100 185 135 135 Q 100 133 65 135"; // ऐ
-  const PATH_O = "M 80 135 Q 100 185 120 135 Q 100 133 80 135"; // ओ
-  const PATH_AU = "M 75 135 Q 100 195 125 135 Q 100 133 75 135"; // औ
-  const PATH_AM = "M 75 135 Q 100 150 125 135 Q 100 136 75 135"; // अं
-  const PATH_AH = "M 75 135 Q 100 170 125 135 Q 100 133 75 135"; // अः
+  const PATH_A_SHORT = "M 86 135 Q 93 129 100 131 Q 107 129 114 135 Q 107 142 100 139 Q 93 142 86 135"; // अ
+  const PATH_AA = "M 87 135 Q 93 122 100 125 Q 107 122 113 135 Q 107 152 100 148 Q 93 152 87 135"; // आ
+  const PATH_I = "M 82 134 Q 91 130 100 132 Q 109 130 118 134 Q 109 140 100 137 Q 91 140 82 134"; // इ
+  const PATH_II = "M 80 133 Q 90 128 100 130 Q 110 128 120 133 Q 110 142 100 138 Q 90 142 80 133"; // ई
+  const PATH_U = "M 90 135 Q 95 128 100 130 Q 105 128 110 135 Q 105 142 100 140 Q 95 142 90 135"; // उ
+  const PATH_UU = "M 92 135 Q 96 125 100 128 Q 104 125 108 135 Q 104 145 100 142 Q 96 145 92 135"; // ऊ
+  const PATH_E = "M 84 135 Q 92 125 100 128 Q 108 125 116 135 Q 108 146 100 142 Q 92 146 84 135"; // ए
+  const PATH_AI = "M 82 135 Q 91 120 100 124 Q 109 120 118 135 Q 109 154 100 148 Q 91 154 82 135"; // ऐ
+  const PATH_O = "M 88 135 Q 94 123 100 126 Q 106 123 112 135 Q 106 148 100 144 Q 94 148 88 135"; // ओ
+  const PATH_AU = "M 89 135 Q 94 118 100 122 Q 106 118 111 135 Q 106 155 100 150 Q 94 155 89 135"; // औ
+  const PATH_AM = "M 85 135 Q 92 131 100 133 Q 108 131 115 135 Q 108 139 100 137 Q 92 139 85 135"; // अं
+  const PATH_AH = "M 85 135 Q 92 126 100 129 Q 108 126 115 135 Q 108 145 100 141 Q 92 145 85 135"; // अः
   const mouthPath = useMotionValue(PATH_CLOSED);
 
   // Chat History Functions
@@ -6268,10 +6268,11 @@ export default function App() {
                       <g>
                         <motion.path
                           d={mouthPath}
-                          stroke={isModelSpeaking ? "#facc15" : "#60a5fa"}
-                          strokeWidth="3"
-                          fill={isModelSpeaking ? "rgba(250, 204, 21, 0.2)" : "none"}
+                          stroke={isModelSpeaking ? "#eab308" : "#3b82f6"}
+                          strokeWidth="2"
+                          fill={isModelSpeaking ? "rgba(234, 179, 8, 0.4)" : "rgba(59, 130, 246, 0.2)"}
                           strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                         {/* Subtle Glow under mouth when speaking */}
                         {isModelSpeaking && (
