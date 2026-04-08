@@ -3287,14 +3287,29 @@ export default function App() {
         } catch (e) {
           console.warn("Failed to initialize silent TTS", e);
         }
+
+        // Also unlock the premium audio element
+        if (premiumAudioRef.current) {
+          try {
+            premiumAudioRef.current.play().then(() => {
+              premiumAudioRef.current?.pause();
+            }).catch(() => {
+              // Ignore NotAllowedError on silent play
+            });
+          } catch (e) {}
+        }
       }
     };
 
     setupVoices();
     window.speechSynthesis.addEventListener('voiceschanged', setupVoices);
+    window.addEventListener('click', setupVoices, { once: true });
+    window.addEventListener('touchstart', setupVoices, { once: true });
 
     return () => {
       window.speechSynthesis.removeEventListener('voiceschanged', setupVoices);
+      window.removeEventListener('click', setupVoices);
+      window.removeEventListener('touchstart', setupVoices);
     };
   }, []);
 
@@ -3468,13 +3483,8 @@ export default function App() {
               const lastMsg = messages[messages.length - 1];
               const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
               if (lastMsgEl) {
-                const containerRect = container.getBoundingClientRect();
-                const msgRect = lastMsgEl.getBoundingClientRect();
-                if (msgRect.height > containerRect.height * 0.7) {
-                  lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                } else {
-                  lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                }
+                // Always scroll to the start of the message so it flows downwards from the top
+                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
               } else {
                 container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
               }
@@ -4002,7 +4012,7 @@ export default function App() {
         if (Date.now() < premiumVoiceDisabledUntilRef.current) {
           // Fall through to standard TTS without changing the user's setting
         } else {
-          const cacheKey = `${messageId}_${premiumVoiceRef.current}`;
+          const cacheKey = `${messageId}_${premiumVoiceRef.current}_${actualStartIndex}`;
           base64Audio = audioCacheRef.current[cacheKey];
 
           if (!base64Audio) {
@@ -6014,7 +6024,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={msg.id} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex scroll-mt-20 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-white shadow-md backdrop-blur-md border border-gray-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)]' : ''}`}>
                     {msg.role === 'model' && (
@@ -6030,7 +6040,7 @@ export default function App() {
                         </div>
                         
                         {/* Speaker Button at Top Right */}
-                        {!(index === messages.length - 1 && (isLoading || isStreaming)) && (
+                        {(!(index === messages.length - 1 && (isLoading || isStreaming)) || playingMessageId === msg.id || isGeneratingAudio === msg.id) && (
                           <button 
                             onClick={() => {
                               if (playingMessageId === msg.id && !isPaused) {
