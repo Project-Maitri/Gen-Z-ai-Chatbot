@@ -5439,8 +5439,8 @@ export default function App() {
           // Use source-over for sharper, more solid colors instead of screen
           ctx.globalCompositeOperation = 'source-over';
           
-          // Base radius
-          const baseR = Math.min(width, height) * 0.3; // Increased base radius
+          // Base radius - use Math.max to ensure it fills tall/wide screens
+          const baseR = Math.max(width, height) * 0.25;
           
           const drawOrb = (angleOffset: number, speed: number, radiusMult: number, colorBase: string, react: number) => {
             const angle = time * speed + angleOffset;
@@ -6175,9 +6175,33 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-white/95 backdrop-blur-sm"
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-black"
               >
-                <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48">
+                {/* Frequency Visualizer (Full Screen Background) */}
+                <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center">
+                  {/* Glowing Aura */}
+                  {isModelSpeaking && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ 
+                        opacity: [0.1, 0.3, 0.1], 
+                      }}
+                      transition={{ 
+                        repeat: Infinity, 
+                        duration: 4,
+                        ease: "easeInOut"
+                      }}
+                      className="absolute inset-0 bg-yellow-400/10 blur-[100px] z-0"
+                    />
+                  )}
+                  
+                  <canvas 
+                    ref={visualizerCanvasRef} 
+                    className="w-full h-full absolute inset-0 z-10"
+                  />
+                </div>
+
+                <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
                   {/* Screen Share Preview */}
                   <AnimatePresence>
                     {isScreenSharing && latestFrame && (
@@ -6196,40 +6220,15 @@ export default function App() {
                     )}
                   </AnimatePresence>
 
-                  {/* Frequency Visualizer */}
-                  <div className="relative z-10 w-80 h-80 md:w-[500px] md:h-[500px] flex items-center justify-center transition-all duration-300">
-                    {/* Glowing Aura */}
-                    {isModelSpeaking && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ 
-                          opacity: [0.2, 0.5, 0.2], 
-                          scale: [1, 1.2, 1],
-                        }}
-                        transition={{ 
-                          repeat: Infinity, 
-                          duration: 3,
-                          ease: "easeInOut"
-                        }}
-                        className="absolute inset-0 rounded-full bg-yellow-400/20 blur-[60px] md:blur-[100px] z-0"
-                      />
-                    )}
-                    
-                    <canvas 
-                      ref={visualizerCanvasRef} 
-                      className="w-full h-full relative z-10 drop-shadow-2xl"
-                    />
-                  </div>
-
                   {/* Status Indicator */}
                   <div className="absolute bottom-12 flex flex-col items-center z-30 w-full">
                     <motion.div 
                       animate={{ opacity: [0.7, 1, 0.7] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-3 bg-white shadow-sm backdrop-blur-md px-6 py-2 rounded-full border border-gray-200 shadow-xl mb-8"
+                      className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 shadow-xl mb-8"
                     >
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
-                      <span className="text-gray-900 font-mukta font-bold text-xl md:text-2xl tracking-wide">
+                      <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide">
                         {isModelSpeaking 
                           ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
                           : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
