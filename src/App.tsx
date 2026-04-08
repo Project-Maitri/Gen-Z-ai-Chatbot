@@ -3458,11 +3458,7 @@ export default function App() {
         const isNewChat = messages.length < lastMessageCountRef.current;
         lastMessageCountRef.current = messages.length;
 
-        if (isLoading) {
-          // Auto-scroll to bottom while typing
-          // Use direct assignment to prevent any smooth scroll polyfill interference and jitter
-          container.scrollTop = container.scrollHeight;
-        } else if (isNewMessage || isNewChat) {
+        if (isNewMessage || isNewChat) {
           // When a chat is loaded or a non-streaming message arrives
           setTimeout(() => {
             if (messages.length <= 1) {
@@ -3483,6 +3479,9 @@ export default function App() {
               }
             }
           }, 100);
+        } else if (isLoading) {
+          // Do nothing while loading to keep the screen completely stable.
+          // This prevents the shaking effect caused by continuous scrolling.
         } else if (isLive) {
           setTimeout(() => {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
