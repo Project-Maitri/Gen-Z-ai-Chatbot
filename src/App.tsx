@@ -2636,6 +2636,7 @@ export default function App() {
 
   const [editMsgId, setEditMsgId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   
   // Chat History States
   const [savedChats, setSavedChats] = useState<SavedChat[]>(() => {
@@ -3490,40 +3491,6 @@ export default function App() {
       }
     }
   }, [messages, liveTranscript, playingMessageId, isLoading, isModelSpeaking, isLive]);
-
-  const lastScrollTimeRef = useRef<number>(0);
-
-  // Scroll to currently spoken word
-  useEffect(() => {
-    if (playingMessageId && playingTextIndex > 0) {
-      const el = document.getElementById('current-spoken-word');
-      const container = document.getElementById('main-scroll-container');
-      
-      const now = Date.now();
-      // Shorter debounce for smoother continuous scrolling
-      if (now - lastScrollTimeRef.current < 150) return;
-      
-      if (el && container) {
-        const elRect = el.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        
-        // Check if element is outside the middle 50% of the container
-        const topThreshold = containerRect.top + containerRect.height * 0.25;
-        const bottomThreshold = containerRect.bottom - containerRect.height * 0.25;
-        
-        if (elRect.top < topThreshold || elRect.bottom > bottomThreshold) {
-          lastScrollTimeRef.current = now;
-          // Calculate exact scroll position to center the element safely within the container
-          const scrollPos = container.scrollTop + (elRect.top - containerRect.top) - (containerRect.height / 2) + (elRect.height / 2);
-          
-          container.scrollTo({ 
-            top: scrollPos, 
-            behavior: 'smooth' 
-          });
-        }
-      }
-    }
-  }, [playingTextIndex, playingMessageId]);
 
   // Initialize Chat (removed as we use generateContent directly now)
   useEffect(() => {
@@ -4598,6 +4565,7 @@ export default function App() {
       
       const newModelMsgId = newMsgId + '-model-' + Date.now();
       setMessages(prev => [...prev, { id: newModelMsgId, role: 'model', text: '' }]);
+      setIsStreaming(true);
       
       let fullText = "";
       let currentChunk = "";
@@ -4606,7 +4574,10 @@ export default function App() {
       let firstChunkSent = false;
       
       for await (const chunk of responseStream) {
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted) {
+          setIsStreaming(false);
+          return;
+        }
         
         const chunkText = chunk.text || "";
         
@@ -4727,6 +4698,7 @@ export default function App() {
     } finally {
       if (abortControllerRef.current === abortController) {
         setIsLoading(false);
+        setIsStreaming(false);
         abortControllerRef.current = null;
       }
     }
@@ -5671,7 +5643,6 @@ export default function App() {
 
       {/* Virtual AI Background */}
       <VirtualNetworkBackground />
-      <FloatingStopButton stopAudio={pauseMessageAudio} isPlaying={playingMessageId !== null && !isPaused} titleText={t.stop} />
 
       {/* Inner App Container */}
       <div className="flex flex-col h-full w-full bg-transparent font-mukta text-gray-900 overflow-hidden relative">
@@ -6059,9 +6030,15 @@ export default function App() {
                         </div>
                         
                         {/* Speaker Button at Top Right */}
-                        {!(playingMessageId === msg.id && !isPaused && isGeneratingAudio !== msg.id) && (
+                        {!(index === messages.length - 1 && (isLoading || isStreaming)) && (
                           <button 
-                            onClick={() => playMessageAudio(mainText, msg.id)}
+                            onClick={() => {
+                              if (playingMessageId === msg.id && !isPaused) {
+                                pauseMessageAudio();
+                              } else {
+                                playMessageAudio(mainText, msg.id);
+                              }
+                            }}
                             className="flex items-center gap-2 px-3 py-1.5 bg-white shadow-md hover:bg-gray-100 shadow-md text-gray-800 hover:text-gray-900 rounded-lg transition-colors text-sm font-medium"
                             title={playingMessageId === msg.id ? (isPaused ? t.listenAgain : t.stop) : t.listen}
                             disabled={isGeneratingAudio === msg.id}
@@ -6071,22 +6048,15 @@ export default function App() {
                                 <div className="w-4 h-4 border-2 border-gray-300 border-t-white rounded-full animate-spin"></div>
                                 <span>{t.loading}</span>
                               </>
-                            ) : playingMessageId === msg.id ? (
-                              isPaused ? (
-                                <>
-                                  <Play size={18} className="fill-current" />
-                                  <span>{t.listenAgain}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Pause size={18} className="fill-current" />
-                                  <span>{t.stop}</span>
-                                </>
-                              )
+                            ) : playingMessageId === msg.id && !isPaused ? (
+                              <>
+                                <Pause size={18} className="fill-current" />
+                                <span>{t.stop}</span>
+                              </>
                             ) : (
                               <>
                                 <Volume2 size={18} />
-                                <span>{t.listen}</span>
+                                <span>{playingMessageId === msg.id && isPaused ? t.listenAgain : t.listen}</span>
                               </>
                             )}
                           </button>
@@ -6150,37 +6120,39 @@ export default function App() {
                     </div>
                     {msg.role === 'model' && (
                       <>
-                        <div id={`message-actions-${msg.id}`} className="mt-3 flex justify-end items-center gap-2">
-                          {msg.id === '1' && !currentChatId && (
-                            <button
-                              onClick={() => setIsSaveModalOpen(true)}
-                              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 hover:text-sky-800 rounded-lg transition-colors mr-auto text-sm font-medium border border-sky-200"
-                              title={t.saveChat}
-                            >
-                              <Bookmark size={14} />
-                              <span>{t.saveChat}</span>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleCopy(msg.text, msg.id)}
-                            className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
-                            title={t.copy}
-                          >
-                            {copiedMessageId === msg.id ? (
-                              <Check size={16} className="text-green-400" />
-                            ) : (
-                              <Copy size={16} />
+                        {!(index === messages.length - 1 && (isLoading || isStreaming)) && (
+                          <div id={`message-actions-${msg.id}`} className="mt-3 flex justify-end items-center gap-2">
+                            {msg.id === '1' && !currentChatId && (
+                              <button
+                                onClick={() => setIsSaveModalOpen(true)}
+                                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 hover:text-sky-800 rounded-lg transition-colors mr-auto text-sm font-medium border border-sky-200"
+                                title={t.saveChat}
+                              >
+                                <Bookmark size={14} />
+                                <span>{t.saveChat}</span>
+                              </button>
                             )}
-                          </button>
-                          <button
-                            onClick={() => handleShare(msg.text)}
-                            className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
-                            title={t.share}
-                          >
-                            <Share2 size={16} />
-                          </button>
-                        </div>
-                        {questions.length > 0 && (
+                            <button
+                              onClick={() => handleCopy(msg.text, msg.id)}
+                              className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
+                              title={t.copy}
+                            >
+                              {copiedMessageId === msg.id ? (
+                                <Check size={16} className="text-green-400" />
+                              ) : (
+                                <Copy size={16} />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleShare(msg.text)}
+                              className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
+                              title={t.share}
+                            >
+                              <Share2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                        {questions.length > 0 && !(index === messages.length - 1 && (isLoading || isStreaming)) && (
                           <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
                             {questions.map((q, idx) => (
                               <button
