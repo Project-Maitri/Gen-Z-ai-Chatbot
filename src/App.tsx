@@ -5416,7 +5416,8 @@ export default function App() {
           const width = rect.width;
           const height = rect.height;
           const centerX = width / 2;
-          const centerY = height / 2;
+          // Shift the animation slightly upwards (by 10% of the height) to account for bottom controls
+          const centerY = height * 0.4;
           
           ctx.clearRect(0, 0, width, height);
           
