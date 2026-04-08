@@ -2690,6 +2690,7 @@ export default function App() {
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceTypingTranscriptRef = useRef('');
+  const continuousVoiceModeRef = useRef(false);
   const [liveTranscript, setLiveTranscript] = useState<Message[]>([]);
   const liveTranscriptRef = useRef<Message[]>([]);
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
@@ -2698,6 +2699,101 @@ export default function App() {
   const [playingTextIndex, setPlayingTextIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState<string | null>(null);
+  
+  const startVoiceRecognition = () => {
+    stopMessageAudio();
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError(t.speechNotSupported || "Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    const langMap: Record<string, string> = {
+      en: 'en-IN',
+      hi: 'hi-IN',
+      bho: 'bho-IN',
+      bn: 'bn-IN',
+      ta: 'ta-IN',
+      te: 'te-IN',
+      mr: 'mr-IN',
+      gu: 'gu-IN',
+      kn: 'kn-IN',
+      ml: 'ml-IN',
+      or: 'or-IN',
+      pa: 'pa-IN',
+      as: 'as-IN',
+      ur: 'ur-IN'
+    };
+    recognition.lang = langMap[uiLang] || 'en-IN';
+    
+    recognitionRef.current = recognition;
+    
+    // Store the existing input so we can append to it
+    const existingInput = input.trim() ? input.trim() + ' ' : '';
+    voiceTypingTranscriptRef.current = existingInput;
+
+    recognition.onstart = () => {
+      setIsVoiceTyping(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      let currentTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        currentTranscript += event.results[i][0].transcript;
+      }
+      const fullText = existingInput + currentTranscript;
+      setInput(fullText);
+      voiceTypingTranscriptRef.current = fullText;
+    };
+
+    recognition.onerror = (event: any) => {
+      console.warn("Speech recognition error", event.error);
+      setIsVoiceTyping(false);
+      if (event.error !== 'no-speech') {
+        continuousVoiceModeRef.current = false;
+      } else if (continuousVoiceModeRef.current) {
+        // If no speech, turn off continuous mode to prevent infinite loops of silence.
+        continuousVoiceModeRef.current = false;
+      }
+    };
+
+    recognition.onend = () => {
+      setIsVoiceTyping(false);
+      if (voiceTypingTranscriptRef.current.trim()) {
+        const textToSend = voiceTypingTranscriptRef.current.trim();
+        voiceTypingTranscriptRef.current = '';
+        handleSend(textToSend, true);
+      } else {
+        // No text was spoken. Turn off continuous mode.
+        continuousVoiceModeRef.current = false;
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("Failed to start speech recognition", e);
+      setIsVoiceTyping(false);
+      continuousVoiceModeRef.current = false;
+    }
+  };
+
+  // Auto-restart voice recognition in continuous mode when model finishes speaking
+  useEffect(() => {
+    if (continuousVoiceModeRef.current && !isModelSpeaking && !playingMessageId && !isLoading && !isVoiceTyping) {
+      // Small delay to ensure audio has completely stopped and UI has updated
+      const timer = setTimeout(() => {
+        if (continuousVoiceModeRef.current && !isModelSpeaking && !playingMessageId && !isLoading && !isVoiceTyping) {
+          startVoiceRecognition();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isModelSpeaking, playingMessageId, isLoading, isVoiceTyping]);
   
   // Close more menu when clicking outside
   useEffect(() => {
@@ -4351,16 +4447,23 @@ export default function App() {
     }
     setIsLoading(false);
     stopMessageAudio();
+    continuousVoiceModeRef.current = false;
   };
 
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
     stopMessageAudio();
     fallbackToStandardMessageIdRef.current = null;
+    
+    if (!autoPlayResponse) {
+      continuousVoiceModeRef.current = false;
+    }
+
     if (isVoiceTyping && recognitionRef.current) {
       // Clear the transcript ref so onend doesn't send it again
       voiceTypingTranscriptRef.current = '';
       recognitionRef.current.stop();
       setIsVoiceTyping(false);
+      continuousVoiceModeRef.current = false;
     }
 
     const userText = typeof textToSend === 'string' ? textToSend : input.trim();
@@ -4663,82 +4766,19 @@ export default function App() {
     }
 
     if (isVoiceTyping) {
+      // If actively listening, stop listening, send, and exit continuous mode
       setIsVoiceTyping(false);
+      continuousVoiceModeRef.current = false;
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
       return;
     }
 
+    // If not currently listening (e.g., model is speaking or idle), start listening
     stopMessageAudio();
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setError(t.speechNotSupported || "Speech recognition is not supported in this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    const langMap: Record<string, string> = {
-      en: 'en-IN',
-      hi: 'hi-IN',
-      bho: 'bho-IN',
-      bn: 'bn-IN',
-      ta: 'ta-IN',
-      te: 'te-IN',
-      mr: 'mr-IN',
-      gu: 'gu-IN',
-      kn: 'kn-IN',
-      ml: 'ml-IN',
-      or: 'or-IN',
-      pa: 'pa-IN',
-      as: 'as-IN',
-      ur: 'ur-IN'
-    };
-    recognition.lang = langMap[uiLang] || 'en-IN';
-    
-    recognitionRef.current = recognition;
-    
-    // Store the existing input so we can append to it
-    const existingInput = input.trim() ? input.trim() + ' ' : '';
-    voiceTypingTranscriptRef.current = existingInput;
-
-    recognition.onstart = () => {
-      setIsVoiceTyping(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      let currentTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        currentTranscript += event.results[i][0].transcript;
-      }
-      const fullText = existingInput + currentTranscript;
-      setInput(fullText);
-      voiceTypingTranscriptRef.current = fullText;
-    };
-
-    recognition.onerror = (event: any) => {
-      console.warn("Speech recognition error", event.error);
-      setIsVoiceTyping(false);
-    };
-
-    recognition.onend = () => {
-      setIsVoiceTyping(false);
-      if (voiceTypingTranscriptRef.current.trim()) {
-        const textToSend = voiceTypingTranscriptRef.current.trim();
-        voiceTypingTranscriptRef.current = '';
-        handleSend(textToSend, true);
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      console.warn("Failed to start speech recognition", e);
-      setIsVoiceTyping(false);
-    }
+    continuousVoiceModeRef.current = true;
+    startVoiceRecognition();
   };
 
   // Live API Audio Setup
@@ -4901,6 +4941,7 @@ export default function App() {
       voiceTypingTranscriptRef.current = '';
       recognitionRef.current.stop();
       setIsVoiceTyping(false);
+      continuousVoiceModeRef.current = false;
     }
 
     setLiveTranscript([]);
