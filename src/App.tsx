@@ -6029,9 +6029,6 @@ export default function App() {
             <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-2'}`}>
               {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
-                const isLastMessage = index === messages.length - 1;
-                const showCursor = isLoading && msg.role === 'model' && isLastMessage;
-                const cursorHtml = showCursor ? '<span class="animate-pulse text-blue-500"> ▍</span>' : '';
                 
                 return (
                 <motion.div 
@@ -6130,11 +6127,11 @@ export default function App() {
                       )}
                       {playingMessageId === msg.id ? (
                         <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                          {highlightMarkdown(mainText, playingTextIndex) + cursorHtml}
+                          {highlightMarkdown(mainText, playingTextIndex)}
                         </ReactMarkdown>
                       ) : (
                         <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                          {mainText + cursorHtml}
+                          {mainText}
                         </ReactMarkdown>
                       )}
                     </div>
