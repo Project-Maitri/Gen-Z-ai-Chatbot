@@ -2856,23 +2856,6 @@ export default function App() {
   const audioCacheRef = useRef<Record<string, string>>({});
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
   const fallbackToStandardMessageIdRef = useRef<string | null>(null);
-  
-  // Avatar Animation values (Realistic Lip Style, Smaller Size)
-  const PATH_CLOSED = "M 85 135 Q 92 132 100 134 Q 108 132 115 135 Q 108 138 100 136 Q 92 138 85 135";
-  // 12 Hindi Vowels
-  const PATH_A_SHORT = "M 86 135 Q 93 129 100 131 Q 107 129 114 135 Q 107 142 100 139 Q 93 142 86 135"; // अ
-  const PATH_AA = "M 87 135 Q 93 122 100 125 Q 107 122 113 135 Q 107 152 100 148 Q 93 152 87 135"; // आ
-  const PATH_I = "M 82 134 Q 91 130 100 132 Q 109 130 118 134 Q 109 140 100 137 Q 91 140 82 134"; // इ
-  const PATH_II = "M 80 133 Q 90 128 100 130 Q 110 128 120 133 Q 110 142 100 138 Q 90 142 80 133"; // ई
-  const PATH_U = "M 90 135 Q 95 128 100 130 Q 105 128 110 135 Q 105 142 100 140 Q 95 142 90 135"; // उ
-  const PATH_UU = "M 92 135 Q 96 125 100 128 Q 104 125 108 135 Q 104 145 100 142 Q 96 145 92 135"; // ऊ
-  const PATH_E = "M 84 135 Q 92 125 100 128 Q 108 125 116 135 Q 108 146 100 142 Q 92 146 84 135"; // ए
-  const PATH_AI = "M 82 135 Q 91 120 100 124 Q 109 120 118 135 Q 109 154 100 148 Q 91 154 82 135"; // ऐ
-  const PATH_O = "M 88 135 Q 94 123 100 126 Q 106 123 112 135 Q 106 148 100 144 Q 94 148 88 135"; // ओ
-  const PATH_AU = "M 89 135 Q 94 118 100 122 Q 106 118 111 135 Q 106 155 100 150 Q 94 155 89 135"; // औ
-  const PATH_AM = "M 85 135 Q 92 131 100 133 Q 108 131 115 135 Q 108 139 100 137 Q 92 139 85 135"; // अं
-  const PATH_AH = "M 85 135 Q 92 126 100 129 Q 108 126 115 135 Q 108 145 100 141 Q 92 145 85 135"; // अः
-  const mouthPath = useMotionValue(PATH_CLOSED);
 
   // Chat History Functions
   const handleSaveChat = () => {
@@ -3285,8 +3268,7 @@ export default function App() {
   const activeAudioSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const silentOscillatorRef = useRef<OscillatorNode | null>(null);
   const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
-  const avatarContainerRef = useRef<HTMLDivElement>(null);
-  const mouthRef = useRef<SVGPathElement>(null);
+  const visualizerCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isMicMutedRef = useRef(false);
   const isScreenSharingRef = useRef(false);
@@ -4986,9 +4968,13 @@ export default function App() {
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
-      // Do NOT connect the microphone source to the analyser, as it will cause local echo
-      // source.connect(analyser);
-      analyser.connect(audioCtx.destination);
+      
+      // Connect the microphone source to the analyser for visualization
+      source.connect(analyser);
+      
+      // DO NOT connect the analyser to the destination, as it will cause local echo!
+      // analyser.connect(audioCtx.destination);
+      
       analyserRef.current = analyser;
       
       // Use AudioWorklet if available, fallback to ScriptProcessor
@@ -5298,10 +5284,13 @@ export default function App() {
       }
       const source = audioContextRef.current.createBufferSource();
       source.buffer = audioBuffer;
+      
+      // Always connect to destination so we can hear it
+      source.connect(audioContextRef.current.destination);
+      
+      // Also connect to analyser for visualization
       if (analyserRef.current) {
         source.connect(analyserRef.current);
-      } else {
-        source.connect(audioContextRef.current.destination);
       }
       
       // Schedule playback to avoid stuttering
@@ -5400,84 +5389,92 @@ export default function App() {
     }
   };
 
-  // Avatar Animation Effect
+  // Visualizer Animation Effect
   useEffect(() => {
     if (!isLive) return;
     
-    if (isModelSpeaking) {
-      if (avatarContainerRef.current) {
-        avatarContainerRef.current.style.filter = 'drop-shadow(0 0 20px rgba(96,165,250,0.6))';
-      }
-    } else {
-      if (avatarContainerRef.current) {
-        avatarContainerRef.current.style.filter = 'drop-shadow(0 0 15px rgba(56,189,248,0.4))';
-      }
-      animate(mouthPath, PATH_CLOSED, { duration: 0.2, ease: "easeOut" });
-    }
-
     let animationId: number;
-    let lastPath = PATH_CLOSED;
     
-    const updateAvatar = () => {
-      let nextPath = PATH_CLOSED;
-      
-      if (isModelSpeaking && analyserRef.current) {
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-        analyserRef.current.getByteFrequencyData(dataArray);
-        
-        // Vowel Formant Approximation for 24kHz sample rate
-        // fftSize = 256 -> frequencyBinCount = 128. Bin width = 12000 / 128 = 93.75 Hz
-        
-        let f1Energy = 0; // F1 (Openness/Jaw Drop): ~300Hz to ~1000Hz (Bins 3-11)
-        let f2Energy = 0; // F2 (Front/Back/Lip Rounding): ~1000Hz to ~2500Hz (Bins 11-27)
-        let totalEnergy = 0;
-        
-        for (let i = 3; i <= 11; i++) f1Energy += dataArray[i];
-        for (let i = 11; i <= 27; i++) f2Energy += dataArray[i];
-        for (let i = 1; i <= 48; i++) totalEnergy += dataArray[i]; // Up to ~4.5kHz
-        
-        f1Energy /= 9;
-        f2Energy /= 17;
-        totalEnergy /= 48;
-        
-        if (totalEnergy > 5) { // Speaking threshold
-          const f1Norm = f1Energy / 255;
-          const f2Norm = f2Energy / 255;
+    const updateVisualizer = () => {
+      if (visualizerCanvasRef.current && analyserRef.current) {
+        const canvas = visualizerCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Handle high-DPI displays
+          const dpr = window.devicePixelRatio || 1;
+          const rect = canvas.getBoundingClientRect();
           
-          if (f1Norm > 0.45) {
-            // Very open mouth (AA, AI, AU)
-            if (f2Norm > 0.4) nextPath = PATH_AI; // Front open
-            else if (f2Norm < 0.2) nextPath = PATH_AU; // Back open
-            else nextPath = PATH_AA; // Central open
-          } else if (f1Norm > 0.25) {
-            // Mid open mouth (A, E, O)
-            if (f2Norm > 0.35) nextPath = PATH_E; // Front mid
-            else if (f2Norm < 0.2) nextPath = PATH_O; // Back mid
-            else nextPath = PATH_A_SHORT; // Central mid
-          } else {
-            // Close mouth (I, U, AM)
-            if (f2Norm > 0.3) nextPath = PATH_II; // Front close
-            else if (f2Norm < 0.15) nextPath = PATH_UU; // Back close
-            else nextPath = PATH_AM; // Central close
+          if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
           }
+          
+          const width = rect.width;
+          const height = rect.height;
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const radius = Math.min(width, height) / 4;
+          
+          ctx.clearRect(0, 0, width, height);
+          
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(dataArray);
+          
+          const bars = 64;
+          const step = Math.floor(dataArray.length / bars);
+          
+          // Draw base circle
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+          ctx.strokeStyle = isModelSpeaking ? 'rgba(234, 179, 8, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // Draw frequency bars
+          for (let i = 0; i < bars; i++) {
+            const value = dataArray[i * step];
+            const percent = value / 255;
+            // Max bar height is roughly half the radius
+            const barHeight = radius + (percent * (radius * 0.8));
+            
+            // Start from top (-Math.PI/2) and go clockwise
+            const angle = (i * 2 * Math.PI) / bars - Math.PI / 2;
+            
+            const x1 = centerX + Math.cos(angle) * radius;
+            const y1 = centerY + Math.sin(angle) * radius;
+            const x2 = centerX + Math.cos(angle) * barHeight;
+            const y2 = centerY + Math.sin(angle) * barHeight;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = isModelSpeaking ? '#eab308' : '#3b82f6';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+          }
+          
+          // Inner pulsing circle based on overall energy
+          const avgEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          const pulseRadius = radius - 15 + (avgEnergy / 255) * 15;
+          
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, pulseRadius, 0, 2 * Math.PI);
+          ctx.fillStyle = isModelSpeaking ? 'rgba(234, 179, 8, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+          ctx.fill();
         }
       }
       
-      if (nextPath !== lastPath) {
-        // Reduced duration from 0.15 to 0.06 for much snappier, realistic lip sync
-        animate(mouthPath, nextPath, { duration: 0.06, ease: "easeOut" });
-        lastPath = nextPath;
-      }
-      
-      animationId = requestAnimationFrame(updateAvatar);
+      animationId = requestAnimationFrame(updateVisualizer);
     };
 
-    animationId = requestAnimationFrame(updateAvatar);
+    animationId = requestAnimationFrame(updateVisualizer);
 
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isModelSpeaking, isLive, mouthPath]);
+  }, [isLive, isModelSpeaking]);
 
   // Keep AudioContext alive when returning to foreground
   useEffect(() => {
@@ -6177,11 +6174,8 @@ export default function App() {
                     )}
                   </AnimatePresence>
 
-                  {/* Nard Realistic Robot Avatar */}
-                  <div 
-                    ref={avatarContainerRef}
-                    className="relative z-10 w-60 h-60 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300"
-                  >
+                  {/* Frequency Visualizer */}
+                  <div className="relative z-10 w-60 h-60 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300">
                     {/* Glowing Aura */}
                     {isModelSpeaking && (
                       <motion.div
@@ -6198,94 +6192,11 @@ export default function App() {
                         className="absolute inset-0 rounded-full bg-yellow-400/20 blur-[60px] md:blur-[100px] z-0"
                       />
                     )}
-
-                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="w-full h-full overflow-visible relative z-10">
-                      <defs>
-                        <linearGradient id="glassFace" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#1e293b" />
-                          <stop offset="100%" stopColor="#020617" />
-                        </linearGradient>
-                        <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
-                          <stop offset="0%" stopColor="#60a5fa" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
-                        </radialGradient>
-                        <radialGradient id="yellowEyeGlow" cx="50%" cy="50%" r="50%">
-                          <stop offset="0%" stopColor="#facc15" stopOpacity="1" />
-                          <stop offset="100%" stopColor="#eab308" stopOpacity="0" />
-                        </radialGradient>
-                        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                          <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor="#000000" floodOpacity="0.5" />
-                        </filter>
-                      </defs>
-
-                      {/* Robot Head Structure */}
-                      <g filter="url(#shadow)">
-                        {/* Outer Shell */}
-                        <path d="M 40 60 C 40 20, 160 20, 160 60 C 160 140, 130 180, 100 180 C 70 180, 40 140, 40 60 Z" fill="url(#glassFace)" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                        
-                        {/* Inner Face Plate */}
-                        <path d="M 55 70 C 55 40, 145 40, 145 70 C 145 130, 120 160, 100 160 C 80 160, 55 130, 55 70 Z" fill="rgba(0,0,0,0.4)" />
-                      </g>
-                      
-                      {/* Eyes */}
-                      <g>
-                        {/* Left Eye */}
-                        <motion.circle 
-                          cx="75" cy="80" r="12" 
-                          fill={isModelSpeaking ? "url(#yellowEyeGlow)" : "url(#eyeGlow)"} 
-                          opacity="0.8" 
-                          animate={isModelSpeaking ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-                          transition={isModelSpeaking ? { repeat: Infinity, duration: 0.2, repeatDelay: 3, ease: "easeInOut" } : {}}
-                          style={{ originX: "75px", originY: "80px" }}
-                        />
-                        <motion.circle 
-                          cx="75" cy="80" r="4" 
-                          fill={isModelSpeaking ? "#facc15" : "#60a5fa"} 
-                          animate={isModelSpeaking ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-                          transition={isModelSpeaking ? { repeat: Infinity, duration: 0.2, repeatDelay: 3, ease: "easeInOut" } : {}}
-                          style={{ originX: "75px", originY: "80px" }}
-                        />
-                        
-                        {/* Right Eye */}
-                        <motion.circle 
-                          cx="125" cy="80" r="12" 
-                          fill={isModelSpeaking ? "url(#yellowEyeGlow)" : "url(#eyeGlow)"} 
-                          opacity="0.8" 
-                          animate={isModelSpeaking ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-                          transition={isModelSpeaking ? { repeat: Infinity, duration: 0.2, repeatDelay: 3, ease: "easeInOut" } : {}}
-                          style={{ originX: "125px", originY: "80px" }}
-                        />
-                        <motion.circle 
-                          cx="125" cy="80" r="4" 
-                          fill={isModelSpeaking ? "#facc15" : "#60a5fa"} 
-                          animate={isModelSpeaking ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-                          transition={isModelSpeaking ? { repeat: Infinity, duration: 0.2, repeatDelay: 3, ease: "easeInOut" } : {}}
-                          style={{ originX: "125px", originY: "80px" }}
-                        />
-                      </g>
-
-                      {/* Realistic Lips */}
-                      <g>
-                        <motion.path
-                          d={mouthPath}
-                          stroke={isModelSpeaking ? "#eab308" : "#3b82f6"}
-                          strokeWidth="2"
-                          fill={isModelSpeaking ? "rgba(234, 179, 8, 0.4)" : "rgba(59, 130, 246, 0.2)"}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        {/* Subtle Glow under mouth when speaking */}
-                        {isModelSpeaking && (
-                          <motion.circle
-                            cx="100" cy="150" r="10"
-                            fill="#facc15"
-                            opacity="0.2"
-                            animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
-                            transition={{ repeat: Infinity, duration: 0.3 }}
-                          />
-                        )}
-                      </g>
-                    </svg>
+                    
+                    <canvas 
+                      ref={visualizerCanvasRef} 
+                      className="w-full h-full relative z-10 drop-shadow-2xl"
+                    />
                   </div>
 
                   {/* Status Indicator */}
