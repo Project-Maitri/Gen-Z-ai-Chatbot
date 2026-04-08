@@ -5404,9 +5404,12 @@ export default function App() {
           const dpr = window.devicePixelRatio || 1;
           const rect = canvas.getBoundingClientRect();
           
-          if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
+          const displayWidth = Math.floor(rect.width * dpr);
+          const displayHeight = Math.floor(rect.height * dpr);
+          
+          if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
             ctx.scale(dpr, dpr);
           }
           
@@ -5450,6 +5453,7 @@ export default function App() {
             
             const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
             gradient.addColorStop(0, color);
+            gradient.addColorStop(0.4, color); // Make the core of the orb more solid
             gradient.addColorStop(1, 'transparent');
             
             ctx.beginPath();
@@ -5581,6 +5585,7 @@ export default function App() {
       {/* Inner App Container */}
       <div className="flex flex-col h-full w-full bg-transparent font-mukta text-gray-900 overflow-hidden relative">
         {/* Header */}
+        {!isLive && (
           <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="flex flex-col items-center">
@@ -5683,6 +5688,7 @@ export default function App() {
               </AnimatePresence>
             </div>
           </header>
+        )}
 
           {/* Error Toast */}
           <AnimatePresence>
