@@ -4612,14 +4612,14 @@ export default function App() {
         const chunkText = chunk.text || "";
         
         // Render the chunk text smoothly to slow down the typing effect
-        // 15ms delay per 2 characters gives a nice, readable typing speed
-        const chunkSize = 2;
-        for (let i = 0; i < chunkText.length; i += chunkSize) {
+        // Split by words and spaces to reveal word-by-word for a "manifesting" effect
+        const tokens = chunkText.split(/(\s+|[.,!?।]+)/);
+        for (const token of tokens) {
+          if (!token) continue;
           if (abortController.signal.aborted) return;
           
-          const textSlice = chunkText.substring(i, i + chunkSize);
-          fullText += textSlice;
-          currentChunk += textSlice;
+          fullText += token;
+          currentChunk += token;
           
           setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
           
@@ -4664,7 +4664,8 @@ export default function App() {
             }
           }
           
-          await new Promise(resolve => setTimeout(resolve, 15));
+          // Delay based on token length to keep pacing natural, but reveal whole words
+          await new Promise(resolve => setTimeout(resolve, token.length * 15 + 10));
         }
       }
       
@@ -6000,8 +6001,12 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
             <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-2'}`}>
-              {!isLive && messages.map((msg) => {
+              {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
+                const isLastMessage = index === messages.length - 1;
+                const showCursor = isLoading && msg.role === 'model' && isLastMessage;
+                const cursorHtml = showCursor ? '<span class="animate-pulse text-blue-500"> ▍</span>' : '';
+                
                 return (
                 <motion.div 
                   id={`message-${msg.id}`}
@@ -6099,10 +6104,12 @@ export default function App() {
                       )}
                       {playingMessageId === msg.id ? (
                         <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                          {highlightMarkdown(mainText, playingTextIndex)}
+                          {highlightMarkdown(mainText, playingTextIndex) + cursorHtml}
                         </ReactMarkdown>
                       ) : (
-                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>{mainText}</ReactMarkdown>
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                          {mainText + cursorHtml}
+                        </ReactMarkdown>
                       )}
                     </div>
                     {msg.role === 'model' && (
