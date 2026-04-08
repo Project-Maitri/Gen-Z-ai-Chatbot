@@ -5436,12 +5436,13 @@ export default function App() {
           
           const time = Date.now() * 0.001;
           
-          ctx.globalCompositeOperation = 'screen';
+          // Use source-over for sharper, more solid colors instead of screen
+          ctx.globalCompositeOperation = 'source-over';
           
           // Base radius
-          const baseR = Math.min(width, height) * 0.25;
+          const baseR = Math.min(width, height) * 0.3; // Increased base radius
           
-          const drawOrb = (angleOffset: number, speed: number, radiusMult: number, color: string, react: number) => {
+          const drawOrb = (angleOffset: number, speed: number, radiusMult: number, colorBase: string, react: number) => {
             const angle = time * speed + angleOffset;
             // Orbit radius expands with audio
             const orbitR = baseR * 0.3 * (1 + react * 0.4); 
@@ -5452,9 +5453,11 @@ export default function App() {
             const r = baseR * radiusMult * (1 + react * 0.6);
             
             const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-            gradient.addColorStop(0, color);
-            gradient.addColorStop(0.4, color); // Make the core of the orb more solid
-            gradient.addColorStop(1, 'transparent');
+            // Construct sharper gradient stops
+            gradient.addColorStop(0, `rgba(${colorBase}, 0.95)`);
+            gradient.addColorStop(0.6, `rgba(${colorBase}, 0.8)`);
+            gradient.addColorStop(0.85, `rgba(${colorBase}, 0.3)`);
+            gradient.addColorStop(1, `rgba(${colorBase}, 0)`);
             
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -5462,26 +5465,24 @@ export default function App() {
             ctx.fill();
           };
           
-          // Gemini Live colors: Blue, Red, Yellow, Green
-          drawOrb(0, 1.2, 1.2, 'rgba(66, 133, 244, 0.9)', nLow);       // Blue
-          drawOrb(2, 0.8, 1.1, 'rgba(234, 67, 53, 0.8)', nMid);        // Red
-          drawOrb(4, 1.5, 1.0, 'rgba(251, 188, 5, 0.8)', nHigh);       // Yellow
-          drawOrb(1, 1.0, 1.3, 'rgba(52, 168, 83, 0.8)', (nLow+nHigh)/2); // Green
+          // Gemini Live colors (RGB values for sharper gradients): Blue, Red, Yellow, Green
+          drawOrb(0, 1.2, 1.2, '66, 133, 244', nLow);       // Blue
+          drawOrb(2, 0.8, 1.1, '234, 67, 53', nMid);        // Red
+          drawOrb(4, 1.5, 1.0, '251, 188, 5', nHigh);       // Yellow
+          drawOrb(1, 1.0, 1.3, '52, 168, 83', (nLow+nHigh)/2); // Green
           
           // Add a central core that pulses
           const coreReact = (nLow + nMid + nHigh) / 3;
           const coreR = baseR * 0.8 * (1 + coreReact * 0.5);
           const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreR);
-          coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-          coreGrad.addColorStop(0.2, 'rgba(255, 255, 255, 0.2)');
-          coreGrad.addColorStop(1, 'transparent');
+          coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+          coreGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.4)');
+          coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
           
           ctx.beginPath();
           ctx.arc(centerX, centerY, coreR, 0, Math.PI * 2);
           ctx.fillStyle = coreGrad;
           ctx.fill();
-          
-          ctx.globalCompositeOperation = 'source-over';
         }
       }
       
@@ -6196,7 +6197,7 @@ export default function App() {
                   </AnimatePresence>
 
                   {/* Frequency Visualizer */}
-                  <div className="relative z-10 w-60 h-60 md:w-96 md:h-96 flex items-center justify-center transition-all duration-300">
+                  <div className="relative z-10 w-80 h-80 md:w-[500px] md:h-[500px] flex items-center justify-center transition-all duration-300">
                     {/* Glowing Aura */}
                     {isModelSpeaking && (
                       <motion.div
