@@ -5586,13 +5586,6 @@ export default function App() {
           // Yellow when speaking, Blue when listening
           ctx.fillStyle = isSpeaking ? 'rgba(250, 204, 21, 1)' : 'rgba(96, 165, 250, 1)';
           ctx.fill();
-          
-          // Draw text in the center core
-          ctx.font = `bold 28px "Mukta", sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'rgba(34, 197, 94, 1)'; // Green text
-          ctx.fillText(emaitriText, centerX, centerY);
         }
       }
       
