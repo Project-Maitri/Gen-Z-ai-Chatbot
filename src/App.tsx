@@ -3703,8 +3703,8 @@ export default function App() {
           // Exponential backoff: 1s, 2s, 4s, 8s
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries - 1) * 1000));
         } else {
-          // Small base delay to prevent burst requests when chunks arrive instantly
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Minimal base delay to prevent burst requests but keep streaming fast
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         const fetchPromise = ai.models.generateContent({
@@ -4007,192 +4007,56 @@ export default function App() {
       }
 
       if (voiceEngineRef.current === 'premium') {
-        let base64Audio: string | null = null;
-        
         // Check if premium voice is temporarily disabled due to quota
         if (Date.now() < premiumVoiceDisabledUntilRef.current) {
           // Fall through to standard TTS without changing the user's setting
         } else {
-          const cacheKey = `${messageId}_${premiumVoiceRef.current}_${actualStartIndex}`;
-          base64Audio = audioCacheRef.current[cacheKey];
-
-          if (!base64Audio) {
-            setIsGeneratingAudio(messageId);
-            try {
-              if (!ai) {
-                initAI(getApiKey());
-              }
-              if (!ai) {
-                throw new Error("AI service not initialized. Please set your API Key in Settings.");
-              }
-              let response;
-              let retries = 0;
-              const maxRetries = 1; // Reduce retries to prevent long delays
-              
-              while (retries <= maxRetries) {
-                try {
-                  const fetchPromise = ai.models.generateContent({
-                    model: "gemini-2.5-flash-preview-tts",
-                    contents: [{ parts: [{ text: textToSpeak }] }],
-                    config: {
-                      responseModalities: [Modality.AUDIO],
-                      speechConfig: {
-                        voiceConfig: {
-                          prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current },
-                        },
-                      },
-                    },
-                  });
-
-                  // Prevent unhandled rejection if timeout wins
-                  fetchPromise.catch(() => {});
-
-                  // 8 second timeout for faster fallback
-                  const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("TTS Request Timeout")), 8000)
-                  );
-
-                  response = await Promise.race([fetchPromise, timeoutPromise]) as any;
-                  break;
-                } catch (e: any) {
-                  const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-                  const isQuotaErr = errStr.includes('429') || 
-                                     errStr.toLowerCase().includes('quota') || 
-                                     errStr.includes('RESOURCE_EXHAUSTED') ||
-                                     errStr.toLowerCase().includes('limit') ||
-                                     errStr.toLowerCase().includes('exceeded');
-                                     
-                  const isServerErr = errStr.includes('503') || 
-                                      errStr.toLowerCase().includes('service unavailable') || 
-                                      errStr.toLowerCase().includes('busy') || 
-                                      errStr.toLowerCase().includes('traffic') ||
-                                      errStr.toLowerCase().includes('deadline_exceeded');
-                  
-                  // If it's a quota error, don't retry, fail fast to fallback
-                  if (isQuotaErr) {
-                    throw e;
-                  }
-                  
-                  if (isServerErr && retries < maxRetries) {
-                    retries++;
-                    await new Promise(resolve => setTimeout(resolve, 1500)); // Short 1.5s delay
-                    if (playingMessageIdRef.current !== messageId) return;
-                    continue;
-                  }
-                  throw e;
-                }
-              }
-
-              if (!response) throw new Error("No response from TTS service");
-
-              const rawAudio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
-              if (rawAudio) {
-                const wavBase64 = createWavFromPcmBase64(rawAudio);
-                audioCacheRef.current[cacheKey] = wavBase64;
-                base64Audio = wavBase64;
-              }
-            } catch (e: any) {
-              const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-              const isQuotaErr = errStr.toLowerCase().includes('429') || 
-                                 errStr.toLowerCase().includes('503') ||
-                                 errStr.toLowerCase().includes('service unavailable') ||
-                                 errStr.toLowerCase().includes('quota') || 
-                                 errStr.includes('RESOURCE_EXHAUSTED') ||
-                                 errStr.toLowerCase().includes('limit') ||
-                                 errStr.toLowerCase().includes('exceeded');
-              
-              if (isQuotaErr) {
-                console.warn("Premium voice quota exceeded, falling back to standard TTS silently.");
-                // Disable premium voice for 15 minutes to prevent repeated slow failures
-                premiumVoiceDisabledUntilRef.current = Date.now() + (15 * 60 * 1000);
-              } else {
-                console.warn("Failed to generate premium audio", e);
-              }
-              
-              // Fallback to standard for this message only
-              base64Audio = null;
-            } finally {
-              setIsGeneratingAudio(null);
-            }
-          }
-        }
-
-        // If user stopped or changed message while generating
-        if (playingMessageIdRef.current !== messageId) {
-          return;
-        }
-
-        if (base64Audio && premiumAudioRef.current) {
-          // If paused, we just resume from where we left off
-          if (actualStartIndex > 0 && premiumAudioRef.current.src.includes(base64Audio.substring(0, 100))) {
-            premiumAudioRef.current.playbackRate = speechRateRef.current;
-            premiumAudioRef.current.play().catch(e => console.warn(e));
-            return;
-          }
-
-          premiumAudioRef.current.src = `data:audio/wav;base64,${base64Audio}`;
-          premiumAudioRef.current.playbackRate = speechRateRef.current;
+          // Chunk the text and queue it for streaming playback
+          let currentChunk = '';
+          let globalStartIndex = wordStartIndex;
           
-          premiumAudioRef.current.onplay = () => {
-            startTimeRef.current = Date.now();
-            lastStartIndexRef.current = wordStartIndex;
-            currentTextIndexRef.current = wordStartIndex;
-            setPlayingTextIndex(wordStartIndex);
-            setIsModelSpeaking(true);
-          };
-
-          premiumAudioRef.current.onpause = () => {
-            setIsModelSpeaking(false);
-          };
-
-          premiumAudioRef.current.ontimeupdate = () => {
-            if (premiumAudioRef.current && premiumAudioRef.current.duration) {
-              const progress = premiumAudioRef.current.currentTime / premiumAudioRef.current.duration;
-              const estimatedIndex = wordStartIndex + Math.floor(progress * textToSpeak.length);
-              
-              if (estimatedIndex > currentTextIndexRef.current) {
-                const newIndex = Math.min(estimatedIndex, currentTextRef.current.length);
-                currentTextIndexRef.current = newIndex;
-                setPlayingTextIndex(newIndex);
+          // Split by words/tokens to process chunking
+          const tokens = textToSpeak.split(/(\s+|[.,!?।]+)/);
+          
+          for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            if (!token) continue;
+            
+            currentChunk += token;
+            
+            let shouldChunk = false;
+            let splitIndex = currentChunk.length;
+            
+            // Use smaller chunks for premium voice to reduce latency
+            const minChunkLength = 60;
+            
+            if (currentChunk.length >= minChunkLength) {
+              const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
+              if (matches.length > 0) {
+                const lastMatch = matches[matches.length - 1];
+                splitIndex = lastMatch.index! + lastMatch[0].length;
+                shouldChunk = true;
+              } else if (currentChunk.length > (minChunkLength * 2)) {
+                shouldChunk = true;
+                const lastSpace = currentChunk.lastIndexOf(' ');
+                splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
               }
             }
-          };
-
-          premiumAudioRef.current.onended = () => {
-            stopMessageAudio();
-          };
-
-          // Setup audio context for avatar animation before playing
-          if (!audioContextRef.current) {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContextClass) {
-              audioContextRef.current = new AudioContextClass();
+            
+            if (shouldChunk) {
+              const textToPlay = currentChunk.substring(0, splitIndex);
+              if (textToPlay.trim().length > 0) {
+                queuePremiumAudioChunk(textToPlay, messageId, globalStartIndex);
+                globalStartIndex += textToPlay.length;
+              }
+              currentChunk = currentChunk.substring(splitIndex);
             }
           }
           
-          if (audioContextRef.current && !analyserRef.current) {
-            analyserRef.current = audioContextRef.current.createAnalyser();
-            analyserRef.current.fftSize = 256;
+          // Queue any remaining text
+          if (currentChunk.trim().length > 0) {
+            queuePremiumAudioChunk(currentChunk, messageId, globalStartIndex);
           }
-          
-          if (audioContextRef.current && analyserRef.current && premiumAudioRef.current && !premiumAudioSourceRef.current) {
-            try {
-              premiumAudioSourceRef.current = audioContextRef.current.createMediaElementSource(premiumAudioRef.current);
-              premiumAudioSourceRef.current.connect(analyserRef.current);
-              analyserRef.current.connect(audioContextRef.current.destination);
-            } catch (e) {
-              console.warn("Failed to connect audio source", e);
-            }
-          }
-          
-          if (audioContextRef.current?.state === 'suspended') {
-            audioContextRef.current.resume();
-          }
-
-          premiumAudioRef.current.play().catch(e => {
-            console.warn("Failed to play premium audio", e);
-            stopMessageAudio();
-          });
           
           return; // Skip standard TTS
         }
@@ -4618,17 +4482,19 @@ export default function App() {
             let shouldChunk = false;
             let splitIndex = currentChunk.length;
 
-            // Accumulate at least 150 characters before chunking to minimize TTS API calls
-            if (currentChunk.length >= 150) {
+            // Use smaller chunks for premium voice to reduce latency, larger for standard
+            const minChunkLength = voiceEngineRef.current === 'premium' ? 60 : 150;
+
+            if (currentChunk.length >= minChunkLength) {
               // Find ALL punctuation marks in the accumulated chunk
-              const matches = [...currentChunk.matchAll(/[.।?!]+(\s+|$)/g)];
+              const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
               
               if (matches.length > 0) {
                 // Split at the LAST punctuation mark to make the largest possible valid chunk
                 const lastMatch = matches[matches.length - 1];
                 splitIndex = lastMatch.index! + lastMatch[0].length;
                 shouldChunk = true;
-              } else if (currentChunk.length > 300) {
+              } else if (currentChunk.length > (minChunkLength * 2)) {
                 // Fallback if no punctuation for a very long time
                 shouldChunk = true;
                 const lastSpace = currentChunk.lastIndexOf(' ');
