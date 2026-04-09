@@ -6115,7 +6115,7 @@ export default function App() {
                       </div>
                     )}
                     <div 
-                      className={`prose max-w-none text-gray-900  ${msg.role === 'user' ? 'prose-lg md:prose-xl text-right' : 'prose-2xl md:prose-2xl prose-p:text-[224px] md:prose-p:text-[288px] prose-li:text-[224px] md:prose-li:text-[288px] prose-strong:text-[224px] md:prose-strong:text-[288px] prose-headings:text-[256px] md:prose-headings:text-[320px] font-medium text-left leading-tight ai-message-content'}`}
+                      className={`prose max-w-none text-gray-900 prose-p:text-[448px] md:prose-p:text-[576px] prose-li:text-[448px] md:prose-li:text-[576px] prose-strong:text-[448px] md:prose-strong:text-[576px] prose-headings:text-[512px] md:prose-headings:text-[640px] font-bold leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
                     >
                       {msg.image && (
                         <div className="mb-3 flex justify-end">
