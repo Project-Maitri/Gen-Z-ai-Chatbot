@@ -5512,7 +5512,7 @@ export default function App() {
           // Spawn new ripples
           const now = Date.now();
           // Spawn rate: slightly slower to prevent words from overlapping along the ray
-          const spawnInterval = Math.max(400, 800 - currentReact * 200);
+          const spawnInterval = Math.max(800, 1600 - currentReact * 400);
           
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
@@ -5520,7 +5520,7 @@ export default function App() {
               r: isSpeaking ? 75 : maxRadius * 0.8, // Start outside the center circle
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: 1.5 + react * 2.0, // Smooth, consistent speed for both directions
+              speed: 0.75 + react * 1.0, // Smooth, consistent speed for both directions (halved)
               direction: direction
             });
             colorIndex++;
