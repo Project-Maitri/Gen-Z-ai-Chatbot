@@ -5506,6 +5506,9 @@ export default function App() {
           // Base radius - use Math.max to ensure it fills tall/wide screens
           const maxRadius = Math.max(width, height);
           
+          // Get localized E-MAITRI text
+          const emaitriText = t.subtitle.split(', ')[1]?.replace(/[.।]/g, '').trim().toUpperCase() || "E-MAITRI";
+          
           // Spawn new ripples
           const now = Date.now();
           // Spawn rate: equal for speaking and listening, scales with audio reactivity
@@ -5556,19 +5559,27 @@ export default function App() {
             
             const safeOpacity = Math.max(0, Math.min(1, rip.opacity));
             
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, rip.r, 0, Math.PI * 2);
-            // Solid color with slight transparency for overlapping effect, NO blur/gradient
+            // Draw text instead of circles
+            ctx.font = `bold ${Math.max(10, rip.r)}px "Mukta", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
             ctx.fillStyle = `rgba(${rip.color}, ${safeOpacity * 0.85})`;
-            ctx.fill();
+            ctx.fillText(emaitriText, centerX, centerY);
           }
           
           // Draw stable center core
           ctx.globalCompositeOperation = 'source-over';
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+          ctx.arc(centerX, centerY, 45, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 1)';
           ctx.fill();
+          
+          // Draw text in the center core
+          ctx.font = `bold 14px "Mukta", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+          ctx.fillText(emaitriText, centerX, centerY);
         }
       }
       
