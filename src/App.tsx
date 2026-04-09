@@ -5503,8 +5503,8 @@ export default function App() {
           const bounceMultiplier = isSpeaking ? 3.0 : 0.8;
           const currentReact = react * bounceMultiplier;
           
-          // Base radius - use Math.max to ensure it fills tall/wide screens
-          const maxRadius = Math.max(width, height);
+          // Base radius - restrict to a circle with diameter equal to screen width (or height if landscape)
+          const maxRadius = Math.min(width, height) / 2;
           
           // Get localized E-MAITRI text
           const emaitriText = t.subtitle.split(', ')[1]?.replace(/[.।]/g, '').trim().toUpperCase() || "E-MAITRI";
