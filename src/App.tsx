@@ -3449,13 +3449,8 @@ export default function App() {
             const lastMsg = messages[messages.length - 1];
             const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
             if (lastMsgEl) {
-              const containerRect = container.getBoundingClientRect();
-              const msgRect = lastMsgEl.getBoundingClientRect();
-              if (msgRect.height > containerRect.height * 0.7) {
-                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              } else {
-                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
-              }
+              // Always scroll to start so it flows downwards
+              lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
               container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
             }
@@ -3463,7 +3458,7 @@ export default function App() {
         }, 100);
       }
     }
-  }, [isLive, messages]);
+  }, [isLive]); // Only run when isLive changes, NOT on every message chunk!
 
   // Scroll logic
   useLayoutEffect(() => {
@@ -3535,6 +3530,7 @@ export default function App() {
     playingMessageIdRef.current = null;
     setIsPaused(false);
     setIsModelSpeaking(false);
+    setIsGeneratingAudio(null);
   };
 
   const pauseMessageAudio = () => {
@@ -3624,6 +3620,7 @@ export default function App() {
       premiumAudioRef.current.onplay = () => {
         startTimeRef.current = Date.now();
         lastStartIndexRef.current = nextChunk.startIndex;
+        setIsGeneratingAudio(null);
       };
       
       premiumAudioRef.current.ontimeupdate = () => {
@@ -3785,6 +3782,7 @@ export default function App() {
 
   const queuePremiumAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
     const cleanText = chunkText
+      .replace(/<[^>]+>/g, match => ' '.repeat(match.length))
       .replace(/[*_#`\-<>]/g, ' ')
       .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
       
@@ -3811,6 +3809,7 @@ export default function App() {
 
   const queueAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
     const cleanText = chunkText
+      .replace(/<[^>]+>/g, match => ' '.repeat(match.length))
       .replace(/[*_#`\-<>]/g, ' ')
       .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
       
@@ -3857,6 +3856,7 @@ export default function App() {
       setIsPaused(false);
       currentTextIndexRef.current = globalStartIndex;
       setPlayingTextIndex(globalStartIndex);
+      setIsGeneratingAudio(null);
     };
     
     utterance.onboundary = (event) => {
@@ -3980,6 +3980,7 @@ export default function App() {
       // Remove basic markdown characters and replace emojis with spaces for cleaner speech
       // We replace with spaces of the same length to keep indices aligned for highlighting
       const cleanText = text
+        .replace(/<[^>]+>/g, match => ' '.repeat(match.length))
         .replace(/[*_#`\-<>]/g, ' ')
         .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
       currentTextRef.current = cleanText;
@@ -4451,6 +4452,7 @@ export default function App() {
     setSelectedImage(null);
     setEditMsgId(null);
     const newMsgId = editMsgId || Date.now().toString();
+    const newModelMsgId = newMsgId + '-model-' + Date.now();
     
     // Build currentMessages synchronously
     let currentMessages: any[] = [];
@@ -4573,9 +4575,12 @@ export default function App() {
         return;
       }
       
-      const newModelMsgId = newMsgId + '-model-' + Date.now();
       setMessages(prev => [...prev, { id: newModelMsgId, role: 'model', text: '' }]);
       setIsStreaming(true);
+      
+      if (autoPlayResponse) {
+        setIsGeneratingAudio(newModelMsgId);
+      }
       
       let fullText = "";
       let currentChunk = "";
@@ -4660,6 +4665,7 @@ export default function App() {
       if (autoPlayResponse && currentChunk.trim().length > 0) {
         if (!hasStartedPlaying) {
           stopMessageAudio();
+          hasStartedPlaying = true;
         }
         if (voiceEngineRef.current === 'premium') {
           queuePremiumAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
@@ -4707,8 +4713,16 @@ export default function App() {
       }
     } finally {
       if (abortControllerRef.current === abortController) {
+        // Clean up the animation spans from the final message text so TTS doesn't read them
+        setMessages(prev => prev.map(m => {
+          if (m.id === newModelMsgId) {
+            return { ...m, text: m.text.replace(/<span class="manifest-word">/g, '').replace(/<\/span>/g, '') };
+          }
+          return m;
+        }));
         setIsLoading(false);
         setIsStreaming(false);
+        setIsGeneratingAudio(null);
         abortControllerRef.current = null;
       }
     }
@@ -6014,7 +6028,7 @@ export default function App() {
 
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
-            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${isLive ? 'pb-[80vh]' : 'pb-2'}`}>
+            <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 pb-[80vh]">
               {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 
@@ -6060,7 +6074,7 @@ export default function App() {
                               </>
                             ) : playingMessageId === msg.id && !isPaused ? (
                               <>
-                                <Pause size={18} className="fill-current" />
+                                <Square size={14} className="fill-current" />
                                 <span>{t.stop}</span>
                               </>
                             ) : (
