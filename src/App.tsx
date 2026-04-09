@@ -5517,10 +5517,10 @@ export default function App() {
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
             ripples.push({
-              r: isSpeaking ? 65 : maxRadius * 0.8, // Start outside the center circle
+              r: isSpeaking ? 75 : maxRadius * 0.8, // Start outside the center circle
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: 1.5 + currentReact * 3.0, // Speed of words moving outward
+              speed: 1.5 + react * 2.0, // Smooth, consistent speed for both directions
               direction: direction
             });
             colorIndex++;
@@ -5557,7 +5557,7 @@ export default function App() {
               // Fades in as it approaches the center
               rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
               
-              if (rip.r <= 65) {
+              if (rip.r <= 75) {
                 ripples.splice(i, 1);
                 i--;
                 continue;
@@ -5582,15 +5582,16 @@ export default function App() {
           // Draw stable center core
           ctx.globalCompositeOperation = 'source-over';
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 45, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+          ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
+          // Yellow when speaking, Blue when listening
+          ctx.fillStyle = isSpeaking ? 'rgba(250, 204, 21, 1)' : 'rgba(96, 165, 250, 1)';
           ctx.fill();
           
           // Draw text in the center core
-          ctx.font = `bold 14px "Mukta", sans-serif`;
+          ctx.font = `bold 28px "Mukta", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+          ctx.fillStyle = 'rgba(34, 197, 94, 1)'; // Green text
           ctx.fillText(emaitriText, centerX, centerY);
         }
       }
