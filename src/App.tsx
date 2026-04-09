@@ -5511,8 +5511,8 @@ export default function App() {
           
           // Spawn new ripples
           const now = Date.now();
-          // Spawn rate: slightly slower to prevent words from overlapping along the ray
-          const spawnInterval = Math.max(1000, 2000 - currentReact * 500);
+          // Spawn rate: decreased interval so the next word appears before the first disappears
+          const spawnInterval = Math.max(600, 1200 - currentReact * 400);
           
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
