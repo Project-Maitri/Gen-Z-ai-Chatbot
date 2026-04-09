@@ -5511,16 +5511,16 @@ export default function App() {
           
           // Spawn new ripples
           const now = Date.now();
-          // Spawn rate: equal for speaking and listening, scales with audio reactivity
-          const spawnInterval = Math.max(300, 700 - currentReact * 200);
+          // Spawn rate: slightly slower to prevent words from overlapping along the ray
+          const spawnInterval = Math.max(400, 800 - currentReact * 200);
           
           if (now - lastSpawnTime > spawnInterval) {
             const direction = isSpeaking ? 1 : -1;
             ripples.push({
-              r: isSpeaking ? 30 : maxRadius * 0.8, // Start at center if speaking, edge if listening
+              r: isSpeaking ? 65 : maxRadius * 0.8, // Start outside the center circle
               color: colors[colorIndex % colors.length],
               opacity: 1,
-              speed: 1.2 + currentReact * 2.5, // Reduced equal speed for both speaking and listening
+              speed: 1.5 + currentReact * 3.0, // Speed of words moving outward
               direction: direction
             });
             colorIndex++;
@@ -5529,6 +5529,13 @@ export default function App() {
           
           // Use screen for bright, overlapping solid colors
           ctx.globalCompositeOperation = 'screen';
+          
+          // Set font once for all rays (same size as center text)
+          ctx.font = `bold 14px "Mukta", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          const numRays = 28; // Large number of lines radiating outward
           
           // Draw ripples (oldest/largest first so newer ones climb on top)
           for (let i = 0; i < ripples.length; i++) {
@@ -5550,7 +5557,7 @@ export default function App() {
               // Fades in as it approaches the center
               rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
               
-              if (rip.r <= 30) {
+              if (rip.r <= 65) {
                 ripples.splice(i, 1);
                 i--;
                 continue;
@@ -5558,13 +5565,18 @@ export default function App() {
             }
             
             const safeOpacity = Math.max(0, Math.min(1, rip.opacity));
-            
-            // Draw text instead of circles
-            ctx.font = `bold ${Math.max(10, rip.r)}px "Mukta", sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
             ctx.fillStyle = `rgba(${rip.color}, ${safeOpacity * 0.85})`;
-            ctx.fillText(emaitriText, centerX, centerY);
+            
+            // Draw text rays
+            for (let j = 0; j < numRays; j++) {
+              const angle = (j * Math.PI * 2) / numRays;
+              ctx.save();
+              ctx.translate(centerX, centerY);
+              ctx.rotate(angle);
+              // Draw text at distance rip.r along the rotated axis
+              ctx.fillText(emaitriText, rip.r, 0);
+              ctx.restore();
+            }
           }
           
           // Draw stable center core
