@@ -2953,6 +2953,7 @@ export default function App() {
   const audioCacheRef = useRef<Record<string, string>>({});
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
   const fallbackToStandardMessageIdRef = useRef<string | null>(null);
+  const forcePremiumNoFallbackRef = useRef<string | null>(null);
 
   // Chat History Functions
   const handleSaveChat = () => {
@@ -3577,20 +3578,29 @@ export default function App() {
     const nextChunk = premiumAudioQueueRef.current[0];
 
     if (nextChunk.failed) {
-      // Fallback this and all remaining chunks to standard TTS
-      const chunksToFallback = [...premiumAudioQueueRef.current];
-      premiumAudioQueueRef.current = [];
+      const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
       
-      // Stop any currently playing premium audio just in case
-      if (premiumAudioRef.current) {
-        premiumAudioRef.current.pause();
+      if (!isForcedPremium) {
+        // Fallback this and all remaining chunks to standard TTS
+        const chunksToFallback = [...premiumAudioQueueRef.current];
+        premiumAudioQueueRef.current = [];
+        
+        // Stop any currently playing premium audio just in case
+        if (premiumAudioRef.current) {
+          premiumAudioRef.current.pause();
+        }
+        
+        setIsGeneratingAudio(null);
+        
+        chunksToFallback.forEach(c => {
+          queueAudioChunk(c.text, messageId, c.startIndex);
+        });
+      } else {
+        // Just drop the failed chunk and continue
+        premiumAudioQueueRef.current.shift();
+        setIsGeneratingAudio(null);
+        playNextPremiumChunk(messageId);
       }
-      
-      setIsGeneratingAudio(null);
-      
-      chunksToFallback.forEach(c => {
-        queueAudioChunk(c.text, messageId, c.startIndex);
-      });
       return;
     }
 
@@ -3655,18 +3665,27 @@ export default function App() {
         console.warn("Premium chunk play error", e);
         isPlayingPremiumRef.current = false;
         
-        // Fallback this and all remaining chunks to standard TTS
-        nextChunk.failed = true;
-        fallbackToStandardMessageIdRef.current = messageId;
+        const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
         
-        const chunksToFallback = [nextChunk, ...premiumAudioQueueRef.current];
-        premiumAudioQueueRef.current = [];
-        
-        setIsGeneratingAudio(null);
-        
-        chunksToFallback.forEach(c => {
-          queueAudioChunk(c.text, messageId, c.startIndex);
-        });
+        if (!isForcedPremium) {
+          // Fallback this and all remaining chunks to standard TTS
+          nextChunk.failed = true;
+          fallbackToStandardMessageIdRef.current = messageId;
+          
+          const chunksToFallback = [nextChunk, ...premiumAudioQueueRef.current];
+          premiumAudioQueueRef.current = [];
+          
+          setIsGeneratingAudio(null);
+          
+          chunksToFallback.forEach(c => {
+            queueAudioChunk(c.text, messageId, c.startIndex);
+          });
+        } else {
+          // Just drop it if forced premium
+          premiumAudioQueueRef.current.shift();
+          setIsGeneratingAudio(null);
+          playNextPremiumChunk(messageId);
+        }
       });
       
       if (!audioContextRef.current) {
@@ -3777,18 +3796,24 @@ export default function App() {
           console.log(`Retrying Premium TTS chunk... (${retries}/${maxRetries})`);
         } else {
           nextToFetch.failed = true;
-          fallbackToStandardMessageIdRef.current = messageId;
+          const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
           
-          const isQuotaErr = errStr.toLowerCase().includes('429') || 
-                             errStr.toLowerCase().includes('quota') || 
-                             errStr.includes('RESOURCE_EXHAUSTED') ||
-                             errStr.toLowerCase().includes('limit') ||
-                             errStr.toLowerCase().includes('exceeded');
-          
-          if (isQuotaErr) {
-            // Silently fall back to standard voice without showing an error toast
-            console.warn("Premium voice quota exceeded, falling back to standard voice silently.");
-            premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
+          if (!isForcedPremium) {
+            fallbackToStandardMessageIdRef.current = messageId;
+            
+            const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                               errStr.toLowerCase().includes('quota') || 
+                               errStr.includes('RESOURCE_EXHAUSTED') ||
+                               errStr.toLowerCase().includes('limit') ||
+                               errStr.toLowerCase().includes('exceeded');
+            
+            if (isQuotaErr) {
+              // Silently fall back to standard voice without showing an error toast
+              console.warn("Premium voice quota exceeded, falling back to standard voice silently.");
+              premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
+            }
+          } else {
+            console.warn("Premium voice failed, but forced premium is active. Dropping chunk.");
           }
           playNextPremiumChunk(messageId);
           break;
@@ -3809,7 +3834,9 @@ export default function App() {
       
     if (cleanText.trim().length === 0) return;
 
-    if (fallbackToStandardMessageIdRef.current === messageId || Date.now() < premiumVoiceDisabledUntilRef.current) {
+    const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
+
+    if (!isForcedPremium && (fallbackToStandardMessageIdRef.current === messageId || Date.now() < premiumVoiceDisabledUntilRef.current)) {
       // Premium is disabled or we already fell back for this message.
       // Push as a failed chunk so it gets routed to standard TTS in order.
       premiumAudioQueueRef.current.push({ 
@@ -3970,6 +3997,7 @@ export default function App() {
   const playMessageAudio = async (text: string, messageId: string, startIndex: number = 0, forceRestart: boolean = false) => {
     let actualStartIndex = startIndex;
     fallbackToStandardMessageIdRef.current = null;
+    forcePremiumNoFallbackRef.current = null;
 
     if (playingMessageId === messageId && startIndex === 0 && !forceRestart) {
       if (isPaused) {
@@ -4318,6 +4346,7 @@ export default function App() {
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
     stopMessageAudio();
     fallbackToStandardMessageIdRef.current = null;
+    forcePremiumNoFallbackRef.current = null;
     
     if (!autoPlayResponse) {
       continuousVoiceModeRef.current = false;
@@ -4341,6 +4370,10 @@ export default function App() {
     setEditMsgId(null);
     const newMsgId = editMsgId || Date.now().toString();
     const newModelMsgId = newMsgId + '-model-' + Date.now();
+    
+    if (autoPlayResponse) {
+      forcePremiumNoFallbackRef.current = newModelMsgId;
+    }
     
     // Build currentMessages synchronously
     let currentMessages: any[] = [];
@@ -4509,7 +4542,7 @@ export default function App() {
             // Use smaller chunks for the first chunk to reduce initial latency, then very large chunks to avoid 15 RPM quota limit
             const isFirstChunk = globalStartIndex === 0;
             const premiumChunkLength = isFirstChunk ? 150 : 2500;
-            const minChunkLength = voiceEngineRef.current === 'premium' ? premiumChunkLength : 150;
+            const minChunkLength = (voiceEngineRef.current === 'premium' || autoPlayResponse) ? premiumChunkLength : 150;
 
             if (currentChunk.length >= minChunkLength) {
               // Find ALL punctuation marks in the accumulated chunk
@@ -4535,7 +4568,7 @@ export default function App() {
                   stopMessageAudio();
                   hasStartedPlaying = true;
                 }
-                if (voiceEngineRef.current === 'premium') {
+                if (voiceEngineRef.current === 'premium' || autoPlayResponse) {
                   queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
                 } else {
                   queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
@@ -4559,7 +4592,7 @@ export default function App() {
           stopMessageAudio();
           hasStartedPlaying = true;
         }
-        if (voiceEngineRef.current === 'premium') {
+        if (voiceEngineRef.current === 'premium' || autoPlayResponse) {
           queuePremiumAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
         } else {
           queueAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
