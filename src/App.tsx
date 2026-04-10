@@ -4848,7 +4848,8 @@ export default function App() {
         audio: { 
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          channelCount: 2 // Request stereo for TDOA and Beamforming
         } 
       });
       mediaStreamRef.current = stream;
@@ -4918,12 +4919,99 @@ export default function App() {
         if (audioCtx.audioWorklet) {
           const workletCode = `
             class PCMProcessor extends AudioWorkletProcessor {
+              constructor() {
+                super();
+                // 1. Proximity & RMS Analysis: Threshold for 30-50cm range
+                // Note: Exact value depends on mic hardware, 0.015 is a reasonable starting point for close speech
+                this.rmsThreshold = 0.015; 
+                
+                // 2. SSL (TDOA) parameters
+                this.maxDelaySamples = 20; // Max expected delay between L/R mics
+                this.allowedDelay = 5; // Allowed delay for "front" direction (approx +/- 15 degrees)
+                
+                this.isActive = false;
+                this.hangover = 0; // Keep active briefly after speech stops to prevent chopping
+              }
+
               process(inputs, outputs, parameters) {
                 const input = inputs[0];
-                if (input && input.length > 0) {
-                  const pcmData = input[0];
-                  this.port.postMessage(pcmData);
+                if (!input || input.length === 0) return true;
+
+                const left = input[0];
+                const right = input.length > 1 ? input[1] : input[0]; // Fallback to mono if stereo unavailable
+                const length = left.length;
+
+                // 1. RMS Calculation
+                let sumL = 0, sumR = 0;
+                for (let i = 0; i < length; i++) {
+                  sumL += left[i] * left[i];
+                  sumR += right[i] * right[i];
                 }
+                const rmsL = Math.sqrt(sumL / length);
+                const rmsR = Math.sqrt(sumR / length);
+                const avgRms = (rmsL + rmsR) / 2;
+
+                let isFront = false;
+
+                // 2. Sound Source Localization (TDOA)
+                if (avgRms > this.rmsThreshold && input.length > 1) {
+                  let maxCorr = -Infinity;
+                  let bestDelay = 0;
+
+                  // Cross-correlation to find time difference
+                  for (let delay = -this.maxDelaySamples; delay <= this.maxDelaySamples; delay++) {
+                    let corr = 0;
+                    let count = 0;
+                    for (let i = Math.max(0, -delay); i < Math.min(length, length - delay); i++) {
+                      corr += left[i] * right[i + delay];
+                      count++;
+                    }
+                    if (count > 0) {
+                      corr /= count;
+                      if (corr > maxCorr) {
+                        maxCorr = corr;
+                        bestDelay = delay;
+                      }
+                    }
+                  }
+
+                  // Check if sound is coming from the front (0 degrees +/- tolerance)
+                  if (Math.abs(bestDelay) <= this.allowedDelay) {
+                    isFront = true;
+                  }
+                } else if (avgRms > this.rmsThreshold && input.length === 1) {
+                  // Fallback for mono microphones: rely only on RMS proximity
+                  isFront = true; 
+                }
+
+                // 4. Combined Filtering Logic (Intensity + Direction)
+                if (isFront && avgRms > this.rmsThreshold) {
+                  this.isActive = true;
+                  this.hangover = 20; // ~50ms hangover
+                } else {
+                  if (this.hangover > 0) {
+                    this.hangover--;
+                  } else {
+                    this.isActive = false;
+                  }
+                }
+
+                // 3. Beamforming Algorithm (Virtual Beam at 0 degrees)
+                const outputPcm = new Float32Array(length);
+                if (this.isActive) {
+                  for (let i = 0; i < length; i++) {
+                    // Delay-and-sum beamforming (since target is 0 delay, just sum and average)
+                    // This amplifies front signals and attenuates off-axis noise
+                    outputPcm[i] = (left[i] + right[i]) / 2;
+                  }
+                } else {
+                  // Reject noise by outputting silence
+                  for (let i = 0; i < length; i++) {
+                    outputPcm[i] = 0;
+                  }
+                }
+
+                this.port.postMessage(outputPcm);
                 return true;
               }
             }
@@ -4986,9 +5074,80 @@ export default function App() {
         }
       } catch (workletErr) {
         console.warn("AudioWorklet failed, falling back to ScriptProcessor:", workletErr);
-        processor = audioCtx.createScriptProcessor(4096, 1, 1);
+        processor = audioCtx.createScriptProcessor(4096, 2, 1); // Request 2 inputs, 1 output
+        
+        let hangover = 0;
+        const rmsThreshold = 0.015;
+        const maxDelaySamples = 20;
+        const allowedDelay = 5;
+        
         processor.onaudioprocess = (e: any) => {
-          const pcmData = e.inputBuffer.getChannelData(0);
+          const left = e.inputBuffer.getChannelData(0);
+          const right = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : left;
+          const length = left.length;
+          
+          // 1. RMS Calculation
+          let sumL = 0, sumR = 0;
+          for (let i = 0; i < length; i++) {
+            sumL += left[i] * left[i];
+            sumR += right[i] * right[i];
+          }
+          const rmsL = Math.sqrt(sumL / length);
+          const rmsR = Math.sqrt(sumR / length);
+          const avgRms = (rmsL + rmsR) / 2;
+
+          let isFront = false;
+
+          // 2. Sound Source Localization (TDOA)
+          if (avgRms > rmsThreshold && e.inputBuffer.numberOfChannels > 1) {
+            let maxCorr = -Infinity;
+            let bestDelay = 0;
+
+            for (let delay = -maxDelaySamples; delay <= maxDelaySamples; delay++) {
+              let corr = 0;
+              let count = 0;
+              for (let i = Math.max(0, -delay); i < Math.min(length, length - delay); i++) {
+                corr += left[i] * right[i + delay];
+                count++;
+              }
+              if (count > 0) {
+                corr /= count;
+                if (corr > maxCorr) {
+                  maxCorr = corr;
+                  bestDelay = delay;
+                }
+              }
+            }
+
+            if (Math.abs(bestDelay) <= allowedDelay) {
+              isFront = true;
+            }
+          } else if (avgRms > rmsThreshold && e.inputBuffer.numberOfChannels === 1) {
+            isFront = true; 
+          }
+
+          let isActive = false;
+          if (isFront && avgRms > rmsThreshold) {
+            isActive = true;
+            hangover = 5; // Fewer frames for ScriptProcessor due to larger buffer size
+          } else {
+            if (hangover > 0) {
+              hangover--;
+              isActive = true;
+            }
+          }
+
+          const pcmData = new Float32Array(length);
+          if (isActive) {
+            for (let i = 0; i < length; i++) {
+              pcmData[i] = (left[i] + right[i]) / 2;
+            }
+          } else {
+            for (let i = 0; i < length; i++) {
+              pcmData[i] = 0;
+            }
+          }
+          
           // Downsample from 44.1kHz/48kHz to 16kHz
           const ratio = audioCtx.sampleRate / 16000;
           const newLength = Math.round(pcmData.length / ratio);
