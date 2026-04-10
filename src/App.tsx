@@ -3689,7 +3689,7 @@ export default function App() {
         }
       }
       if (audioContextRef.current?.state === 'suspended') {
-        audioContextRef.current.resume();
+        audioContextRef.current.resume().catch(e => console.warn("AudioContext resume failed:", e));
       }
     }
   };
@@ -3758,16 +3758,19 @@ export default function App() {
         console.warn(`Premium TTS chunk error (Attempt ${retries + 1})`, e);
         
         const errStr = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
-        const isRetryable = errStr.includes('429') || 
+        const isQuotaErr = errStr.toLowerCase().includes('quota') || 
+                           errStr.includes('RESOURCE_EXHAUSTED') ||
+                           errStr.toLowerCase().includes('limit') ||
+                           errStr.toLowerCase().includes('exceeded');
+                           
+        const isRetryable = !isQuotaErr && (
+                            errStr.includes('429') || 
                             errStr.includes('503') || 
-                            errStr.toLowerCase().includes('quota') || 
-                            errStr.includes('RESOURCE_EXHAUSTED') ||
-                            errStr.toLowerCase().includes('limit') ||
-                            errStr.toLowerCase().includes('exceeded') ||
                             errStr.toLowerCase().includes('service unavailable') ||
                             errStr.toLowerCase().includes('busy') ||
                             errStr.toLowerCase().includes('timeout') ||
-                            errStr.toLowerCase().includes('fetch');
+                            errStr.toLowerCase().includes('fetch')
+        );
         
         if (isRetryable && retries < maxRetries) {
           retries++;
@@ -4047,9 +4050,9 @@ export default function App() {
             let splitIndex = currentChunk.length;
             
             // Use larger chunks for premium voice when playing full messages to avoid 15 RPM quota limit
-            // First chunk can be smaller to start quickly, but subsequent chunks should be large
+            // First chunk can be smaller to start quickly, but subsequent chunks should be very large
             const isFirstChunk = globalStartIndex === wordStartIndex;
-            const minChunkLength = isFirstChunk ? 150 : 800;
+            const minChunkLength = isFirstChunk ? 150 : 2500;
             
             if (currentChunk.length >= minChunkLength) {
               const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
@@ -4503,9 +4506,9 @@ export default function App() {
             let shouldChunk = false;
             let splitIndex = currentChunk.length;
 
-            // Use smaller chunks for the first chunk to reduce initial latency, then larger chunks to avoid 15 RPM quota limit
+            // Use smaller chunks for the first chunk to reduce initial latency, then very large chunks to avoid 15 RPM quota limit
             const isFirstChunk = globalStartIndex === 0;
-            const premiumChunkLength = isFirstChunk ? 80 : 400;
+            const premiumChunkLength = isFirstChunk ? 150 : 2500;
             const minChunkLength = voiceEngineRef.current === 'premium' ? premiumChunkLength : 150;
 
             if (currentChunk.length >= minChunkLength) {
@@ -5652,7 +5655,7 @@ export default function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isLive && audioContextRef.current) {
         if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
+          audioContextRef.current.resume().catch(e => console.warn("AudioContext resume failed on visibility change:", e));
         }
       }
     };
