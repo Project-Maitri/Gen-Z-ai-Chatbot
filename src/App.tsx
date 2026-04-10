@@ -3586,6 +3586,8 @@ export default function App() {
         premiumAudioRef.current.pause();
       }
       
+      setIsGeneratingAudio(null);
+      
       chunksToFallback.forEach(c => {
         queueAudioChunk(c.text, messageId, c.startIndex);
       });
@@ -3652,8 +3654,19 @@ export default function App() {
       premiumAudioRef.current.play().catch(e => {
         console.warn("Premium chunk play error", e);
         isPlayingPremiumRef.current = false;
-        queueAudioChunk(nextChunk.text, messageId, nextChunk.startIndex);
-        playNextPremiumChunk(messageId);
+        
+        // Fallback this and all remaining chunks to standard TTS
+        nextChunk.failed = true;
+        fallbackToStandardMessageIdRef.current = messageId;
+        
+        const chunksToFallback = [nextChunk, ...premiumAudioQueueRef.current];
+        premiumAudioQueueRef.current = [];
+        
+        setIsGeneratingAudio(null);
+        
+        chunksToFallback.forEach(c => {
+          queueAudioChunk(c.text, messageId, c.startIndex);
+        });
       });
       
       if (!audioContextRef.current) {
@@ -3696,6 +3709,9 @@ export default function App() {
 
     while (retries <= maxRetries && !success) {
       try {
+        if (!ai) {
+          initAI(getApiKey());
+        }
         if (!ai) throw new Error("AI not initialized");
         
         // Rate limiting and exponential backoff to prevent 429 and 503 errors
@@ -3749,7 +3765,9 @@ export default function App() {
                             errStr.toLowerCase().includes('limit') ||
                             errStr.toLowerCase().includes('exceeded') ||
                             errStr.toLowerCase().includes('service unavailable') ||
-                            errStr.toLowerCase().includes('busy');
+                            errStr.toLowerCase().includes('busy') ||
+                            errStr.toLowerCase().includes('timeout') ||
+                            errStr.toLowerCase().includes('fetch');
         
         if (isRetryable && retries < maxRetries) {
           retries++;
@@ -4011,6 +4029,7 @@ export default function App() {
         if (Date.now() < premiumVoiceDisabledUntilRef.current) {
           // Fall through to standard TTS without changing the user's setting
         } else {
+          setIsGeneratingAudio(messageId);
           // Chunk the text and queue it for streaming playback
           let currentChunk = '';
           let globalStartIndex = wordStartIndex;
@@ -4027,8 +4046,10 @@ export default function App() {
             let shouldChunk = false;
             let splitIndex = currentChunk.length;
             
-            // Use smaller chunks for premium voice to reduce latency
-            const minChunkLength = 60;
+            // Use larger chunks for premium voice when playing full messages to avoid 15 RPM quota limit
+            // First chunk can be smaller to start quickly, but subsequent chunks should be large
+            const isFirstChunk = globalStartIndex === wordStartIndex;
+            const minChunkLength = isFirstChunk ? 150 : 800;
             
             if (currentChunk.length >= minChunkLength) {
               const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
@@ -4482,8 +4503,10 @@ export default function App() {
             let shouldChunk = false;
             let splitIndex = currentChunk.length;
 
-            // Use smaller chunks for premium voice to reduce latency, larger for standard
-            const minChunkLength = voiceEngineRef.current === 'premium' ? 60 : 150;
+            // Use smaller chunks for the first chunk to reduce initial latency, then larger chunks to avoid 15 RPM quota limit
+            const isFirstChunk = globalStartIndex === 0;
+            const premiumChunkLength = isFirstChunk ? 80 : 400;
+            const minChunkLength = voiceEngineRef.current === 'premium' ? premiumChunkLength : 150;
 
             if (currentChunk.length >= minChunkLength) {
               // Find ALL punctuation marks in the accumulated chunk
