@@ -3493,10 +3493,29 @@ export default function App() {
           setTimeout(() => {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }, 100);
+        } else if (isStreaming) {
+          setTimeout(() => {
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg && lastMsg.role === 'model') {
+              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
+              if (lastMsgEl) {
+                const containerRect = container.getBoundingClientRect();
+                const msgRect = lastMsgEl.getBoundingClientRect();
+                
+                // Check if we are already near the bottom of the container
+                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+                
+                // If the message extends below the visible area AND we are near the bottom
+                if (msgRect.bottom > containerRect.bottom && isNearBottom) {
+                  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                }
+              }
+            }
+          }, 50);
         }
       }
     }
-  }, [messages, liveTranscript, playingMessageId, isLoading, isModelSpeaking, isLive]);
+  }, [messages, liveTranscript, playingMessageId, isLoading, isModelSpeaking, isLive, isStreaming]);
 
   // Initialize Chat (removed as we use generateContent directly now)
   useEffect(() => {
