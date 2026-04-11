@@ -6175,7 +6175,7 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
             <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 pb-[60vh]">
-              {messages.map((msg, index) => {
+              {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 
                 return (
@@ -6416,10 +6416,10 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-0 overflow-hidden pointer-events-none"
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-black"
               >
                 {/* Frequency Visualizer (Full Screen Background) */}
-                <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center">
                   {/* Glowing Aura */}
                   {isModelSpeaking && (
                     <motion.div
@@ -6494,7 +6494,7 @@ export default function App() {
                             <MonitorOff size={24} className="text-gray-600" />
                           )}
                         </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-800 bg-white/60 px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
+                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
                           {isScreenSharing ? t.screenOn : t.screenOff}
                         </span>
                       </div>
@@ -6533,7 +6533,7 @@ export default function App() {
                         >
                           <X size={24} className="text-gray-600" />
                         </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-800 bg-white/60 px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
+                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
                           {t.back}
                         </span>
                       </div>
