@@ -2554,9 +2554,21 @@ export default function App() {
       } else {
         initialName = safeStorage.getItem('userName_v1') || '';
       }
+      
+      const savedMessages = safeStorage.getItem('current_messages_v1');
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
     } catch (e) {}
     return [{ id: '1', role: 'model', text: getInitialMessage(uiLang, initialName) }];
   });
+
+  useEffect(() => {
+    safeStorage.setItem('current_messages_v1', JSON.stringify(messages));
+  }, [messages]);
 
   // Update initial message when language or bot name changes
   useEffect(() => {
@@ -3494,24 +3506,8 @@ export default function App() {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }, 100);
         } else if (isStreaming) {
-          setTimeout(() => {
-            const lastMsg = messages[messages.length - 1];
-            if (lastMsg && lastMsg.role === 'model') {
-              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
-              if (lastMsgEl) {
-                const containerRect = container.getBoundingClientRect();
-                const msgRect = lastMsgEl.getBoundingClientRect();
-                
-                // Check if we are already near the bottom of the container
-                const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-                
-                // If the message extends below the visible area AND we are near the bottom
-                if (msgRect.bottom > containerRect.bottom && isNearBottom) {
-                  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-                }
-              }
-            }
-          }, 50);
+          // Do nothing during streaming. The message will naturally grow downwards.
+          // The initial isNewMessage block already scrolled the start of the message to the top.
         }
       }
     }
@@ -3551,6 +3547,8 @@ export default function App() {
     setIsPaused(false);
     setIsModelSpeaking(false);
     setIsGeneratingAudio(null);
+    fallbackToStandardMessageIdRef.current = null;
+    forcePremiumNoFallbackRef.current = null;
   };
 
   const pauseMessageAudio = () => {
@@ -3833,6 +3831,14 @@ export default function App() {
             }
           } else {
             console.warn("Premium voice failed, but forced premium is active. Dropping chunk.");
+            const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                               errStr.toLowerCase().includes('quota') || 
+                               errStr.includes('RESOURCE_EXHAUSTED') ||
+                               errStr.toLowerCase().includes('limit') ||
+                               errStr.toLowerCase().includes('exceeded');
+            if (isQuotaErr) {
+              setError(t.premiumVoiceError || "Premium voice quota exceeded.");
+            }
           }
           playNextPremiumChunk(messageId);
           break;
@@ -3991,10 +3997,10 @@ export default function App() {
       }
 
       let genderFilteredVoices = [];
-      if (gender === 'female') {
-        genderFilteredVoices = candidateVoices.filter(v => isFemaleVoice(v.name) || isFemaleVoice(v.voiceURI));
-      } else if (gender === 'male') {
-        genderFilteredVoices = candidateVoices.filter(v => isMaleVoice(v.name) || isMaleVoice(v.voiceURI));
+      if (gender === 'F') {
+        genderFilteredVoices = candidateVoices.filter(v => isFemaleVoice(v));
+      } else if (gender === 'M') {
+        genderFilteredVoices = candidateVoices.filter(v => isMaleVoice(v));
       }
 
       if (genderFilteredVoices.length > 0) {
@@ -4016,7 +4022,12 @@ export default function App() {
   const playMessageAudio = async (text: string, messageId: string, startIndex: number = 0, forceRestart: boolean = false) => {
     let actualStartIndex = startIndex;
     fallbackToStandardMessageIdRef.current = null;
-    forcePremiumNoFallbackRef.current = null;
+    
+    // Reset forcePremiumNoFallbackRef if we are manually playing a message
+    // It should only be active when triggered by handleSend with autoPlayResponse=true
+    if (forceRestart || playingMessageId !== messageId) {
+      forcePremiumNoFallbackRef.current = null;
+    }
 
     if (playingMessageId === messageId && startIndex === 0 && !forceRestart) {
       if (isPaused) {
@@ -4365,7 +4376,6 @@ export default function App() {
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
     stopMessageAudio();
     fallbackToStandardMessageIdRef.current = null;
-    forcePremiumNoFallbackRef.current = null;
     
     if (!autoPlayResponse) {
       continuousVoiceModeRef.current = false;
@@ -4392,6 +4402,8 @@ export default function App() {
     
     if (autoPlayResponse) {
       forcePremiumNoFallbackRef.current = newModelMsgId;
+    } else {
+      forcePremiumNoFallbackRef.current = null;
     }
     
     // Build currentMessages synchronously
@@ -5304,7 +5316,9 @@ export default function App() {
                        if (messages.length <= 2) {
                          s.sendRealtimeInput({ text: `Please introduce yourself by saying exactly this phrase: '${getInitialMessage(uiLang, userName)}'` });
                        } else {
-                         s.sendRealtimeInput({ text: `Please greet the user in ${currentLanguageName} and ask how you can help them continue.` });
+                         const recentMessages = messages.slice(-10);
+                         const historyText = recentMessages.map((m: any) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${parseMessage(m.text).mainText}`).join('\n');
+                         s.sendRealtimeInput({ text: `Here is the transcript of our previous conversation:\n\n${historyText}\n\nPlease greet the user in ${currentLanguageName}, briefly remind them of the last topic we were discussing based on the transcript, and ask how they would like to continue.` });
                        }
                        console.log("Initial message sent to Live API.");
                      }
