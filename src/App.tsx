@@ -3436,14 +3436,18 @@ export default function App() {
   // Scroll to top of last message when generation finishes
   useEffect(() => {
     if (prevIsLoadingRef.current === true && isLoading === false) {
-      const container = document.getElementById('main-scroll-container');
-      if (container && messages.length > 0) {
-        const lastMsg = messages[messages.length - 1];
-        const msgEl = document.getElementById(`message-${lastMsg.id}`);
-        if (msgEl) {
-          setTimeout(() => {
-            msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 100);
+      // Do not force scroll to top if audio is currently playing, 
+      // as it has its own scroll tracking logic.
+      if (!playingMessageIdRef.current) {
+        const container = document.getElementById('main-scroll-container');
+        if (container && messages.length > 0) {
+          const lastMsg = messages[messages.length - 1];
+          const msgEl = document.getElementById(`message-${lastMsg.id}`);
+          if (msgEl) {
+            setTimeout(() => {
+              msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
         }
       }
     }
@@ -3506,8 +3510,23 @@ export default function App() {
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
           }, 100);
         } else if (isStreaming) {
-          // Do nothing during streaming. The message will naturally grow downwards.
-          // The initial isNewMessage block already scrolled the start of the message to the top.
+          setTimeout(() => {
+            if (messages.length > 0) {
+              const lastMsg = messages[messages.length - 1];
+              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
+              if (lastMsgEl && container) {
+                const msgRect = lastMsgEl.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                
+                // If the message has grown taller than the visible container,
+                // or its bottom is extending below the visible area, scroll to follow it.
+                // Otherwise, let it stay anchored at the top.
+                if (msgRect.bottom > containerRect.bottom) {
+                  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                }
+              }
+            }
+          }, 100);
         }
       }
     }
