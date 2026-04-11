@@ -2443,6 +2443,24 @@ export default function App() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState('');
 
+  const [pageContext, setPageContext] = useState<string | null>(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ctx = urlParams.get('context');
+      if (ctx) {
+        // Remove it from URL so it doesn't clutter
+        urlParams.delete('context');
+        const newSearch = urlParams.toString();
+        const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+        window.history.replaceState({}, document.title, newUrl);
+        return decodeURIComponent(ctx);
+      }
+    } catch (e) {
+      console.warn("Error reading context from URL", e);
+    }
+    return null;
+  });
+
   const [userName, setUserName] = useState(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -4387,7 +4405,12 @@ export default function App() {
     continuousVoiceModeRef.current = false;
   };
 
-  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string) => {
+  const handleProactiveVoice = (textPrompt: string) => {
+    console.log("Nard बोलना शुरू कर रहा है (Proactive)...");
+    handleSend(textPrompt, true, undefined, true);
+  };
+
+  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string, isHidden: boolean = false) => {
     stopMessageAudio();
     fallbackToStandardMessageIdRef.current = null;
     
@@ -4408,9 +4431,11 @@ export default function App() {
     if (isLoading) return;
     
     const imageToSend = selectedImage;
-    setInput('');
-    setSelectedImage(null);
-    setEditMsgId(null);
+    if (!isHidden) {
+      setInput('');
+      setSelectedImage(null);
+      setEditMsgId(null);
+    }
     const newMsgId = editMsgId || Date.now().toString();
     const newModelMsgId = newMsgId + '-model-' + Date.now();
     
@@ -4436,8 +4461,10 @@ export default function App() {
       currentMessages = [...messages, { id: newMsgId, role: 'user', text: userText, image: imageToSend }];
     }
     
-    // Update messages state
-    setMessages(currentMessages);
+    // Update messages state if not hidden
+    if (!isHidden) {
+      setMessages(currentMessages);
+    }
 
     setIsLoading(true);
     
@@ -4483,6 +4510,10 @@ export default function App() {
       };
       let systemInstruction = String(SYSTEM_INSTRUCTION);
       
+      if (pageContext) {
+        systemInstruction += `\n\nCRITICAL CONTEXT FROM E-MAITRI PORTAL: The user is currently viewing the following content/page on the E-MAITRI portal. Use this context to answer their questions accurately:\n"""\n${pageContext}\n"""\n`;
+      }
+
       if (userName.trim()) {
         const currentBotName = userName.trim();
         if (currentMessages.length <= 2) {
@@ -4705,6 +4736,32 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data) {
+        if (event.data.type === 'EMAITRI_CONTEXT') {
+          if (event.data.payload) {
+            setPageContext(event.data.payload);
+            console.log("Received E-MAITRI context via postMessage");
+          }
+        } else if (event.data.type === 'CONTEXT_UPDATE') {
+          const section = event.data.page;
+          const details = event.data.info;
+          console.log("पोर्टल से नया कंटेक्स्ट मिला: " + section);
+
+          const promptForNard = `सिस्टम अपडेट: यूजर अभी '${section}' देख रहा है। विवरण: ${details}। 
+          नारद के अंदाज़ में केवल एक छोटा वाक्य (अधिकतम 15 शब्द) बोलें जो यूजर का मार्गदर्शन करे। 
+          सीधे बोलना शुरू करें, कोई औपचारिक अभिवादन न दोहराएं।`;
+
+          handleProactiveVoice(promptForNard);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [handleProactiveVoice]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4905,7 +4962,7 @@ export default function App() {
       console.error("Error starting screen share:", err);
       setIsScreenSharing(false);
       isScreenSharingRef.current = false;
-      alert("Screen sharing failed. If you are using an iframe, please ensure it has the allow=\"display-capture\" attribute. Note: Screen sharing is not supported on mobile browsers.");
+      setError("Screen sharing failed. Please ensure you have granted permission and are using a supported browser.");
     }
   };
 
@@ -5288,6 +5345,10 @@ export default function App() {
       }
       let liveInstruction = SYSTEM_INSTRUCTION;
       
+      if (pageContext) {
+        liveInstruction += `\n\nCRITICAL CONTEXT FROM E-MAITRI PORTAL: The user is currently viewing the following content/page on the E-MAITRI portal. Use this context to answer their questions accurately:\n"""\n${pageContext}\n"""\n`;
+      }
+
       const langMapForInstruction: Record<string, string> = {
         'hi': 'Hindi', 'en': 'English', 'bn': 'Bengali', 'ta': 'Tamil', 'te': 'Telugu',
         'mr': 'Marathi', 'gu': 'Gujarati', 'kn': 'Kannada', 'ml': 'Malayalam', 'ur': 'Urdu',
