@@ -2778,7 +2778,7 @@ export default function App() {
       if (voiceTypingTranscriptRef.current.trim()) {
         const textToSend = voiceTypingTranscriptRef.current.trim();
         voiceTypingTranscriptRef.current = '';
-        handleSend(textToSend, true);
+        handleSend(textToSend, false);
       } else {
         // No text was spoken. Turn off continuous mode.
         continuousVoiceModeRef.current = false;
@@ -6198,39 +6198,6 @@ export default function App() {
                           </div>
                           <span className="font-mukta text-sm">{displayBotName}</span>
                         </div>
-                        
-                        {/* Speaker Button at Top Right */}
-                        {(!(index === messages.length - 1 && (isLoading || isStreaming)) || playingMessageId === msg.id || isGeneratingAudio === msg.id) && (
-                          <button 
-                            onClick={() => {
-                              if (playingMessageId === msg.id && !isPaused) {
-                                pauseMessageAudio();
-                              } else {
-                                playMessageAudio(mainText, msg.id);
-                              }
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white shadow-md hover:bg-gray-100 shadow-md text-gray-800 hover:text-gray-900 rounded-lg transition-colors text-sm font-medium"
-                            title={playingMessageId === msg.id ? (isPaused ? t.listenAgain : t.stop) : t.listen}
-                            disabled={isGeneratingAudio === msg.id}
-                          >
-                            {isGeneratingAudio === msg.id ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-gray-300 border-t-white rounded-full animate-spin"></div>
-                                <span>{t.loading}</span>
-                              </>
-                            ) : playingMessageId === msg.id && !isPaused ? (
-                              <>
-                                <Square size={14} className="fill-current" />
-                                <span>{t.stop}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Volume2 size={18} />
-                                <span>{playingMessageId === msg.id && isPaused ? t.listenAgain : t.listen}</span>
-                              </>
-                            )}
-                          </button>
-                        )}
                       </div>
                     )}
                     {msg.role === 'user' && (
