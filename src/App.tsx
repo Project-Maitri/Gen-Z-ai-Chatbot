@@ -325,6 +325,7 @@ type Message = {
   role: 'user' | 'model';
   text: string;
   image?: { data: string, mimeType: string };
+  isLive?: boolean;
 };
 
 type SavedChat = {
@@ -2704,8 +2705,6 @@ export default function App() {
   const recognitionRef = useRef<any>(null);
   const voiceTypingTranscriptRef = useRef('');
   const continuousVoiceModeRef = useRef(false);
-  const [liveTranscript, setLiveTranscript] = useState<Message[]>([]);
-  const liveTranscriptRef = useRef<Message[]>([]);
   const [isModelSpeaking, setIsModelSpeaking] = useState(false);
   const isModelSpeakingRef = useRef(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -3530,7 +3529,7 @@ export default function App() {
         }
       }
     }
-  }, [messages, liveTranscript, playingMessageId, isLoading, isModelSpeaking, isLive, isStreaming]);
+  }, [messages, playingMessageId, isLoading, isModelSpeaking, isLive, isStreaming]);
 
   // Initialize Chat (removed as we use generateContent directly now)
   useEffect(() => {
@@ -4923,9 +4922,6 @@ export default function App() {
       continuousVoiceModeRef.current = false;
     }
 
-    setLiveTranscript([]);
-    liveTranscriptRef.current = [];
-
     try {
       const apiKey = getApiKey();
       console.log("Starting Live Audio session with API Key status:", apiKey ? "Present" : "Missing");
@@ -5379,24 +5375,34 @@ export default function App() {
              
              const inputTranscription = message.serverContent?.inputTranscription;
              if (inputTranscription?.text) {
-               let lastMsg = liveTranscriptRef.current[liveTranscriptRef.current.length - 1];
-               if (!lastMsg || lastMsg.role !== 'user') {
-                 lastMsg = { id: Date.now().toString() + Math.random(), role: 'user', text: '' };
-                 liveTranscriptRef.current.push(lastMsg);
-               }
-               lastMsg.text += inputTranscription.text;
-               setLiveTranscript([...liveTranscriptRef.current]);
+               setMessages(prev => {
+                 const newMessages = [...prev];
+                 let lastMsg = newMessages[newMessages.length - 1];
+                 if (!lastMsg || lastMsg.role !== 'user' || !lastMsg.isLive) {
+                   lastMsg = { id: Date.now().toString() + Math.random(), role: 'user', text: '', isLive: true };
+                   newMessages.push(lastMsg);
+                 } else {
+                   lastMsg = { ...lastMsg, text: lastMsg.text + inputTranscription.text };
+                   newMessages[newMessages.length - 1] = lastMsg;
+                 }
+                 return newMessages;
+               });
              }
              
              const outputTranscription = message.serverContent?.outputTranscription;
              if (outputTranscription?.text) {
-               let lastMsg = liveTranscriptRef.current[liveTranscriptRef.current.length - 1];
-               if (!lastMsg || lastMsg.role !== 'model') {
-                 lastMsg = { id: Date.now().toString() + Math.random(), role: 'model', text: '' };
-                 liveTranscriptRef.current.push(lastMsg);
-               }
-               lastMsg.text += outputTranscription.text;
-               setLiveTranscript([...liveTranscriptRef.current]);
+               setMessages(prev => {
+                 const newMessages = [...prev];
+                 let lastMsg = newMessages[newMessages.length - 1];
+                 if (!lastMsg || lastMsg.role !== 'model' || !lastMsg.isLive) {
+                   lastMsg = { id: Date.now().toString() + Math.random(), role: 'model', text: '', isLive: true };
+                   newMessages.push(lastMsg);
+                 } else {
+                   lastMsg = { ...lastMsg, text: lastMsg.text + outputTranscription.text };
+                   newMessages[newMessages.length - 1] = lastMsg;
+                 }
+                 return newMessages;
+               });
              }
           },
           onclose: (event?: any) => {
@@ -5559,15 +5565,6 @@ export default function App() {
     setIsLive(false);
     setIsMicMuted(false);
     isMicMutedRef.current = false;
-    
-    if (liveTranscriptRef.current.length > 0) {
-      setMessages(prev => {
-        const validTranscripts = liveTranscriptRef.current.filter(m => m.text.trim().length > 0);
-        return [...prev, ...validTranscripts];
-      });
-      setLiveTranscript([]);
-      liveTranscriptRef.current = [];
-    }
   };
 
   // Visualizer Animation Effect
@@ -6182,7 +6179,7 @@ export default function App() {
           {/* Chat Area */}
           <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
             <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 pb-8">
-              {!isLive && messages.map((msg, index) => {
+              {messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 
                 return (
@@ -6423,10 +6420,10 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-black"
+                className="absolute inset-0 flex flex-col items-center justify-center z-0 overflow-hidden pointer-events-none"
               >
                 {/* Frequency Visualizer (Full Screen Background) */}
-                <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center">
+                <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center bg-black/40 backdrop-blur-sm">
                   {/* Glowing Aura */}
                   {isModelSpeaking && (
                     <motion.div
@@ -6501,7 +6498,7 @@ export default function App() {
                             <MonitorOff size={24} className="text-gray-600" />
                           )}
                         </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
+                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-800 bg-white/60 px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
                           {isScreenSharing ? t.screenOn : t.screenOff}
                         </span>
                       </div>
@@ -6540,7 +6537,7 @@ export default function App() {
                         >
                           <X size={24} className="text-gray-600" />
                         </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
+                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-800 bg-white/60 px-2 py-0.5 rounded-full uppercase tracking-widest whitespace-nowrap">
                           {t.back}
                         </span>
                       </div>
