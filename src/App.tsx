@@ -4806,6 +4806,12 @@ export default function App() {
         setIsScreenSharing(true);
         isScreenSharingRef.current = true;
 
+        // Bring the opener tab (E-MAITRI) to the foreground
+        if (window.opener) {
+          window.opener.focus();
+        }
+        window.blur();
+
         const captureFrame = async () => {
           if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
           if (!screenVideoRef.current || !screenCanvasRef.current) return;
