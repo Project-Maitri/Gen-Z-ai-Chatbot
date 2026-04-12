@@ -2717,8 +2717,6 @@ export default function App() {
   }, [messages, currentChatId]);
 
   const [isLive, setIsLive] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [latestFrame, setLatestFrame] = useState<string | null>(null);
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceTypingTranscriptRef = useRef('');
@@ -2861,24 +2859,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [speechRate, setSpeechRate] = useState(() => parseFloat(safeStorage.getItem('speechRate_v4') || '0.8'));
-  const [speechPitch, setSpeechPitch] = useState(() => parseFloat(safeStorage.getItem('speechPitch_v4') || '1.0'));
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => safeStorage.getItem('selectedVoiceURI') || '');
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceEngine, setVoiceEngine] = useState<'standard' | 'premium'>(() => {
-    if (!navigator.onLine) return 'standard';
-    return (safeStorage.getItem('voiceEngine_v3') as 'standard' | 'premium') || 'premium';
-  });
-
-  // Auto-switch to standard voice engine when offline
-  useEffect(() => {
-    const handleOffline = () => {
-      setVoiceEngine('standard');
-      safeStorage.setItem('voiceEngine_v3', 'standard');
-    };
-    
-    window.addEventListener('offline', handleOffline);
-    return () => window.removeEventListener('offline', handleOffline);
-  }, []);
   const [premiumVoice, setPremiumVoice] = useState(() => {
     const saved = safeStorage.getItem('premiumVoice');
     if (saved) return saved;
@@ -2918,24 +2898,7 @@ export default function App() {
     }
   }, [userName, uiLang, premiumVoice]);
 
-  const lastPitchGenderRef = useRef<'M' | 'F' | null>(null);
 
-  // Auto-sync offline speech pitch with bot gender
-  useEffect(() => {
-    const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
-    const gender = guessGender(currentName);
-    
-    // Only auto-update if the gender actually changed, OR if it's the first load and no pitch is saved
-    if (lastPitchGenderRef.current !== gender) {
-      const hasSavedPitch = !!safeStorage.getItem('speechPitch_v4');
-      if (lastPitchGenderRef.current !== null || !hasSavedPitch) {
-        const newPitch = gender === 'F' ? 0.8 : 0.5;
-        setSpeechPitch(newPitch);
-        safeStorage.setItem('speechPitch_v4', newPitch.toString());
-      }
-    }
-    lastPitchGenderRef.current = gender;
-  }, [userName, uiLang]);
 
   // Clear setupName when userName is cleared so the setup box is empty when it reappears
   useEffect(() => {
@@ -2969,10 +2932,7 @@ export default function App() {
   }, [error]);
   
   const speechRateRef = useRef(speechRate);
-  const speechPitchRef = useRef(speechPitch);
-  const selectedVoiceURIRef = useRef(selectedVoiceURI);
   const lastGenderRef = useRef<'M' | 'F' | null>(null);
-  const voiceEngineRef = useRef(voiceEngine);
   const premiumVoiceRef = useRef(premiumVoice);
   const premiumAudioRef = useRef<HTMLAudioElement | null>(null);
   const premiumAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
@@ -2981,8 +2941,6 @@ export default function App() {
   const isFetchingPremiumRef = useRef(false);
   const audioCacheRef = useRef<Record<string, string>>({});
   const premiumVoiceDisabledUntilRef = useRef<number>(0);
-  const fallbackToStandardMessageIdRef = useRef<string | null>(null);
-  const forcePremiumNoFallbackRef = useRef<string | null>(null);
 
   // Chat History Functions
   const handleSaveChat = () => {
@@ -3072,28 +3030,13 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    safeStorage.setItem('voiceEngine_v3', voiceEngine);
-    voiceEngineRef.current = voiceEngine;
-    
-    if (playingMessageIdRef.current && !isPaused) {
-      const msgId = playingMessageIdRef.current;
-      const msg = messages.find(m => m.id === msgId || m.id + '-model' === msgId);
-      if (msg) {
-        const { mainText } = parseMessage(msg.text);
-        const timer = setTimeout(() => {
-          playMessageAudio(mainText, msgId, currentTextIndexRef.current, true);
-        }, 300);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [voiceEngine]);
+
 
   useEffect(() => {
     safeStorage.setItem('premiumVoice', premiumVoice);
     premiumVoiceRef.current = premiumVoice;
     
-    if (playingMessageIdRef.current && !isPaused && voiceEngine === 'premium') {
+    if (playingMessageIdRef.current && !isPaused) {
       const msgId = playingMessageIdRef.current;
       const msg = messages.find(m => m.id === msgId || m.id + '-model' === msgId);
       if (msg) {
@@ -3106,138 +3049,7 @@ export default function App() {
     }
   }, [premiumVoice]);
 
-  // Load available voices
-  useEffect(() => {
-    if (!window.speechSynthesis) return;
-    const loadVoices = () => {
-      const allVoices = window.speechSynthesis.getVoices();
-      if (allVoices.length === 0) return;
 
-      setAvailableVoices(allVoices);
-
-      const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
-      const gender = guessGender(currentName);
-      let shouldResetVoice = false;
-
-      if (lastGenderRef.current !== null && lastGenderRef.current !== gender) {
-        shouldResetVoice = true;
-      } else if (selectedVoiceURIRef.current) {
-        // On initial load or anytime, check if the explicitly selected voice contradicts the current gender
-        const currentVoice = allVoices.find(v => v.voiceURI === selectedVoiceURIRef.current);
-        if (currentVoice) {
-          if (gender === 'F' && isMaleVoice(currentVoice) && !isFemaleVoice(currentVoice)) {
-            shouldResetVoice = true;
-          } else if (gender === 'M' && isFemaleVoice(currentVoice) && !isMaleVoice(currentVoice)) {
-            shouldResetVoice = true;
-          }
-        }
-      }
-
-      if (shouldResetVoice) {
-        // If gender changed or contradicts the selected voice, reset to Auto Select
-        setSelectedVoiceURI('');
-        selectedVoiceURIRef.current = '';
-        safeStorage.setItem('selectedVoiceURI', '');
-      }
-
-      lastGenderRef.current = gender;
-    };
-    loadVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-    return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
-    };
-  }, [userName, uiLang, selectedVoiceURI]);
-
-  // "Jugaadu" (Hack) to trigger native OS voice downloads for required languages
-  useEffect(() => {
-    if (!window.speechSynthesis) return;
-
-    let hasTriggered = false;
-
-    const triggerVoiceDownloads = () => {
-      if (hasTriggered) return;
-      hasTriggered = true;
-
-      const langPrefix = uiLang.split('-')[0];
-      
-      // Map UI lang to standard TTS locales
-      const localeMap: Record<string, string> = {
-        'hi': 'hi-IN', 'en': 'en-IN', 'bn': 'bn-IN', 'ta': 'ta-IN', 'te': 'te-IN',
-        'mr': 'mr-IN', 'gu': 'gu-IN', 'kn': 'kn-IN', 'ml': 'ml-IN', 'ur': 'ur-PK',
-        'pa': 'pa-IN', 'ne': 'ne-NP', 'si': 'si-LK', 'bho': 'hi-IN', 'mai': 'hi-IN',
-        'sa': 'hi-IN', 'kok': 'hi-IN', 'doi': 'hi-IN', 'brx': 'hi-IN', 'as': 'bn-IN',
-        'mni': 'bn-IN', 'ks': 'ur-PK', 'sd': 'ur-PK'
-      };
-      
-      const targetLocale = localeMap[langPrefix] || `${langPrefix}-IN`;
-      const localesToTrigger = [targetLocale];
-      
-      // Always ensure Hindi and English are triggered as fallbacks
-      if (targetLocale !== 'hi-IN') localesToTrigger.push('hi-IN');
-      if (targetLocale !== 'en-IN') localesToTrigger.push('en-IN');
-
-      // Filter out duplicates just in case
-      const uniqueLocales = Array.from(new Set(localesToTrigger));
-
-      // Force load voices to ensure the engine is awake
-      window.speechSynthesis.getVoices();
-
-      uniqueLocales.forEach(locale => {
-        // Create a nearly silent utterance with a space
-        // This forces the OS TTS engine to initialize the language,
-        // which triggers a background download if the voice is missing but supported.
-        // Must be triggered by a user interaction to bypass browser autoplay blocks.
-        const utterance = new SpeechSynthesisUtterance(' ');
-        utterance.lang = locale;
-        utterance.volume = 0.01; // Almost silent
-        utterance.rate = 10; // Extremely fast
-        utterance.pitch = 1;
-        
-        // Catch errors silently
-        utterance.onerror = () => {};
-        
-        window.speechSynthesis.speak(utterance);
-      });
-
-      // Clean up listeners after first trigger
-      window.removeEventListener('click', triggerVoiceDownloads);
-      window.removeEventListener('touchstart', triggerVoiceDownloads);
-      window.removeEventListener('keydown', triggerVoiceDownloads);
-    };
-
-    // Browsers strictly block SpeechSynthesis without user interaction.
-    // We attach the trigger to the first user interaction anywhere on the screen.
-    window.addEventListener('click', triggerVoiceDownloads, { once: true });
-    window.addEventListener('touchstart', triggerVoiceDownloads, { once: true });
-    window.addEventListener('keydown', triggerVoiceDownloads, { once: true });
-
-    return () => {
-      window.removeEventListener('click', triggerVoiceDownloads);
-      window.removeEventListener('touchstart', triggerVoiceDownloads);
-      window.removeEventListener('keydown', triggerVoiceDownloads);
-    };
-  }, [uiLang]);
-
-  // Save selected voice
-  useEffect(() => {
-    safeStorage.setItem('selectedVoiceURI', selectedVoiceURI);
-    selectedVoiceURIRef.current = selectedVoiceURI;
-    
-    // If audio is currently playing, restart it with the new voice
-    if (playingMessageIdRef.current && !isPaused) {
-      const msgId = playingMessageIdRef.current;
-      const msg = messages.find(m => m.id === msgId || m.id + '-model' === msgId);
-      if (msg) {
-        const { mainText } = parseMessage(msg.text);
-        // Small delay to prevent stuttering
-        const timer = setTimeout(() => {
-          playMessageAudio(mainText, msgId, currentTextIndexRef.current, true);
-        }, 300);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [selectedVoiceURI]);
 
   // Save speech settings and restart audio if playing
   useEffect(() => {
@@ -3259,24 +3071,7 @@ export default function App() {
     }
   }, [speechRate]);
 
-  useEffect(() => {
-    safeStorage.setItem('speechPitch_v4', speechPitch.toString());
-    speechPitchRef.current = speechPitch;
-    
-    // If audio is currently playing, restart it with the new pitch
-    if (playingMessageIdRef.current && !isPaused) {
-      const msgId = playingMessageIdRef.current;
-      const msg = messages.find(m => m.id === msgId || m.id + '-model' === msgId);
-      if (msg) {
-        const { mainText } = parseMessage(msg.text);
-        // Small delay to prevent stuttering if sliding quickly
-        const timer = setTimeout(() => {
-          playMessageAudio(mainText, msgId, currentTextIndexRef.current, true);
-        }, 300);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [speechPitch]);
+
 
   // Zero-Delay Voice Setup (First Launch)
   useEffect(() => {
@@ -3413,11 +3208,6 @@ export default function App() {
   const visualizerCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isMicMutedRef = useRef(false);
-  const isScreenSharingRef = useRef(false);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-  const screenVideoRef = useRef<HTMLVideoElement | null>(null);
-  const screenCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const screenIntervalRef = useRef<number | null>(null);
   const [isMicMuted, setIsMicMuted] = useState(false);
 
   // TTS Refs
@@ -3579,8 +3369,6 @@ export default function App() {
     setIsPaused(false);
     setIsModelSpeaking(false);
     setIsGeneratingAudio(null);
-    fallbackToStandardMessageIdRef.current = null;
-    forcePremiumNoFallbackRef.current = null;
   };
 
   const pauseMessageAudio = () => {
@@ -3627,29 +3415,10 @@ export default function App() {
     const nextChunk = premiumAudioQueueRef.current[0];
 
     if (nextChunk.failed) {
-      const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
-      
-      if (!isForcedPremium) {
-        // Fallback this and all remaining chunks to standard TTS
-        const chunksToFallback = [...premiumAudioQueueRef.current];
-        premiumAudioQueueRef.current = [];
-        
-        // Stop any currently playing premium audio just in case
-        if (premiumAudioRef.current) {
-          premiumAudioRef.current.pause();
-        }
-        
-        setIsGeneratingAudio(null);
-        
-        chunksToFallback.forEach(c => {
-          queueAudioChunk(c.text, messageId, c.startIndex);
-        });
-      } else {
-        // Just drop the failed chunk and continue
-        premiumAudioQueueRef.current.shift();
-        setIsGeneratingAudio(null);
-        playNextPremiumChunk(messageId);
-      }
+      // Just drop the failed chunk and continue
+      premiumAudioQueueRef.current.shift();
+      setIsGeneratingAudio(null);
+      playNextPremiumChunk(messageId);
       return;
     }
 
@@ -3714,27 +3483,10 @@ export default function App() {
         console.warn("Premium chunk play error", e);
         isPlayingPremiumRef.current = false;
         
-        const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
-        
-        if (!isForcedPremium) {
-          // Fallback this and all remaining chunks to standard TTS
-          nextChunk.failed = true;
-          fallbackToStandardMessageIdRef.current = messageId;
-          
-          const chunksToFallback = [nextChunk, ...premiumAudioQueueRef.current];
-          premiumAudioQueueRef.current = [];
-          
-          setIsGeneratingAudio(null);
-          
-          chunksToFallback.forEach(c => {
-            queueAudioChunk(c.text, messageId, c.startIndex);
-          });
-        } else {
-          // Just drop it if forced premium
-          premiumAudioQueueRef.current.shift();
-          setIsGeneratingAudio(null);
-          playNextPremiumChunk(messageId);
-        }
+        // Just drop it
+        premiumAudioQueueRef.current.shift();
+        setIsGeneratingAudio(null);
+        playNextPremiumChunk(messageId);
       });
       
       if (!audioContextRef.current) {
@@ -3845,33 +3597,17 @@ export default function App() {
           console.log(`Retrying Premium TTS chunk... (${retries}/${maxRetries})`);
         } else {
           nextToFetch.failed = true;
-          const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
           
-          if (!isForcedPremium) {
-            fallbackToStandardMessageIdRef.current = messageId;
-            
-            const isQuotaErr = errStr.toLowerCase().includes('429') || 
-                               errStr.toLowerCase().includes('quota') || 
-                               errStr.includes('RESOURCE_EXHAUSTED') ||
-                               errStr.toLowerCase().includes('limit') ||
-                               errStr.toLowerCase().includes('exceeded');
-            
-            if (isQuotaErr) {
-              // Silently fall back to standard voice without showing an error toast
-              console.warn("Premium voice quota exceeded, falling back to standard voice silently.");
-              premiumVoiceDisabledUntilRef.current = Date.now() + (5 * 60 * 1000);
-            }
-          } else {
-            console.warn("Premium voice failed, but forced premium is active. Dropping chunk.");
-            const isQuotaErr = errStr.toLowerCase().includes('429') || 
-                               errStr.toLowerCase().includes('quota') || 
-                               errStr.includes('RESOURCE_EXHAUSTED') ||
-                               errStr.toLowerCase().includes('limit') ||
-                               errStr.toLowerCase().includes('exceeded');
-            if (isQuotaErr) {
-              setError(t.premiumVoiceError || "Premium voice quota exceeded.");
-            }
+          console.warn("Premium voice failed. Dropping chunk.");
+          const isQuotaErr = errStr.toLowerCase().includes('429') || 
+                             errStr.toLowerCase().includes('quota') || 
+                             errStr.includes('RESOURCE_EXHAUSTED') ||
+                             errStr.toLowerCase().includes('limit') ||
+                             errStr.toLowerCase().includes('exceeded');
+          if (isQuotaErr) {
+            setError(t.premiumVoiceError || "Premium voice quota exceeded.");
           }
+          
           playNextPremiumChunk(messageId);
           break;
         }
@@ -3891,175 +3627,16 @@ export default function App() {
       
     if (cleanText.trim().length === 0) return;
 
-    const isForcedPremium = forcePremiumNoFallbackRef.current === messageId;
-
-    if (!isForcedPremium && (fallbackToStandardMessageIdRef.current === messageId || Date.now() < premiumVoiceDisabledUntilRef.current)) {
-      // Premium is disabled or we already fell back for this message.
-      // Push as a failed chunk so it gets routed to standard TTS in order.
-      premiumAudioQueueRef.current.push({ 
-        text: cleanText, 
-        startIndex: globalStartIndex, 
-        failed: true 
-      });
-      // Try to play in case nothing is playing
-      playNextPremiumChunk(messageId);
-      return;
-    }
-
     const chunkObj = { text: cleanText, startIndex: globalStartIndex, audio: undefined, failed: false, isFetching: false };
     premiumAudioQueueRef.current.push(chunkObj);
 
     processPremiumAudioQueue(messageId);
   };
 
-  const queueAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
-    const cleanText = chunkText
-      .replace(/<[^>]+>/g, match => ' '.repeat(match.length))
-      .replace(/[*_#`\-<>]/g, ' ')
-      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
-      
-    if (cleanText.trim().length === 0) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    // Detect language based on text content
-    let detectedLang = 'hi-IN'; // Default to Hindi
-    if (/[\u0900-\u097F]/.test(cleanText)) {
-      if (uiLang === 'mr') detectedLang = 'mr-IN';
-      else if (uiLang === 'bho') detectedLang = 'bho-IN';
-      else detectedLang = 'hi-IN';
-    } else if (/[\u0980-\u09FF]/.test(cleanText)) {
-      detectedLang = uiLang === 'as' ? 'as-IN' : 'bn-IN'; // Bengali/Assamese
-    } else if (/[\u0B80-\u0BFF]/.test(cleanText)) {
-      detectedLang = 'ta-IN'; // Tamil
-    } else if (/[\u0C00-\u0C7F]/.test(cleanText)) {
-      detectedLang = 'te-IN'; // Telugu
-    } else if (/[\u0A80-\u0AFF]/.test(cleanText)) {
-      detectedLang = 'gu-IN'; // Gujarati
-    } else if (/[\u0C80-\u0CFF]/.test(cleanText)) {
-      detectedLang = 'kn-IN'; // Kannada
-    } else if (/[\u0D00-\u0D7F]/.test(cleanText)) {
-      detectedLang = 'ml-IN'; // Malayalam
-    } else if (/[\u0A00-\u0A7F]/.test(cleanText)) {
-      detectedLang = 'pa-IN'; // Punjabi
-    } else if (/[\u0B00-\u0B7F]/.test(cleanText)) {
-      detectedLang = 'or-IN'; // Odia
-    } else if (/[\u0600-\u06FF]/.test(cleanText)) {
-      detectedLang = 'ur-IN'; // Urdu
-    } else if (/^[a-zA-Z0-9\s.,!?'"-]+$/.test(cleanText.trim())) {
-      detectedLang = 'en-IN'; // English (Indian accent)
-    }
-    
-    utterance.lang = detectedLang;
-    utterance.rate = speechRateRef.current;
-    utterance.pitch = speechPitchRef.current;
-    
-    utterance.onstart = () => {
-      setPlayingMessageId(messageId);
-      playingMessageIdRef.current = messageId;
-      setIsModelSpeaking(true);
-      setIsPaused(false);
-      currentTextIndexRef.current = globalStartIndex;
-      setPlayingTextIndex(globalStartIndex);
-      setIsGeneratingAudio(null);
-    };
-    
-    utterance.onboundary = (event) => {
-      const newIndex = globalStartIndex + event.charIndex;
-      currentTextIndexRef.current = newIndex;
-      setPlayingTextIndex(newIndex);
-    };
-    
-    utterance.onend = () => {
-      // We don't call stopMessageAudio here because there might be more chunks in the queue
-      setIsModelSpeaking(false);
-      
-      // If this is the last chunk and generation is complete, clear the playing state
-      if (window.speechSynthesis && !window.speechSynthesis.pending && !abortControllerRef.current) {
-        if (playingMessageIdRef.current === messageId && isGeneratingAudio !== messageId) {
-          setPlayingMessageId(null);
-          playingMessageIdRef.current = null;
-          setIsPaused(false);
-        }
-      }
-    };
-    
-    let voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-    if (voices.length === 0) {
-      voices = availableVoices;
-    }
-    
-    let selectedVoice = null;
-    if (selectedVoiceURIRef.current) {
-      selectedVoice = voices.find(v => v.voiceURI === selectedVoiceURIRef.current) || null;
-    }
-    
-    if (!selectedVoice) {
-      const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
-      const gender = guessGender(currentName);
-      const langPrefix = detectedLang.split('-')[0];
-      
-      const getLanguageCascade = (langCode: string) => {
-        const cascade = [langCode];
-        const devanagariLangs = ['hi', 'bho', 'mr', 'ne', 'mai', 'kok', 'doi', 'sa', 'brx'];
-        if (devanagariLangs.includes(langCode) && langCode !== 'hi') cascade.push('hi');
-        const bengaliScriptLangs = ['bn', 'as', 'mni'];
-        if (bengaliScriptLangs.includes(langCode) && langCode !== 'bn') cascade.push('bn', 'hi');
-        const arabicScriptLangs = ['ur', 'ks', 'sd'];
-        if (arabicScriptLangs.includes(langCode) && langCode !== 'ur') cascade.push('ur', 'hi');
-        if (!cascade.includes('hi')) cascade.push('hi');
-        if (!cascade.includes('en')) cascade.push('en');
-        return cascade;
-      };
-
-      const langCascade = getLanguageCascade(langPrefix);
-      let candidateVoices: SpeechSynthesisVoice[] = [];
-      
-      for (const targetLang of langCascade) {
-        candidateVoices = voices.filter(v => 
-          v.lang.toLowerCase().startsWith(targetLang) || 
-          v.lang.toLowerCase().includes(`-${targetLang}-`) ||
-          v.lang.toLowerCase().replace('_', '-').startsWith(targetLang)
-        );
-        if (candidateVoices.length > 0) break;
-      }
-      
-      if (candidateVoices.length === 0) {
-        candidateVoices = voices;
-      }
-
-      let genderFilteredVoices = [];
-      if (gender === 'F') {
-        genderFilteredVoices = candidateVoices.filter(v => isFemaleVoice(v));
-      } else if (gender === 'M') {
-        genderFilteredVoices = candidateVoices.filter(v => isMaleVoice(v));
-      }
-
-      if (genderFilteredVoices.length > 0) {
-        selectedVoice = genderFilteredVoices[0];
-      } else if (candidateVoices.length > 0) {
-        selectedVoice = candidateVoices[0];
-      }
-    }
-    
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-    
-    if (window.speechSynthesis) {
-      window.speechSynthesis.speak(utterance);
-    }
-  };
 
   const playMessageAudio = async (text: string, messageId: string, startIndex: number = 0, forceRestart: boolean = false) => {
     let actualStartIndex = startIndex;
-    fallbackToStandardMessageIdRef.current = null;
-    
-    // Reset forcePremiumNoFallbackRef if we are manually playing a message
-    // It should only be active when triggered by handleSend with autoPlayResponse=true
-    if (forceRestart || playingMessageId !== messageId) {
-      forcePremiumNoFallbackRef.current = null;
-    }
 
     if (playingMessageId === messageId && startIndex === 0 && !forceRestart) {
       if (isPaused) {
@@ -4117,272 +3694,59 @@ export default function App() {
         textToSpeak = textToSpeak.substring(0, 5000);
       }
 
-      if (voiceEngineRef.current === 'premium') {
-        // Check if premium voice is temporarily disabled due to quota
-        if (Date.now() < premiumVoiceDisabledUntilRef.current) {
-          // Fall through to standard TTS without changing the user's setting
-        } else {
-          setIsGeneratingAudio(messageId);
-          // Chunk the text and queue it for streaming playback
-          let currentChunk = '';
-          let globalStartIndex = wordStartIndex;
+      // Check if premium voice is temporarily disabled due to quota
+      if (Date.now() >= premiumVoiceDisabledUntilRef.current) {
+        setIsGeneratingAudio(messageId);
+        // Chunk the text and queue it for streaming playback
+        let currentChunk = '';
+        let globalStartIndex = wordStartIndex;
+        
+        // Split by words/tokens to process chunking
+        const tokens = textToSpeak.split(/(\s+|[.,!?।]+)/);
+        
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          if (!token) continue;
           
-          // Split by words/tokens to process chunking
-          const tokens = textToSpeak.split(/(\s+|[.,!?।]+)/);
+          currentChunk += token;
           
-          for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-            if (!token) continue;
-            
-            currentChunk += token;
-            
-            let shouldChunk = false;
-            let splitIndex = currentChunk.length;
-            
-            // Use larger chunks for premium voice when playing full messages to avoid 15 RPM quota limit
-            // First chunk can be smaller to start quickly, but subsequent chunks should be very large
-            const isFirstChunk = globalStartIndex === wordStartIndex;
-            const minChunkLength = isFirstChunk ? 150 : 2500;
-            
-            if (currentChunk.length >= minChunkLength) {
-              const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
-              if (matches.length > 0) {
-                const lastMatch = matches[matches.length - 1];
-                splitIndex = lastMatch.index! + lastMatch[0].length;
-                shouldChunk = true;
-              } else if (currentChunk.length > (minChunkLength * 2)) {
-                shouldChunk = true;
-                const lastSpace = currentChunk.lastIndexOf(' ');
-                splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
-              }
-            }
-            
-            if (shouldChunk) {
-              const textToPlay = currentChunk.substring(0, splitIndex);
-              if (textToPlay.trim().length > 0) {
-                queuePremiumAudioChunk(textToPlay, messageId, globalStartIndex);
-                globalStartIndex += textToPlay.length;
-              }
-              currentChunk = currentChunk.substring(splitIndex);
+          let shouldChunk = false;
+          let splitIndex = currentChunk.length;
+          
+          // Use larger chunks for premium voice when playing full messages to avoid 15 RPM quota limit
+          // First chunk can be smaller to start quickly, but subsequent chunks should be very large
+          const isFirstChunk = globalStartIndex === wordStartIndex;
+          const minChunkLength = isFirstChunk ? 150 : 2500;
+          
+          if (currentChunk.length >= minChunkLength) {
+            const matches = [...currentChunk.matchAll(/[.।?!,]+(\s+|$)/g)];
+            if (matches.length > 0) {
+              const lastMatch = matches[matches.length - 1];
+              splitIndex = lastMatch.index! + lastMatch[0].length;
+              shouldChunk = true;
+            } else if (currentChunk.length > (minChunkLength * 2)) {
+              shouldChunk = true;
+              const lastSpace = currentChunk.lastIndexOf(' ');
+              splitIndex = lastSpace > 0 ? lastSpace + 1 : currentChunk.length;
             }
           }
           
-          // Queue any remaining text
-          if (currentChunk.trim().length > 0) {
-            queuePremiumAudioChunk(currentChunk, messageId, globalStartIndex);
-          }
-          
-          return; // Skip standard TTS
-        }
-      }
-      
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      
-      // Detect language based on text content
-      let detectedLang = 'hi-IN'; // Default to Hindi
-      if (/[\u0900-\u097F]/.test(textToSpeak)) {
-        if (uiLang === 'mr') detectedLang = 'mr-IN';
-        else if (uiLang === 'bho') detectedLang = 'bho-IN';
-        else detectedLang = 'hi-IN';
-      } else if (/[\u0980-\u09FF]/.test(textToSpeak)) {
-        detectedLang = uiLang === 'as' ? 'as-IN' : 'bn-IN'; // Bengali/Assamese
-      } else if (/[\u0B80-\u0BFF]/.test(textToSpeak)) {
-        detectedLang = 'ta-IN'; // Tamil
-      } else if (/[\u0C00-\u0C7F]/.test(textToSpeak)) {
-        detectedLang = 'te-IN'; // Telugu
-      } else if (/[\u0A80-\u0AFF]/.test(textToSpeak)) {
-        detectedLang = 'gu-IN'; // Gujarati
-      } else if (/[\u0C80-\u0CFF]/.test(textToSpeak)) {
-        detectedLang = 'kn-IN'; // Kannada
-      } else if (/[\u0D00-\u0D7F]/.test(textToSpeak)) {
-        detectedLang = 'ml-IN'; // Malayalam
-      } else if (/[\u0A00-\u0A7F]/.test(textToSpeak)) {
-        detectedLang = 'pa-IN'; // Punjabi
-      } else if (/[\u0B00-\u0B7F]/.test(textToSpeak)) {
-        detectedLang = 'or-IN'; // Odia
-      } else if (/[\u0600-\u06FF]/.test(textToSpeak)) {
-        detectedLang = 'ur-IN'; // Urdu
-      } else if (/^[a-zA-Z0-9\s.,!?'"-]+$/.test(textToSpeak.trim())) {
-        detectedLang = 'en-IN'; // English (Indian accent)
-      }
-      
-      utterance.lang = detectedLang;
-      utterance.rate = speechRateRef.current;
-      utterance.pitch = speechPitchRef.current;
-      
-      // Set these synchronously so they are ready even if onstart is delayed or fails
-      startTimeRef.current = Date.now();
-      lastStartIndexRef.current = wordStartIndex;
-      currentTextIndexRef.current = wordStartIndex;
-      setPlayingTextIndex(wordStartIndex);
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      
-      // Fallback timer for devices where onboundary doesn't fire reliably (like Android)
-      // This is needed for auto-scroll and floating button to work
-      timerRef.current = setInterval(() => {
-        if (startTimeRef.current > 0 && currentUtteranceRef.current) {
-          const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
-          const estimatedChars = Math.floor(elapsedSeconds * 12); // ~12 chars per second for Hindi
-          const estimatedIndex = lastStartIndexRef.current + estimatedChars;
-          
-          // Only update if the estimated index is ahead of the current index
-          // This allows onboundary to take precedence if it's working
-          if (estimatedIndex > currentTextIndexRef.current) {
-            const newIndex = Math.min(estimatedIndex, currentTextRef.current.length);
-            currentTextIndexRef.current = newIndex;
-            setPlayingTextIndex(newIndex);
-          }
-          
-          // Workaround for Chrome bug where onend doesn't fire for long texts
-          if (elapsedSeconds > 2 && window.speechSynthesis) {
-            if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && !isPaused) {
-              clearInterval(timerRef.current!);
-              timerRef.current = null;
-              if (currentUtteranceRef.current === utterance) {
-                setIsModelSpeaking(false);
-                if (playingMessageIdRef.current === messageId) {
-                  setPlayingMessageId(null);
-                  playingMessageIdRef.current = null;
-                  setIsPaused(false);
-                }
-              }
+          if (shouldChunk) {
+            const textToPlay = currentChunk.substring(0, splitIndex);
+            if (textToPlay.trim().length > 0) {
+              queuePremiumAudioChunk(textToPlay, messageId, globalStartIndex);
+              globalStartIndex += textToPlay.length;
             }
-          }
-        }
-      }, 100);
-      
-      utterance.onstart = () => {
-        // Reset timer precisely when audio actually starts
-        startTimeRef.current = Date.now();
-        setIsModelSpeaking(true);
-      };
-      
-      utterance.onboundary = (event) => {
-        // If onboundary fires, it means the device supports it, so we can disable the fallback timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        
-        const newIndex = wordStartIndex + event.charIndex;
-        // If onboundary fires, it's more accurate, so we use it and update our baseline
-        currentTextIndexRef.current = newIndex;
-        setPlayingTextIndex(newIndex);
-        // Update the baseline for the fallback timer so it doesn't jump back and forth
-        lastStartIndexRef.current = newIndex;
-        startTimeRef.current = Date.now();
-      };
-      
-      let voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-      if (voices.length === 0) {
-        voices = availableVoices;
-      }
-      
-      // Check if user has explicitly selected a voice
-      let selectedVoice = null;
-      if (selectedVoiceURIRef.current) {
-        selectedVoice = voices.find(v => v.voiceURI === selectedVoiceURIRef.current) || null;
-      }
-      
-      // If no explicit voice selected or it wasn't found, use auto-selection logic
-      if (!selectedVoice) {
-        const currentName = userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard');
-        const gender = guessGender(currentName);
-
-        const langPrefix = detectedLang.split('-')[0];
-        
-        // Smart language fallback cascade for Indian languages
-        const getLanguageCascade = (langCode: string) => {
-          const cascade = [langCode];
-          const devanagariLangs = ['hi', 'bho', 'mr', 'ne', 'mai', 'kok', 'doi', 'sa', 'brx'];
-          if (devanagariLangs.includes(langCode) && langCode !== 'hi') cascade.push('hi');
-          const bengaliScriptLangs = ['bn', 'as', 'mni'];
-          if (bengaliScriptLangs.includes(langCode) && langCode !== 'bn') cascade.push('bn', 'hi');
-          const arabicScriptLangs = ['ur', 'ks', 'sd'];
-          if (arabicScriptLangs.includes(langCode) && langCode !== 'ur') cascade.push('ur', 'hi');
-          if (!cascade.includes('hi')) cascade.push('hi');
-          if (!cascade.includes('en')) cascade.push('en');
-          return cascade;
-        };
-
-        const langCascade = getLanguageCascade(langPrefix);
-        let candidateVoices: SpeechSynthesisVoice[] = [];
-        
-        for (const targetLang of langCascade) {
-          candidateVoices = voices.filter(v => 
-            v.lang.toLowerCase().startsWith(targetLang) || 
-            v.lang.toLowerCase().includes(`-${targetLang}-`) ||
-            v.lang.toLowerCase().includes(`_${targetLang}_`)
-          );
-          if (candidateVoices.length > 0) {
-            break;
+            currentChunk = currentChunk.substring(splitIndex);
           }
         }
         
-        if (candidateVoices.length === 0) {
-          candidateVoices = voices;
+        // Queue any remaining text
+        if (currentChunk.trim().length > 0) {
+          queuePremiumAudioChunk(currentChunk, messageId, globalStartIndex);
         }
-
-        if (gender === 'F') {
-          selectedVoice = candidateVoices.find(isFemaleVoice);
-          if (!selectedVoice) {
-            // Fallback: find all voices that are NOT explicitly male
-            const possibleVoices = candidateVoices.filter(v => !isMaleVoice(v));
-            selectedVoice = possibleVoices.length > 0 ? possibleVoices[0] : candidateVoices[0];
-          }
-        } else {
-          selectedVoice = candidateVoices.find(isMaleVoice);
-          if (!selectedVoice) {
-            // Fallback: find all voices that are NOT explicitly female
-            const possibleVoices = candidateVoices.filter(v => !isFemaleVoice(v));
-            selectedVoice = possibleVoices.length > 1 ? possibleVoices[possibleVoices.length - 1] : (possibleVoices[0] || candidateVoices[candidateVoices.length - 1]);
-          }
-        }
-      }
-
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        // Override detectedLang with the actual voice's lang to prevent browser from overriding voice
-        utterance.lang = selectedVoice.lang;
-      }
-
-      currentUtteranceRef.current = utterance;
-
-      utterance.onend = () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        if (currentUtteranceRef.current !== utterance) return;
         
-        setIsModelSpeaking(false);
-        if (playingMessageIdRef.current === messageId) {
-          setPlayingMessageId(null);
-          playingMessageIdRef.current = null;
-          setIsPaused(false);
-        }
-      };
-      
-      utterance.onerror = () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        if (currentUtteranceRef.current !== utterance) return;
-        
-        setIsModelSpeaking(false);
-        if (playingMessageIdRef.current === messageId) {
-          setPlayingMessageId(null);
-          playingMessageIdRef.current = null;
-          setIsPaused(false);
-        }
-      };
-
-      if (window.speechSynthesis) {
-        window.speechSynthesis.speak(utterance);
+        return;
       }
     } catch (e: any) {
       console.warn("TTS Error", e);
@@ -4412,7 +3776,6 @@ export default function App() {
 
   const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string, isHidden: boolean = false) => {
     stopMessageAudio();
-    fallbackToStandardMessageIdRef.current = null;
     
     if (!autoPlayResponse) {
       continuousVoiceModeRef.current = false;
@@ -4438,12 +3801,6 @@ export default function App() {
     }
     const newMsgId = editMsgId || Date.now().toString();
     const newModelMsgId = newMsgId + '-model-' + Date.now();
-    
-    if (autoPlayResponse) {
-      forcePremiumNoFallbackRef.current = newModelMsgId;
-    } else {
-      forcePremiumNoFallbackRef.current = null;
-    }
     
     // Build currentMessages synchronously
     let currentMessages: any[] = [];
@@ -4618,7 +3975,7 @@ export default function App() {
             // Use smaller chunks for the first chunk to reduce initial latency, then very large chunks to avoid 15 RPM quota limit
             const isFirstChunk = globalStartIndex === 0;
             const premiumChunkLength = isFirstChunk ? 150 : 2500;
-            const minChunkLength = (voiceEngineRef.current === 'premium' || autoPlayResponse) ? premiumChunkLength : 150;
+            const minChunkLength = premiumChunkLength;
 
             if (currentChunk.length >= minChunkLength) {
               // Find ALL punctuation marks in the accumulated chunk
@@ -4644,11 +4001,7 @@ export default function App() {
                   stopMessageAudio();
                   hasStartedPlaying = true;
                 }
-                if (voiceEngineRef.current === 'premium' || autoPlayResponse) {
-                  queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                } else {
-                  queueAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
-                }
+                queuePremiumAudioChunk(textToPlay, newModelMsgId, globalStartIndex);
                 globalStartIndex += textToPlay.length;
               }
               
@@ -4668,11 +4021,7 @@ export default function App() {
           stopMessageAudio();
           hasStartedPlaying = true;
         }
-        if (voiceEngineRef.current === 'premium' || autoPlayResponse) {
-          queuePremiumAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
-        } else {
-          queueAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
-        }
+        queuePremiumAudioChunk(currentChunk, newModelMsgId, globalStartIndex);
       }
       
     } catch (error: any) {
@@ -4817,153 +4166,6 @@ export default function App() {
     const newMutedState = !isMicMutedRef.current;
     isMicMutedRef.current = newMutedState;
     setIsMicMuted(newMutedState);
-  };
-
-  const stopScreenShare = () => {
-    if (screenIntervalRef.current) {
-      clearInterval(screenIntervalRef.current);
-      screenIntervalRef.current = null;
-    }
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach(track => track.stop());
-      screenStreamRef.current = null;
-    }
-    setIsScreenSharing(false);
-    isScreenSharingRef.current = false;
-    setLatestFrame(null);
-  };
-
-  const toggleScreenShare = async () => {
-    if (isScreenSharing) {
-      stopScreenShare();
-      return;
-    }
-
-    try {
-      // Check if getDisplayMedia is available (not available on mobile or if iframe lacks permissions)
-      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            displaySurface: "browser",
-          },
-          audio: false
-        });
-
-        screenStreamRef.current = stream;
-
-        stream.getVideoTracks()[0].onended = () => {
-          stopScreenShare();
-        };
-
-        if (screenVideoRef.current) {
-          screenVideoRef.current.srcObject = stream;
-          await screenVideoRef.current.play();
-        }
-
-        setIsScreenSharing(true);
-        isScreenSharingRef.current = true;
-
-        // Bring the opener tab (E-MAITRI) to the foreground
-        if (window.opener) {
-          window.opener.focus();
-        }
-        window.blur();
-
-        const captureFrame = async () => {
-          if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
-          if (!screenVideoRef.current || !screenCanvasRef.current) return;
-          
-          try {
-            const video = screenVideoRef.current;
-            const canvas = screenCanvasRef.current;
-            
-            if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-            const scale = 0.5;
-            canvas.width = video.videoWidth * scale;
-            canvas.height = video.videoHeight * scale;
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const base64DataUrl = canvas.toDataURL('image/jpeg', 0.5);
-            if (!base64DataUrl) return;
-            
-            const base64Data = base64DataUrl.split(',')[1];
-            if (!base64Data) return;
-            
-            setLatestFrame(base64DataUrl);
-            
-            if (sessionPromiseRef.current && isSessionActiveRef.current) {
-              sessionPromiseRef.current.then(s => {
-                try {
-                  if (s && isSessionActiveRef.current) {
-                    s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
-                  }
-                } catch (e) {
-                  console.warn("Failed to send video frame:", e);
-                }
-              }).catch(() => {});
-            }
-          } catch (err) {
-            console.warn("Screen Capture error:", err);
-          }
-        };
-
-        setTimeout(captureFrame, 500);
-        screenIntervalRef.current = window.setInterval(captureFrame, 2500);
-      } else {
-        // Fallback to html2canvas if getDisplayMedia is not supported
-        console.warn("getDisplayMedia not supported, falling back to html2canvas");
-        
-        setIsScreenSharing(true);
-        isScreenSharingRef.current = true;
-
-        const captureFrame = async () => {
-          if (!isLive || !isScreenSharingRef.current || !sessionPromiseRef.current) return;
-          
-          try {
-            const canvas = await html2canvas(document.body, {
-              scale: 0.5,
-              useCORS: true,
-              logging: false,
-              backgroundColor: null,
-            });
-            
-            const base64DataUrl = canvas.toDataURL('image/jpeg', 0.5);
-            if (!base64DataUrl) return;
-            const base64Data = base64DataUrl.split(',')[1];
-            if (!base64Data) return;
-            
-            setLatestFrame(base64DataUrl);
-            
-            if (sessionPromiseRef.current && isSessionActiveRef.current) {
-              sessionPromiseRef.current.then(s => {
-                try {
-                  if (s && isSessionActiveRef.current) {
-                    s.sendRealtimeInput({ video: { data: base64Data, mimeType: 'image/jpeg' } });
-                  }
-                } catch (e) {
-                  console.warn("Failed to send video frame:", e);
-                }
-              }).catch(() => {});
-            }
-          } catch (err) {
-            console.warn("DOM Capture error:", err);
-          }
-        };
-
-        captureFrame();
-        screenIntervalRef.current = window.setInterval(captureFrame, 2500);
-      }
-    } catch (err) {
-      console.error("Error starting screen share:", err);
-      setIsScreenSharing(false);
-      isScreenSharingRef.current = false;
-      setError("Screen sharing failed. Please ensure you have granted permission and are using a supported browser.");
-    }
   };
 
   const toggleLiveAudio = async () => {
@@ -5577,7 +4779,6 @@ export default function App() {
 
   const stopLiveAudio = () => {
     isSessionActiveRef.current = false;
-    stopScreenShare();
     activeAudioSourcesRef.current.forEach(source => {
       try { source.stop(); } catch (e) {}
     });
@@ -5874,10 +5075,6 @@ export default function App() {
     <div 
       className="fixed inset-0 flex flex-col overflow-hidden"
     >
-      {/* Hidden elements for screen sharing */}
-      <video ref={screenVideoRef} style={{ display: 'none' }} playsInline muted />
-      <canvas ref={screenCanvasRef} style={{ display: 'none' }} />
-
       {/* Virtual AI Background */}
       <VirtualNetworkBackground />
 
@@ -6111,76 +5308,28 @@ export default function App() {
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-                          <Volume2 size={20} />
+                          <Users size={16} />
                         </div>
                         <div>
-                          <h3 className="text-gray-900 font-medium">{t.voiceEngine}</h3>
-                          <p className="text-gray-500 text-xs">{t.chooseVoiceEngine}</p>
+                          <h3 className="text-gray-900 font-medium">{t.premium} Voice</h3>
+                          <p className="text-gray-500 text-xs">{t.selectPremiumVoice}</p>
                         </div>
                       </div>
                       <select 
                         className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
-                        value={voiceEngine}
-                        onChange={(e) => setVoiceEngine(e.target.value as 'standard' | 'premium')}
+                        value={premiumVoice}
+                        onChange={(e) => {
+                          setPremiumVoice(e.target.value);
+                          safeStorage.setItem('premiumVoice', e.target.value);
+                        }}
                       >
-                        <option value="standard" className="bg-zinc-800">{t.standard} (Offline, Fast)</option>
-                        <option value="premium" className="bg-zinc-800">{t.premium} AI (Natural, Emotional)</option>
+                        <option value="Fenrir" className="bg-zinc-800">{t.fenrirDesc}</option>
+                        <option value="Charon" className="bg-zinc-800">{t.charonDesc}</option>
+                        <option value="Puck" className="bg-zinc-800">{t.puckDesc}</option>
+                        <option value="Kore" className="bg-zinc-800">{(t as any).koreDesc || "Kore (Calm Female)"}</option>
+                        <option value="Zephyr" className="bg-zinc-800">{(t as any).zephyrDesc || "Zephyr (Strong Female)"}</option>
                       </select>
                     </div>
-
-                    <div className="h-px w-full bg-white shadow-md"></div>
-
-                    {voiceEngine === 'premium' ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-                            <Users size={16} />
-                          </div>
-                          <div>
-                            <h3 className="text-gray-900 font-medium">{t.premium} Voice</h3>
-                            <p className="text-gray-500 text-xs">{t.selectPremiumVoice}</p>
-                          </div>
-                        </div>
-                        <select 
-                          className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
-                          value={premiumVoice}
-                          onChange={(e) => {
-                            setPremiumVoice(e.target.value);
-                            safeStorage.setItem('premiumVoice', e.target.value);
-                          }}
-                        >
-                          <option value="Fenrir" className="bg-zinc-800">{t.fenrirDesc}</option>
-                          <option value="Charon" className="bg-zinc-800">{t.charonDesc}</option>
-                          <option value="Puck" className="bg-zinc-800">{t.puckDesc}</option>
-                          <option value="Kore" className="bg-zinc-800">{(t as any).koreDesc || "Kore (Calm Female)"}</option>
-                          <option value="Zephyr" className="bg-zinc-800">{(t as any).zephyrDesc || "Zephyr (Strong Female)"}</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-                            <Users size={16} />
-                          </div>
-                          <div>
-                            <h3 className="text-gray-900 font-medium">{t.standard} Voice</h3>
-                            <p className="text-gray-500 text-xs">{t.selectStandardVoice}</p>
-                          </div>
-                        </div>
-                        <select 
-                          className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
-                          value={selectedVoiceURI}
-                          onChange={(e) => setSelectedVoiceURI(e.target.value)}
-                        >
-                          <option value="" className="bg-zinc-800">{t.autoSelect}</option>
-                          {availableVoices.map((v, index) => (
-                            <option key={`${v.voiceURI}-${index}`} value={v.voiceURI} className="bg-zinc-800">
-                              {v.name.replace(/_/g, '-')} ({v.lang.replace(/_/g, '-')})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
                   </div>
 
                   <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
@@ -6205,32 +5354,6 @@ export default function App() {
                           className="w-24 md:w-32 accent-sky-500"
                         />
                         <span className="text-gray-700 w-8 text-right">{speechRate.toFixed(1)}x</span>
-                      </div>
-                    </div>
-
-                    <div className="h-px w-full bg-white shadow-md"></div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-                          <Volume2 size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-gray-900 font-medium">{t.speechPitch || "Speech Pitch"}</h3>
-                          <p className="text-gray-500 text-xs">{t.adjustPitch || "Adjust voice pitch"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input 
-                          type="range" 
-                          min="0.1" 
-                          max="2" 
-                          step="0.1" 
-                          value={speechPitch} 
-                          onChange={(e) => setSpeechPitch(parseFloat(e.target.value))}
-                          className="w-24 md:w-32 accent-sky-500"
-                        />
-                        <span className="text-gray-700 w-8 text-right">{speechPitch.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
@@ -6477,24 +5600,6 @@ export default function App() {
                 </div>
 
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
-                  {/* Screen Share Preview */}
-                  <AnimatePresence>
-                    {isScreenSharing && latestFrame && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="absolute top-4 left-4 z-40 w-48 h-32 md:w-64 md:h-40 rounded-2xl overflow-hidden border-2 border-blue-400/50 shadow-2xl bg-black"
-                      >
-                        <img 
-                          src={latestFrame}
-                          alt="Screen Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
                   {/* Status Indicator */}
                   <div className="absolute bottom-12 flex flex-col items-center z-30 w-full">
                     <motion.div 
@@ -6512,27 +5617,6 @@ export default function App() {
 
                     {/* Controls */}
                     <div className="relative flex items-center justify-center w-full">
-                      {/* Screen Share Toggle Button */}
-                      <div className="absolute left-8 md:left-16 flex items-center justify-center">
-                        <button
-                          onClick={toggleScreenShare}
-                          className={`relative w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 hover:scale-105 active:scale-95 ${
-                            isScreenSharing
-                              ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_5px_20px_rgba(30,58,138,0.4)] border-blue-300'
-                              : 'bg-white shadow-md border-gray-200 text-gray-600 hover:bg-gray-50'
-                          }`}
-                        >
-                          {isScreenSharing ? (
-                            <MonitorUp size={24} className="text-white" />
-                          ) : (
-                            <MonitorOff size={24} className="text-gray-600" />
-                          )}
-                        </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
-                          {isScreenSharing ? t.screenOn : t.screenOff}
-                        </span>
-                      </div>
-
                       <div className="relative flex items-center justify-center">
                         <motion.div 
                           animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
