@@ -5903,7 +5903,7 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white border-r border-gray-200 shadow-2xl flex flex-col"
             >
               <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -5928,7 +5928,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pt-0 space-y-2">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 pt-0 space-y-2">
                 {savedChats.length === 0 ? (
                   <div className="text-center text-gray-400 py-8 text-sm">
                     {t.noSavedChats}
@@ -5986,7 +5986,7 @@ export default function App() {
                       }`}
                     >
                       {editingChatId === chat.id ? (
-                        <div className="flex-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex-1 flex items-center gap-2 min-w-0" onClick={e => e.stopPropagation()}>
                           <input
                             type="text"
                             value={editingChatName}
@@ -5995,7 +5995,7 @@ export default function App() {
                               if (e.key === 'Enter') handleSaveRename();
                               if (e.key === 'Escape') handleCancelRename();
                             }}
-                            className="flex-1 bg-white border-gray-300 border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 outline-none focus:border-sky-500"
+                            className="flex-1 min-w-0 bg-white border-gray-300 border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 outline-none focus:border-sky-500"
                             autoFocus
                           />
                           <button onClick={handleSaveRename} className="p-1 text-green-400 hover:bg-green-400/20 rounded" title={t.save}>
@@ -6007,9 +6007,9 @@ export default function App() {
                         </div>
                       ) : (
                         <>
-                          <div className="flex flex-col overflow-hidden flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">{chat.name}</span>
+                          <div className="flex flex-col overflow-hidden flex-1 min-w-0">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="font-medium truncate block w-full">{chat.name}</span>
                             </div>
                             <span className="text-xs opacity-60">
                               {new Date(chat.timestamp).toLocaleDateString()}
