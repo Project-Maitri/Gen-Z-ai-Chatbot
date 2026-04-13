@@ -4009,10 +4009,8 @@ export default function App() {
             }
           }
           
-          // Delay based on token length to keep pacing natural
-          // If it's a word, delay a bit more to let the animation play
-          const delay = isPlainWord ? token.length * 15 + 10 : 5;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          // No delay to make text appearance speed full
+          // await new Promise(resolve => setTimeout(resolve, 0));
         }
       }
       
