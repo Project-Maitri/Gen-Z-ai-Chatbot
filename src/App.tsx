@@ -4009,8 +4009,9 @@ export default function App() {
             }
           }
           
-          // No delay to make text appearance speed full
-          // await new Promise(resolve => setTimeout(resolve, 0));
+          // 250 words per minute = 240ms per word
+          const delay = isPlainWord ? 240 : 10;
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
