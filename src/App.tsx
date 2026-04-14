@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User } from 'lucide-react';
+import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -2843,6 +2843,7 @@ export default function App() {
   useEffect(() => {
     if (showSettings) {
       window.history.pushState({ settingsOpen: true }, '');
+      fetchAudioDevices();
     }
 
     const handlePopState = (event: PopStateEvent) => {
@@ -3209,6 +3210,9 @@ export default function App() {
   const animationFrameRef = useRef<number | null>(null);
   const isMicMutedRef = useRef(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioInput, setSelectedAudioInput] = useState<string>('default');
 
   // TTS Refs
   const ttsAudioContextRef = useRef<AudioContext | null>(null);
@@ -4161,6 +4165,39 @@ export default function App() {
   };
 
   // Live API Audio Setup
+  const fetchAudioDevices = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        // Request permission first to get device labels
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(device => device.kind === 'audioinput');
+        setAudioInputs(inputs);
+      }
+    } catch (err) {
+      console.error("Error fetching audio devices:", err);
+    }
+  };
+
+  const connectBluetooth = async () => {
+    try {
+      const nav = navigator as any;
+      if (!nav.bluetooth) {
+        alert(uiLang === 'hi' ? "आपके ब्राउज़र में ब्लूटूथ सपोर्ट नहीं है।" : "Bluetooth is not supported in this browser.");
+        return;
+      }
+      const device = await nav.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['generic_audio'] // Just as an example, though audio routing is OS level
+      });
+      console.log("Bluetooth device selected:", device.name);
+      alert(uiLang === 'hi' ? `${device.name} से कनेक्ट किया गया। कृपया इसे ऑडियो इनपुट के रूप में चुनें।` : `Connected to ${device.name}. Please select it as your audio input.`);
+      await fetchAudioDevices();
+    } catch (error) {
+      console.error("Bluetooth connection error:", error);
+    }
+  };
+
   const toggleMicMute = () => {
     const newMutedState = !isMicMutedRef.current;
     isMicMutedRef.current = newMutedState;
@@ -4188,6 +4225,7 @@ export default function App() {
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { 
+          deviceId: selectedAudioInput !== 'default' ? { exact: selectedAudioInput } : undefined,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
@@ -5354,6 +5392,43 @@ export default function App() {
                         />
                         <span className="text-gray-700 w-8 text-right">{speechRate.toFixed(1)}x</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Audio Input Settings */}
+                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                          <Mic size={20} />
+                        </div>
+                        <div>
+                          <h3 className="text-gray-900 font-medium">{uiLang === 'hi' ? 'ऑडियो इनपुट' : 'Audio Input'}</h3>
+                          <p className="text-gray-500 text-xs">{uiLang === 'hi' ? 'अपना माइक्रोफ़ोन चुनें' : 'Select your microphone'}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={connectBluetooth}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <Bluetooth size={16} />
+                        {uiLang === 'hi' ? 'ब्लूटूथ कनेक्ट करें' : 'Connect Bluetooth'}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={selectedAudioInput}
+                        onChange={(e) => setSelectedAudioInput(e.target.value)}
+                        onClick={fetchAudioDevices}
+                        className="w-full bg-white shadow-sm border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="default">{uiLang === 'hi' ? 'डिफ़ॉल्ट माइक्रोफ़ोन' : 'Default Microphone'}</option>
+                        {audioInputs.map((device) => (
+                          <option key={device.deviceId} value={device.deviceId}>
+                            {device.label || (uiLang === 'hi' ? `माइक्रोफ़ोन ${device.deviceId.substring(0, 5)}...` : `Microphone ${device.deviceId.substring(0, 5)}...`)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
