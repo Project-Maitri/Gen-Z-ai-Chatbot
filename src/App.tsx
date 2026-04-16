@@ -2911,8 +2911,9 @@ export default function App() {
   // Link global setError to the component state
   useEffect(() => {
     globalSetError = (msg: string | null) => {
-      if (msg === "Traffic limit exceeded. Please try again later.") {
-        setError(t.errorTraffic);
+      if (msg === "Traffic limit exceeded. Please try again later." || msg === t.errorTraffic) {
+        // Do not show the red banner for traffic/quota errors
+        // setError(t.errorTraffic);
       } else {
         setError(msg);
       }
@@ -4047,7 +4048,7 @@ export default function App() {
         const quotaMsg = t.errorTraffic || "Sorry, there is too much traffic right now or the quota is exhausted. Please try again later.";
         const errorId = newMsgId + '-error';
         setMessages(prev => [...prev, { id: errorId, role: 'model', text: quotaMsg }]);
-        setError(quotaMsg);
+        // setError(quotaMsg); // Removed to prevent the red banner from showing repeatedly
         
         // Auto-remove the error message from chat after 1 second
         setTimeout(() => {
@@ -4752,7 +4753,9 @@ export default function App() {
         }
       }
       
-      setError(errorMsg);
+      if (errorMsg !== t.errorTraffic) {
+        setError(errorMsg);
+      }
       setIsLive(false);
     }
   };
