@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,17 +26,18 @@ app.post("/api/macrodroid/message", async (req, res) => {
       return res.status(500).type('text/plain').send("AI configuration missing");
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-lite-preview-02-05',
-      contents: `You are Nard (नार्ड), an AI assistant for the E-Maitri portal. 
+    const prompt = `You are Nard (नार्ड), an AI assistant for the E-Maitri portal. 
 A user from a WhatsApp community sent this message: "${message}"
 Please provide a helpful, concise response in the same language as the user's message. 
-Keep it short enough for a WhatsApp message.`,
-    });
+Keep it short enough for a WhatsApp message.`;
 
-    const replyText = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const replyText = response.text();
+    
     console.log(`Sending reply: ${replyText}`);
 
     res.type('text/plain').send(replyText);
