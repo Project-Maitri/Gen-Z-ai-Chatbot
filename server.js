@@ -29,7 +29,7 @@ app.post("/api/macrodroid/message", async (req, res) => {
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: `You are Nard (नार्ड), an AI assistant for the E-Maitri portal. 
 A user from a WhatsApp community sent this message: "${message}"
 Please provide a helpful, concise response in the same language as the user's message. 
