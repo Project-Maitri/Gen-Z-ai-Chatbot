@@ -43,6 +43,10 @@ Keep it short enough for a WhatsApp message.`,
 
   } catch (error) {
     console.error("Error processing MacroDroid request:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     res.status(500).type('text/plain').send("क्षमा करें, अभी मैं जवाब देने में असमर्थ हूँ।");
   }
 });
