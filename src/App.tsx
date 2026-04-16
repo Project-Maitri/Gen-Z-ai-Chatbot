@@ -4311,96 +4311,18 @@ export default function App() {
         if (audioCtx.audioWorklet) {
           const workletCode = `
             class PCMProcessor extends AudioWorkletProcessor {
-              constructor() {
-                super();
-                // 1. Proximity & RMS Analysis: Threshold for 30-50cm range
-                // Note: Exact value depends on mic hardware, 0.015 is a reasonable starting point for close speech
-                this.rmsThreshold = 0.015; 
-                
-                // 2. SSL (TDOA) parameters
-                this.maxDelaySamples = 20; // Max expected delay between L/R mics
-                this.allowedDelay = 5; // Allowed delay for "front" direction (approx +/- 15 degrees)
-                
-                this.isActive = false;
-                this.hangover = 0; // Keep active briefly after speech stops to prevent chopping
-              }
-
               process(inputs, outputs, parameters) {
                 const input = inputs[0];
                 if (!input || input.length === 0) return true;
 
                 const left = input[0];
-                const right = input.length > 1 ? input[1] : input[0]; // Fallback to mono if stereo unavailable
+                const right = input.length > 1 ? input[1] : input[0];
                 const length = left.length;
 
-                // 1. RMS Calculation
-                let sumL = 0, sumR = 0;
-                for (let i = 0; i < length; i++) {
-                  sumL += left[i] * left[i];
-                  sumR += right[i] * right[i];
-                }
-                const rmsL = Math.sqrt(sumL / length);
-                const rmsR = Math.sqrt(sumR / length);
-                const avgRms = (rmsL + rmsR) / 2;
-
-                let isFront = false;
-
-                // 2. Sound Source Localization (TDOA)
-                if (avgRms > this.rmsThreshold && input.length > 1) {
-                  let maxCorr = -Infinity;
-                  let bestDelay = 0;
-
-                  // Cross-correlation to find time difference
-                  for (let delay = -this.maxDelaySamples; delay <= this.maxDelaySamples; delay++) {
-                    let corr = 0;
-                    let count = 0;
-                    for (let i = Math.max(0, -delay); i < Math.min(length, length - delay); i++) {
-                      corr += left[i] * right[i + delay];
-                      count++;
-                    }
-                    if (count > 0) {
-                      corr /= count;
-                      if (corr > maxCorr) {
-                        maxCorr = corr;
-                        bestDelay = delay;
-                      }
-                    }
-                  }
-
-                  // Check if sound is coming from the front (0 degrees +/- tolerance)
-                  if (Math.abs(bestDelay) <= this.allowedDelay) {
-                    isFront = true;
-                  }
-                } else if (avgRms > this.rmsThreshold && input.length === 1) {
-                  // Fallback for mono microphones: rely only on RMS proximity
-                  isFront = true; 
-                }
-
-                // 4. Combined Filtering Logic (Intensity + Direction)
-                if (isFront && avgRms > this.rmsThreshold) {
-                  this.isActive = true;
-                  this.hangover = 20; // ~50ms hangover
-                } else {
-                  if (this.hangover > 0) {
-                    this.hangover--;
-                  } else {
-                    this.isActive = false;
-                  }
-                }
-
-                // 3. Beamforming Algorithm (Virtual Beam at 0 degrees)
                 const outputPcm = new Float32Array(length);
-                if (this.isActive) {
-                  for (let i = 0; i < length; i++) {
-                    // Delay-and-sum beamforming (since target is 0 delay, just sum and average)
-                    // This amplifies front signals and attenuates off-axis noise
-                    outputPcm[i] = (left[i] + right[i]) / 2;
-                  }
-                } else {
-                  // Reject noise by outputting silence
-                  for (let i = 0; i < length; i++) {
-                    outputPcm[i] = 0;
-                  }
+                for (let i = 0; i < length; i++) {
+                  // Mix down to mono
+                  outputPcm[i] = (left[i] + right[i]) / 2;
                 }
 
                 this.port.postMessage(outputPcm);
@@ -4414,12 +4336,14 @@ export default function App() {
           await audioCtx.audioWorklet.addModule(workletUrl);
           processor = new AudioWorkletNode(audioCtx, 'pcm-processor');
           
+          let pcmBuffer: number[] = [];
+          
           processor.port.onmessage = (event: MessageEvent) => {
             const pcmData = event.data;
             // Downsample from 44.1kHz/48kHz to 16kHz
             const ratio = audioCtx.sampleRate / 16000;
             const newLength = Math.round(pcmData.length / ratio);
-            const result = new Int16Array(newLength);
+            
             let offset = 0;
             for (let i = 0; i < newLength; i++) {
               const nextOffset = Math.round((i + 1) * ratio);
@@ -4429,11 +4353,84 @@ export default function App() {
                 sum += pcmData[j];
                 count++;
               }
-              result[i] = Math.min(1, Math.max(-1, sum / count)) * 0x7FFF;
+              pcmBuffer.push(Math.min(1, Math.max(-1, sum / count)) * 0x7FFF);
               offset = nextOffset;
             }
             
-            // Convert to base64
+            // Send chunk when buffer reaches ~4096 samples (256ms at 16kHz)
+            if (pcmBuffer.length >= 4096) {
+              const result = new Int16Array(pcmBuffer);
+              pcmBuffer = []; // Reset buffer
+              
+              const bytes = new Uint8Array(result.buffer);
+              let binary = '';
+              for (let i = 0; i < bytes.byteLength; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+              }
+              const base64 = btoa(binary);
+              
+              if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
+                sessionPromiseRef.current.then(s => {
+                  try {
+                    if (s && isSessionActiveRef.current) {
+                      s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
+                    }
+                  } catch (err: any) {
+                    const errMsg = err?.message || String(err);
+                    if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
+                      console.warn("Failed to send audio input:", err);
+                    } else {
+                      isSessionActiveRef.current = false;
+                    }
+                  }
+                }).catch(() => {});
+              }
+            }
+          };
+          
+          source.connect(processor);
+          const dummyDest = audioCtx.createMediaStreamDestination();
+          processor.connect(dummyDest);
+        } else {
+          throw new Error("AudioWorklet not supported");
+        }
+      } catch (workletErr) {
+        console.warn("AudioWorklet failed, falling back to ScriptProcessor:", workletErr);
+        processor = audioCtx.createScriptProcessor(4096, 2, 1); // Request 2 inputs, 1 output
+        
+        let pcmBuffer: number[] = [];
+        
+        processor.onaudioprocess = (e: any) => {
+          const left = e.inputBuffer.getChannelData(0);
+          const right = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : left;
+          const length = left.length;
+          
+          const pcmData = new Float32Array(length);
+          for (let i = 0; i < length; i++) {
+            pcmData[i] = (left[i] + right[i]) / 2;
+          }
+          
+          // Downsample from 44.1kHz/48kHz to 16kHz
+          const ratio = audioCtx.sampleRate / 16000;
+          const newLength = Math.round(pcmData.length / ratio);
+          
+          let offset = 0;
+          for (let i = 0; i < newLength; i++) {
+            const nextOffset = Math.round((i + 1) * ratio);
+            let sum = 0;
+            let count = 0;
+            for (let j = offset; j < nextOffset && j < pcmData.length; j++) {
+              sum += pcmData[j];
+              count++;
+            }
+            pcmBuffer.push(Math.min(1, Math.max(-1, sum / count)) * 0x7FFF);
+            offset = nextOffset;
+          }
+          
+          if (pcmBuffer.length >= 4096) {
+            const result = new Int16Array(pcmBuffer);
+            pcmBuffer = [];
+            
             const bytes = new Uint8Array(result.buffer);
             let binary = '';
             for (let i = 0; i < bytes.byteLength; i++) {
@@ -4457,129 +4454,6 @@ export default function App() {
                 }
               }).catch(() => {});
             }
-          };
-          
-          source.connect(processor);
-          processor.connect(audioCtx.destination);
-        } else {
-          throw new Error("AudioWorklet not supported");
-        }
-      } catch (workletErr) {
-        console.warn("AudioWorklet failed, falling back to ScriptProcessor:", workletErr);
-        processor = audioCtx.createScriptProcessor(4096, 2, 1); // Request 2 inputs, 1 output
-        
-        let hangover = 0;
-        const rmsThreshold = 0.015;
-        const maxDelaySamples = 20;
-        const allowedDelay = 5;
-        
-        processor.onaudioprocess = (e: any) => {
-          const left = e.inputBuffer.getChannelData(0);
-          const right = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : left;
-          const length = left.length;
-          
-          // 1. RMS Calculation
-          let sumL = 0, sumR = 0;
-          for (let i = 0; i < length; i++) {
-            sumL += left[i] * left[i];
-            sumR += right[i] * right[i];
-          }
-          const rmsL = Math.sqrt(sumL / length);
-          const rmsR = Math.sqrt(sumR / length);
-          const avgRms = (rmsL + rmsR) / 2;
-
-          let isFront = false;
-
-          // 2. Sound Source Localization (TDOA)
-          if (avgRms > rmsThreshold && e.inputBuffer.numberOfChannels > 1) {
-            let maxCorr = -Infinity;
-            let bestDelay = 0;
-
-            for (let delay = -maxDelaySamples; delay <= maxDelaySamples; delay++) {
-              let corr = 0;
-              let count = 0;
-              for (let i = Math.max(0, -delay); i < Math.min(length, length - delay); i++) {
-                corr += left[i] * right[i + delay];
-                count++;
-              }
-              if (count > 0) {
-                corr /= count;
-                if (corr > maxCorr) {
-                  maxCorr = corr;
-                  bestDelay = delay;
-                }
-              }
-            }
-
-            if (Math.abs(bestDelay) <= allowedDelay) {
-              isFront = true;
-            }
-          } else if (avgRms > rmsThreshold && e.inputBuffer.numberOfChannels === 1) {
-            isFront = true; 
-          }
-
-          let isActive = false;
-          if (isFront && avgRms > rmsThreshold) {
-            isActive = true;
-            hangover = 5; // Fewer frames for ScriptProcessor due to larger buffer size
-          } else {
-            if (hangover > 0) {
-              hangover--;
-              isActive = true;
-            }
-          }
-
-          const pcmData = new Float32Array(length);
-          if (isActive) {
-            for (let i = 0; i < length; i++) {
-              pcmData[i] = (left[i] + right[i]) / 2;
-            }
-          } else {
-            for (let i = 0; i < length; i++) {
-              pcmData[i] = 0;
-            }
-          }
-          
-          // Downsample from 44.1kHz/48kHz to 16kHz
-          const ratio = audioCtx.sampleRate / 16000;
-          const newLength = Math.round(pcmData.length / ratio);
-          const result = new Int16Array(newLength);
-          let offset = 0;
-          for (let i = 0; i < newLength; i++) {
-            const nextOffset = Math.round((i + 1) * ratio);
-            let sum = 0;
-            let count = 0;
-            for (let j = offset; j < nextOffset && j < pcmData.length; j++) {
-              sum += pcmData[j];
-              count++;
-            }
-            result[i] = Math.min(1, Math.max(-1, sum / count)) * 0x7FFF;
-            offset = nextOffset;
-          }
-          
-          // Convert to base64
-          const bytes = new Uint8Array(result.buffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-              binary += String.fromCharCode(bytes[i]);
-          }
-          const base64 = btoa(binary);
-          
-          if (sessionPromiseRef.current && !isMicMutedRef.current && isSessionActiveRef.current) {
-            sessionPromiseRef.current.then(s => {
-              try {
-                if (s && isSessionActiveRef.current) {
-                  s.sendRealtimeInput({ audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
-                }
-              } catch (err: any) {
-                const errMsg = err?.message || String(err);
-                if (!errMsg.includes('CLOSING') && !errMsg.includes('CLOSED')) {
-                  console.warn("Failed to send audio input:", err);
-                } else {
-                  isSessionActiveRef.current = false;
-                }
-              }
-            }).catch(() => {});
           }
         };
         source.connect(processor);
@@ -4946,6 +4820,28 @@ export default function App() {
           const react = (nLow + nMid + nHigh) / 3;
           const isSpeaking = isModelSpeakingRef.current;
           
+          // Update the listening Apple-style indicator effect based on mic input
+          if (!isSpeaking) {
+            const glowEl = document.getElementById('listening-indicator-glow');
+            const borderEl = document.getElementById('listening-indicator-border');
+            if (glowEl && borderEl) {
+              let opacity = 0;
+              if (react > 0.05) {
+                 opacity = Math.min(1, (react - 0.05) * 5);
+              }
+              const scale = 1 + (opacity * 0.02);
+              glowEl.style.opacity = opacity.toString();
+              borderEl.style.opacity = opacity.toString();
+              glowEl.style.transform = `scale(${scale})`;
+              borderEl.style.transform = `scale(${scale})`;
+            }
+          } else {
+            const glowEl = document.getElementById('listening-indicator-glow');
+            const borderEl = document.getElementById('listening-indicator-border');
+            if (glowEl) glowEl.style.opacity = '0';
+            if (borderEl) borderEl.style.opacity = '0';
+          }
+          
           // Adjust reactivity based on state
           // Listening: slight bounce. Speaking: big bounce.
           const bounceMultiplier = isSpeaking ? 3.0 : 0.8;
@@ -5029,11 +4925,54 @@ export default function App() {
           
           // Draw stable center core
           ctx.globalCompositeOperation = 'source-over';
+          
+          let effectIntensity = 0;
+          if (isSpeaking) {
+             effectIntensity = 0.8 + Math.sin(Date.now() / 150) * 0.2; // Pulse effect only for AI speaking
+          }
+
+          // 1. Solid center fill first
           ctx.beginPath();
           ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
           // Yellow when speaking, Blue when listening
           ctx.fillStyle = isSpeaking ? 'rgba(250, 204, 21, 1)' : 'rgba(96, 165, 250, 1)';
           ctx.fill();
+
+          // 2. Draw colorful edges over the fill
+          if (effectIntensity > 0) {
+            let gradientStr;
+            const time = (Date.now() % 2000) / 2000;
+            if (typeof ctx.createConicGradient === 'function') {
+              const gradient = ctx.createConicGradient(time * Math.PI * 2, centerX, centerY);
+              gradient.addColorStop(0, `rgba(0, 170, 255, ${effectIntensity})`);
+              gradient.addColorStop(0.16, `rgba(132, 0, 255, ${effectIntensity})`);
+              gradient.addColorStop(0.33, `rgba(255, 0, 170, ${effectIntensity})`);
+              gradient.addColorStop(0.5, `rgba(255, 94, 0, ${effectIntensity})`);
+              gradient.addColorStop(0.66, `rgba(255, 0, 170, ${effectIntensity})`);
+              gradient.addColorStop(0.83, `rgba(132, 0, 255, ${effectIntensity})`);
+              gradient.addColorStop(1, `rgba(0, 170, 255, ${effectIntensity})`);
+              gradientStr = gradient;
+            } else {
+              gradientStr = `rgba(255, 0, 170, ${effectIntensity})`;
+            }
+
+            // Outer effect
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 75 + effectIntensity * 4, 0, Math.PI * 2);
+            ctx.strokeStyle = gradientStr;
+            ctx.lineWidth = 12 * effectIntensity;
+            ctx.shadowColor = `rgba(255, 0, 170, ${effectIntensity})`;
+            ctx.shadowBlur = 30 * effectIntensity;
+            ctx.stroke();
+            
+            // Inner effect (kinaro ke andar)
+            ctx.shadowBlur = 0; // Removing blur for the inner part to keep it clean inside
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 75 - (6 * effectIntensity), 0, Math.PI * 2);
+            ctx.strokeStyle = gradientStr;
+            ctx.lineWidth = 12 * effectIntensity;
+            ctx.stroke();
+          }
         }
       }
       
@@ -5689,19 +5628,52 @@ export default function App() {
 
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
                   {/* Status Indicator */}
-                  <div className="absolute bottom-4 flex flex-col items-center z-30 w-full">
-                    <motion.div 
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 shadow-xl mb-4"
-                    >
-                      <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
-                      <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide">
-                        {isModelSpeaking 
-                          ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
-                          : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
-                      </span>
-                    </motion.div>
+                  <div className="absolute bottom-4 flex flex-col items-center z-30 w-full px-4">
+                    <style>{`
+                      @keyframes siri-gradient {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
+                      }
+                    `}</style>
+                    <div className="relative w-full max-w-[280px] sm:max-w-xs flex justify-center">
+                      {/* Colorful glow */}
+                      <div 
+                        id="listening-indicator-glow"
+                        className="absolute -inset-1.5 rounded-full blur-md opacity-0"
+                        style={{
+                          background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
+                          backgroundSize: '200% 100%',
+                          animation: 'siri-gradient 2s linear infinite',
+                          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out',
+                          willChange: 'opacity, transform'
+                        }}
+                      />
+                      {/* Colorful sharp border line */}
+                      <div 
+                        id="listening-indicator-border"
+                        className="absolute -inset-[2px] rounded-full opacity-0"
+                        style={{
+                          background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
+                          backgroundSize: '200% 100%',
+                          animation: 'siri-gradient 2s linear infinite',
+                          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out',
+                          willChange: 'opacity, transform'
+                        }}
+                      />
+                      <motion.div 
+                        animate={{ opacity: [0.85, 1, 0.85] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="relative w-full flex items-center justify-center gap-3 bg-gray-950/80 backdrop-blur-xl px-8 py-3 rounded-full border border-gray-700/50 shadow-2xl"
+                      >
+                        <div className={`w-3 h-3 flex-shrink-0 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
+                        <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide drop-shadow-sm truncate">
+                          {isModelSpeaking 
+                            ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
+                            : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
+                        </span>
+                      </motion.div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
