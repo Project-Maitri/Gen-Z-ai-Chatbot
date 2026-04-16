@@ -4926,11 +4926,6 @@ export default function App() {
           // Draw stable center core
           ctx.globalCompositeOperation = 'source-over';
           
-          let effectIntensity = 0;
-          if (isSpeaking) {
-             effectIntensity = 0.8 + Math.sin(Date.now() / 150) * 0.2; // Pulse effect only for AI speaking
-          }
-
           // 1. Solid center fill first
           ctx.beginPath();
           ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
@@ -4938,40 +4933,97 @@ export default function App() {
           ctx.fillStyle = isSpeaking ? 'rgba(250, 204, 21, 1)' : 'rgba(96, 165, 250, 1)';
           ctx.fill();
 
-          // 2. Draw colorful edges over the fill
-          if (effectIntensity > 0) {
-            let gradientStr;
-            const time = (Date.now() % 2000) / 2000;
-            if (typeof ctx.createConicGradient === 'function') {
-              const gradient = ctx.createConicGradient(time * Math.PI * 2, centerX, centerY);
-              gradient.addColorStop(0, `rgba(0, 170, 255, ${effectIntensity})`);
-              gradient.addColorStop(0.16, `rgba(132, 0, 255, ${effectIntensity})`);
-              gradient.addColorStop(0.33, `rgba(255, 0, 170, ${effectIntensity})`);
-              gradient.addColorStop(0.5, `rgba(255, 94, 0, ${effectIntensity})`);
-              gradient.addColorStop(0.66, `rgba(255, 0, 170, ${effectIntensity})`);
-              gradient.addColorStop(0.83, `rgba(132, 0, 255, ${effectIntensity})`);
-              gradient.addColorStop(1, `rgba(0, 170, 255, ${effectIntensity})`);
-              gradientStr = gradient;
-            } else {
-              gradientStr = `rgba(255, 0, 170, ${effectIntensity})`;
+          // 2. Frequency Web and Audio Wave inside the circle, reaching up to halfway
+          if (isSpeaking) {
+            ctx.save();
+            
+            // Clip to circle so lights stay strictly inside
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
+            ctx.clip();
+
+            // Calculate overall energy for generalized glow/amplitude
+            let totalValue = 0;
+            const numBins = 32;
+            for (let i = 0; i < numBins; i++) {
+                // Fetch the corresponding frequency bin
+                const dataIndex = Math.floor((i / numBins) * 64);
+                let value = dataArray[dataIndex] || 0;
+                totalValue += value;
+            }
+            const averageIntensity = (totalValue / numBins) / 255;
+            
+            // activeScale reacts dynamically to the sound volume
+            const activeScale = Math.min(1.2, averageIntensity * 1.5 + react * 0.6);
+
+            // 1. Illuminate the whole circle with a bright glow based on audio volume
+            if (activeScale > 0.05) {
+                ctx.globalCompositeOperation = 'screen';
+                const glowGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 75);
+                // "पूरे गोले में भरपूर उजाला" (Abundant glow)
+                glowGrad.addColorStop(0, `rgba(255, 255, 255, ${Math.min(1, activeScale * 1.0)})`);
+                glowGrad.addColorStop(0.5, `rgba(255, 255, 255, ${Math.min(1, activeScale * 0.5)})`);
+                glowGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
+                ctx.fillStyle = glowGrad;
+                ctx.fill();
             }
 
-            // Outer effect
+            // 2. Draw the solid white bottom half with an audio-reactive top surface
+            ctx.globalCompositeOperation = 'source-over';
+            const width = 150;
+            const startX = centerX - 75;
+            const bottomY = centerY + 75;
+            const time = Date.now() / 150; // Speed of the flow
+
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 75 + effectIntensity * 4, 0, Math.PI * 2);
-            ctx.strokeStyle = gradientStr;
-            ctx.lineWidth = 12 * effectIntensity;
-            ctx.shadowColor = `rgba(255, 0, 170, ${effectIntensity})`;
-            ctx.shadowBlur = 30 * effectIntensity;
+            ctx.moveTo(startX, bottomY); // Start perfectly at bottom-left
+            ctx.lineTo(startX, centerY); // Go up to middle-left edge
+
+            for (let x = 0; x <= width; x += 2) {
+                const currentX = startX + x;
+                
+                // Taper so the wave seamlessly attaches to the left/right midpoints
+                const taper = Math.sin((x / width) * Math.PI);
+                
+                // Real-time local reactivity
+                const binIndex = Math.floor((x / width) * (numBins - 1));
+                const dataIndex = Math.floor((binIndex / numBins) * 64);
+                let localIntensity = (dataArray[dataIndex] || 0) / 255;
+                
+                // The amplitude of the surface ripples
+                const dynamicAmp = 35 * (0.05 + localIntensity * 2.0) * activeScale * taper;
+                
+                // Combined wave for organic, fluid-like soundwave movement
+                const wave = Math.sin((x * 0.06) + (time * 1.2)) * 0.6 +
+                             Math.sin((x * 0.12) - (time * 0.8)) * 0.3 +
+                             Math.sin((x * 0.20) + (time * 1.5)) * 0.1;
+                
+                // Height offsets
+                // Base swell lifts the entire surface slightly when talking loud
+                const baselineSwell = localIntensity * 12 * taper;
+                const yOffset = (wave * dynamicAmp) + baselineSwell;
+                
+                ctx.lineTo(currentX, centerY - yOffset);
+            }
+
+            ctx.lineTo(startX + width, bottomY); // Down to bottom-right point
+            ctx.closePath();
+
+            // Fill entirely with bright white
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 10; 
+            ctx.fill();
+
+            // Add subtle top line to make the wave peaks extra crisp
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#ffffff';
             ctx.stroke();
-            
-            // Inner effect (kinaro ke andar)
-            ctx.shadowBlur = 0; // Removing blur for the inner part to keep it clean inside
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 75 - (6 * effectIntensity), 0, Math.PI * 2);
-            ctx.strokeStyle = gradientStr;
-            ctx.lineWidth = 12 * effectIntensity;
-            ctx.stroke();
+
+            ctx.restore();
           }
         }
       }
