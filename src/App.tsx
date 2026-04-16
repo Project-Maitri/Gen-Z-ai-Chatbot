@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth } from 'lucide-react';
+import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -2717,6 +2717,10 @@ export default function App() {
   }, [messages, currentChatId]);
 
   const [isLive, setIsLive] = useState(false);
+  const isLiveRef = useRef(false);
+  useEffect(() => {
+    isLiveRef.current = isLive;
+  }, [isLive]);
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceTypingTranscriptRef = useRef('');
@@ -2839,16 +2843,23 @@ export default function App() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Handle back button to close settings
+  // Handle back button to close settings and live chat
   useEffect(() => {
     if (showSettings) {
       window.history.pushState({ settingsOpen: true }, '');
       fetchAudioDevices();
     }
+    
+    if (isLive) {
+      window.history.pushState({ liveChatOpen: true }, '');
+    }
 
     const handlePopState = (event: PopStateEvent) => {
       if (showSettings) {
         setShowSettings(false);
+      }
+      if (isLiveRef.current) {
+        stopLiveAudio();
       }
     };
 
@@ -2856,7 +2867,7 @@ export default function App() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [showSettings]);
+  }, [showSettings, isLive]);
   const [error, setError] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [speechRate, setSpeechRate] = useState(() => parseFloat(safeStorage.getItem('speechRate_v4') || '0.8'));
@@ -5678,11 +5689,11 @@ export default function App() {
 
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
                   {/* Status Indicator */}
-                  <div className="absolute bottom-12 flex flex-col items-center z-30 w-full">
+                  <div className="absolute bottom-4 flex flex-col items-center z-30 w-full">
                     <motion.div 
                       animate={{ opacity: [0.7, 1, 0.7] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 shadow-xl mb-8"
+                      className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 shadow-xl mb-4"
                     >
                       <div className={`w-3 h-3 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
                       <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide">
@@ -5691,48 +5702,6 @@ export default function App() {
                           : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
                       </span>
                     </motion.div>
-
-                    {/* Controls */}
-                    <div className="relative flex items-center justify-center w-full">
-                      <div className="relative flex items-center justify-center">
-                        <motion.div 
-                          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                          className={`absolute w-32 h-32 md:w-40 md:h-40 rounded-full border-2 ${isModelSpeaking ? 'border-yellow-400/30' : (isMicMuted ? 'border-red-400/30' : 'border-blue-400/30')}`}
-                        ></motion.div>
-                        
-                        <button
-                          onClick={toggleMicMute}
-                          className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 hover:scale-105 active:scale-95 ${
-                            isMicMuted
-                              ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_10px_30px_rgba(239,68,68,0.5)] border-red-300'
-                              : isModelSpeaking 
-                                ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_10px_30px_rgba(234,179,8,0.5)] border-yellow-200/50' 
-                                : 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_10px_30px_rgba(30,58,138,0.5)] border-gray-300'
-                          }`}
-                        >
-                          {isMicMuted ? (
-                            <MicOff size={40} className="md:w-12 md:h-12 text-white" />
-                          ) : (
-                            <Mic size={40} className="md:w-12 md:h-12 text-white" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Close Button */}
-                      <div className="absolute right-8 md:right-16 flex items-center justify-center">
-                        <button
-                          onClick={toggleLiveAudio}
-                          className="relative w-14 h-14 md:w-16 md:h-16 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-md border border-gray-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center backdrop-blur-md"
-                          title={t.back}
-                        >
-                          <X size={24} className="text-gray-600" />
-                        </button>
-                        <span className="absolute -bottom-6 text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">
-                          {t.back}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </motion.div>
