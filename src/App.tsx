@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth } from 'lucide-react';
+import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -2798,7 +2798,7 @@ export default function App() {
       if (voiceTypingTranscriptRef.current.trim()) {
         const textToSend = voiceTypingTranscriptRef.current.trim();
         voiceTypingTranscriptRef.current = '';
-        handleSend(textToSend, false);
+        handleSend(textToSend, false, undefined, false, true);
       } else {
         // No text was spoken. Turn off continuous mode.
         continuousVoiceModeRef.current = false;
@@ -3223,6 +3223,7 @@ export default function App() {
   const isMicMutedRef = useRef(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [showLiveSubtitles, setShowLiveSubtitles] = useState(false);
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>('default');
 
@@ -3514,6 +3515,7 @@ export default function App() {
       if (audioContextRef.current && !analyserRef.current) {
         analyserRef.current = audioContextRef.current.createAnalyser();
         analyserRef.current.fftSize = 256;
+        analyserRef.current.smoothingTimeConstant = 0.1; // Make it perfectly real time
       }
       if (audioContextRef.current && analyserRef.current && premiumAudioRef.current && !premiumAudioSourceRef.current) {
         try {
@@ -3790,10 +3792,10 @@ export default function App() {
     handleSend(textPrompt, true, undefined, true);
   };
 
-  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string, isHidden: boolean = false) => {
+  const handleSend = async (textToSend?: string | React.MouseEvent, autoPlayResponse: boolean = false, editMsgId?: string, isHidden: boolean = false, keepVoiceMode: boolean = false) => {
     stopMessageAudio();
     
-    if (!autoPlayResponse) {
+    if (!autoPlayResponse && !keepVoiceMode) {
       continuousVoiceModeRef.current = false;
     }
 
@@ -3802,7 +3804,9 @@ export default function App() {
       voiceTypingTranscriptRef.current = '';
       recognitionRef.current.stop();
       setIsVoiceTyping(false);
-      continuousVoiceModeRef.current = false;
+      if (!keepVoiceMode) {
+        continuousVoiceModeRef.current = false;
+      }
     }
 
     const userText = typeof textToSend === 'string' ? textToSend : input.trim();
@@ -4776,6 +4780,7 @@ export default function App() {
       '255, 0, 255'    // Magenta/Purple
     ];
     let lastSpawnTime = 0;
+    let smoothedOceanHeight = -1;
     
     const updateVisualizer = () => {
       if (visualizerCanvasRef.current && analyserRef.current) {
@@ -4843,188 +4848,97 @@ export default function App() {
           }
           
           // Adjust reactivity based on state
-          // Listening: slight bounce. Speaking: big bounce.
-          const bounceMultiplier = isSpeaking ? 3.0 : 0.8;
+          // Consistent behavior whether speaking or listening
+          const bounceMultiplier = 0.8;
           const currentReact = react * bounceMultiplier;
           
           // Base radius - restrict to a circle with diameter equal to screen width (or height if landscape)
           const maxRadius = Math.min(width, height) / 2;
           
-          // Get localized E-MAITRI text
-          const emaitriText = t.subtitle.split(', ')[1]?.replace(/[.।]/g, '').trim().toUpperCase() || "E-MAITRI";
-          
-          // Spawn new ripples
-          const now = Date.now();
-          // Spawn rate: decreased interval so the next word appears before the first disappears
-          const spawnInterval = Math.max(600, 1200 - currentReact * 400);
-          
-          if (now - lastSpawnTime > spawnInterval) {
-            const direction = isSpeaking ? 1 : -1;
-            ripples.push({
-              r: isSpeaking ? 75 : maxRadius * 0.8, // Start outside the center circle
-              color: colors[colorIndex % colors.length],
-              opacity: 1,
-              speed: 0.5 + react * 0.7, // Smooth, consistent speed for both directions (reduced further)
-              direction: direction
-            });
-            colorIndex++;
-            lastSpawnTime = now;
+          // Completely remove emaitri text rays, ripples, and center circle.
+          // Drawing light waves shooting upwards near the 'listening' button
+
+          const numBins = 32;
+          let totalValue = 0;
+          for (let i = 0; i < numBins; i++) {
+              const dataIndex = Math.floor((i / numBins) * 64);
+              totalValue += (dataArray[dataIndex] || 0);
           }
-          
-          // Use screen for bright, overlapping solid colors
+          const averageIntensity = (totalValue / numBins) / 255;
+          const activeScale = Math.min(1.5, averageIntensity * 1.5 + currentReact * 0.6);
+
+          // Position near the bottom control buttons, shooting upwards
+          const baseY = height - 160; 
+          const waveWidth = Math.min(width * 0.85, 500); 
+          const startX = centerX - (waveWidth / 2);
+          const time = Date.now() / 150;
+
+          // Base color - White when speaking, Blue-ish when listening
+          const glowRgb = isSpeaking ? '255, 255, 255' : '96, 165, 250';
+
           ctx.globalCompositeOperation = 'screen';
+
+          const timeSec = Date.now() / 1000;
           
-          // Set font once for all rays (same size as center text)
-          ctx.font = `bold 14px "Mukta", sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          // Dynamically adjust ocean base height based on speaking state
+          const targetOceanHeight = (isSpeaking && !showLiveSubtitlesRef.current) ? height * 0.5 : height * 0.15;
+          if (smoothedOceanHeight === -1) smoothedOceanHeight = targetOceanHeight;
+          smoothedOceanHeight += (targetOceanHeight - smoothedOceanHeight) * 0.04;
           
-          const numRays = 28; // Large number of lines radiating outward
-          
-          // Draw ripples (oldest/largest first so newer ones climb on top)
-          for (let i = 0; i < ripples.length; i++) {
-            let rip = ripples[i];
-            
-            if (rip.direction === 1) {
-              // Outward ripple
-              rip.r += rip.speed;
-              rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
+          // Significantly reduced amplitude for a calmer sea
+          const activeAmp = 5 + averageIntensity * height * 0.05;
+
+          // Colors - Deep Ocean Blues always, even when speaking (reduced whiteness)
+          const waveColors = [
+              'rgba(30, 58, 138, 0.4)',    // Deep blue
+              'rgba(37, 99, 235, 0.5)',    // Royal blue
+              'rgba(14, 165, 233, 0.5)',   // Ocean cyan
+              'rgba(56, 189, 248, 0.4)'    // Light ocean cyan (less white/opaque)
+          ];
+
+          const waveCount = 4;
+          for (let w = 0; w < waveCount; w++) {
+              ctx.beginPath();
+              // Start at absolute bottom-left corner
+              ctx.moveTo(0, height);
+
+              const waveSpeedOffset = timeSec * (0.8 + w * 0.3);
               
-              if (rip.opacity <= 0 || rip.r > maxRadius) {
-                ripples.splice(i, 1);
-                i--;
-                continue;
+              for (let x = 0; x <= width; x += 10) {
+                  // Normalize x from 0 to 1 for smooth transitions
+                  const nx = x / width;
+                  
+                  // Organic sweeping ocean waves with multiple sine overlaps
+                  // This completely avoids the 'cone peak' effect caused by EQ frequency bands
+                  const sine1 = Math.sin(nx * Math.PI * (2 + w) + waveSpeedOffset);
+                  const sine2 = Math.sin(nx * Math.PI * (3 + w * 1.5) - waveSpeedOffset * 0.8);
+                  const organicSine = (sine1 * 0.6 + sine2 * 0.4);
+                  
+                  // Smoothly scale the wave amplitude based on overall volume (much calmer now)
+                  const yOffset = organicSine * (10 + activeAmp * (0.3 + w * 0.15));
+
+                  // Draw from bottom upwards
+                  const y = height - (smoothedOceanHeight * (0.5 + (w*0.15))) - yOffset;
+                  
+                  ctx.lineTo(x, y);
               }
-            } else {
-              // Inward ripple
-              rip.r -= rip.speed;
-              // Fades in as it approaches the center
-              rip.opacity = 1 - Math.pow(rip.r / (maxRadius * 0.8), 2);
+
+              ctx.lineTo(width, height);
+              ctx.closePath();
+
+              ctx.fillStyle = waveColors[w];
               
-              if (rip.r <= 75) {
-                ripples.splice(i, 1);
-                i--;
-                continue;
+              if (w === waveCount - 1) {
+                  ctx.shadowBlur = 10;
+                  ctx.shadowColor = 'rgba(14, 165, 233, 0.4)'; // darker, less white shadow
+              } else {
+                  ctx.shadowBlur = 0;
               }
-            }
-            
-            const safeOpacity = Math.max(0, Math.min(1, rip.opacity));
-            ctx.fillStyle = `rgba(${rip.color}, ${safeOpacity * 0.85})`;
-            
-            // Draw text rays
-            for (let j = 0; j < numRays; j++) {
-              const angle = (j * Math.PI * 2) / numRays;
-              ctx.save();
-              ctx.translate(centerX, centerY);
-              ctx.rotate(angle);
-              // Draw text at distance rip.r along the rotated axis
-              ctx.fillText(emaitriText, rip.r, 0);
-              ctx.restore();
-            }
+              
+              ctx.fill();
           }
-          
-          // Draw stable center core
-          ctx.globalCompositeOperation = 'source-over';
-          
-          // 1. Solid center fill first
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
-          // Yellow when speaking, Blue when listening
-          ctx.fillStyle = isSpeaking ? 'rgba(250, 204, 21, 1)' : 'rgba(96, 165, 250, 1)';
-          ctx.fill();
+          ctx.shadowBlur = 0;
 
-          // 2. Frequency Web and Audio Wave inside the circle, reaching up to halfway
-          if (isSpeaking) {
-            ctx.save();
-            
-            // Clip to circle so lights stay strictly inside
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
-            ctx.clip();
-
-            // Calculate overall energy for generalized glow/amplitude
-            let totalValue = 0;
-            const numBins = 32;
-            for (let i = 0; i < numBins; i++) {
-                // Fetch the corresponding frequency bin
-                const dataIndex = Math.floor((i / numBins) * 64);
-                let value = dataArray[dataIndex] || 0;
-                totalValue += value;
-            }
-            const averageIntensity = (totalValue / numBins) / 255;
-            
-            // activeScale reacts dynamically to the sound volume
-            const activeScale = Math.min(1.2, averageIntensity * 1.5 + react * 0.6);
-
-            // 1. Illuminate the whole circle with a bright glow based on audio volume
-            if (activeScale > 0.05) {
-                ctx.globalCompositeOperation = 'screen';
-                const glowGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 75);
-                // "पूरे गोले में भरपूर उजाला" (Abundant glow)
-                glowGrad.addColorStop(0, `rgba(255, 255, 255, ${Math.min(1, activeScale * 1.0)})`);
-                glowGrad.addColorStop(0.5, `rgba(255, 255, 255, ${Math.min(1, activeScale * 0.5)})`);
-                glowGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
-                
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, 75, 0, Math.PI * 2);
-                ctx.fillStyle = glowGrad;
-                ctx.fill();
-            }
-
-            // 2. Draw the solid white bottom half with an audio-reactive top surface
-            ctx.globalCompositeOperation = 'source-over';
-            const width = 150;
-            const startX = centerX - 75;
-            const bottomY = centerY + 75;
-            const time = Date.now() / 150; // Speed of the flow
-
-            ctx.beginPath();
-            ctx.moveTo(startX, bottomY); // Start perfectly at bottom-left
-            ctx.lineTo(startX, centerY); // Go up to middle-left edge
-
-            for (let x = 0; x <= width; x += 2) {
-                const currentX = startX + x;
-                
-                // Taper so the wave seamlessly attaches to the left/right midpoints
-                const taper = Math.sin((x / width) * Math.PI);
-                
-                // Real-time local reactivity
-                const binIndex = Math.floor((x / width) * (numBins - 1));
-                const dataIndex = Math.floor((binIndex / numBins) * 64);
-                let localIntensity = (dataArray[dataIndex] || 0) / 255;
-                
-                // The amplitude of the surface ripples
-                const dynamicAmp = 35 * (0.05 + localIntensity * 2.0) * activeScale * taper;
-                
-                // Combined wave for organic, fluid-like soundwave movement
-                const wave = Math.sin((x * 0.06) + (time * 1.2)) * 0.6 +
-                             Math.sin((x * 0.12) - (time * 0.8)) * 0.3 +
-                             Math.sin((x * 0.20) + (time * 1.5)) * 0.1;
-                
-                // Height offsets
-                // Base swell lifts the entire surface slightly when talking loud
-                const baselineSwell = localIntensity * 12 * taper;
-                const yOffset = (wave * dynamicAmp) + baselineSwell;
-                
-                ctx.lineTo(currentX, centerY - yOffset);
-            }
-
-            ctx.lineTo(startX + width, bottomY); // Down to bottom-right point
-            ctx.closePath();
-
-            // Fill entirely with bright white
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = '#ffffff';
-            ctx.shadowBlur = 10; 
-            ctx.fill();
-
-            // Add subtle top line to make the wave peaks extra crisp
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.stroke();
-
-            ctx.restore();
-          }
         }
       }
       
@@ -5036,7 +4950,7 @@ export default function App() {
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isLive, isModelSpeaking]);
+  }, [isLive, isModelSpeaking, showLiveSubtitles]);
 
   // Keep AudioContext alive when returning to foreground
   useEffect(() => {
@@ -5676,6 +5590,18 @@ export default function App() {
                     ref={visualizerCanvasRef} 
                     className="w-full h-full absolute inset-0 z-10"
                   />
+                  {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="absolute top-4 right-4 max-w-[80vw] z-[60] bg-black/60 backdrop-blur-sm p-4 rounded-2xl border border-white/20 shadow-xl"
+                    >
+                      <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta">
+                        {liveSubtitles}
+                      </p>
+                    </motion.div>
+                  )}
                 </div>
 
                 <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
@@ -5766,85 +5692,117 @@ export default function App() {
               </motion.div>
             )}
         {!isLive && (
-          <div className="max-w-3xl mx-auto relative flex items-end gap-2">
-            <div className="w-full relative flex flex-col bg-white shadow-md backdrop-blur-xl border border-gray-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] rounded-[2rem] p-2 transition-all duration-300 focus-within:bg-gray-100 shadow-md focus-within:border-gray-400 focus-within:shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
-              {editMsgId && (
-                <div className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-1.5 mb-2 rounded-xl border border-blue-100 text-xs font-medium mx-2 mt-1">
-                  <div className="flex items-center gap-1.5">
-                    <Edit2 size={12} />
-                    <span>{t.edit}</span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setEditMsgId(null);
-                      setInput('');
-                      setSelectedImage(null);
-                    }}
-                    className="text-blue-500 hover:text-blue-800 p-0.5 rounded-full hover:bg-blue-100 transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-              {selectedImage && (
-                <div className="relative w-20 h-20 mb-2 ml-12">
-                  <img src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} alt="Selected" className="w-full h-full object-cover rounded-lg border border-gray-300 shadow-sm" />
-                  <button 
-                    onClick={() => setSelectedImage(null)} 
-                    className="absolute -top-2 -right-2 bg-white text-gray-800 rounded-full p-1 shadow-md border border-gray-200 hover:bg-gray-100"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-              <div className="flex items-end w-full">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center w-11 h-11 rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-200 transition-colors shrink-0 mb-1 ml-1"
-                  title={t.uploadImage}
-                >
-                  <Plus size={24} />
-                </button>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  ref={fileInputRef} 
-                  onChange={handleImageUpload} 
-                />
-                
-                {!input && !selectedImage && !isInputFocused && !isVoiceTyping && (
-                  <div className={`absolute top-0 left-[48px] right-0 h-full pointer-events-none py-3 px-2 ${
-                    (isLoading || isVoiceTyping)
-                      ? 'pr-[60px] sm:pr-[70px]' 
-                      : 'pr-[110px] sm:pr-[120px]'
-                  }`}>
+      <div className="max-w-3xl mx-auto relative flex items-end gap-2">
+        <style>{`
+          @keyframes fluid-wave-1 {
+            0% { transform: scaleY(0.3); }
+            50% { transform: scaleY(1.0); }
+            100% { transform: scaleY(0.3); }
+          }
+          @keyframes fluid-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}</style>
+        <div className={`w-full relative flex flex-col shadow-md backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] p-2 transition-all duration-500 focus-within:shadow-lg ${
+          isVoiceTyping 
+            ? 'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-blue-400 outline-none ring-2 ring-blue-300/50 scale-[1.02]' 
+            : 'bg-white border-gray-200 focus-within:bg-gray-50 focus-within:border-gray-300'
+        }`}
+        style={isVoiceTyping ? { animation: 'fluid-gradient 3s ease infinite', backgroundSize: '200% 200%' } : {}}
+        >
+          {editMsgId && (
+            <div className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-1.5 mb-2 rounded-xl border border-blue-100 text-xs font-medium mx-2 mt-1">
+              <div className="flex items-center gap-1.5">
+                <Edit2 size={12} />
+                <span>{t.edit}</span>
+              </div>
+              <button 
+                onClick={() => {
+                  setEditMsgId(null);
+                  setInput('');
+                  setSelectedImage(null);
+                }}
+                className="text-blue-500 hover:text-blue-800 p-0.5 rounded-full hover:bg-blue-100 transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+          {selectedImage && (
+            <div className="relative w-20 h-20 mb-2 ml-12">
+              <img src={`data:${selectedImage.mimeType};base64,${selectedImage.data}`} alt="Selected" className="w-full h-full object-cover rounded-lg border border-gray-300 shadow-sm" />
+              <button 
+                onClick={() => setSelectedImage(null)} 
+                className="absolute -top-2 -right-2 bg-white text-gray-800 rounded-full p-1 shadow-md border border-gray-200 hover:bg-gray-100"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          <div className="flex items-end w-full relative z-10">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center w-11 h-11 rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-200 transition-colors shrink-0 mb-1 ml-1"
+              title={t.uploadImage}
+            >
+              <Plus size={24} />
+            </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleImageUpload} 
+            />
+            
+            {isVoiceTyping && !input ? (
+               <div className="absolute top-0 left-[48px] right-[110px] h-full pointer-events-none py-3 px-4 flex items-center gap-1">
+                  <span className="text-blue-600/80 font-medium text-sm mr-2">{uiLang === 'hi' ? 'सुन रहा हूँ...' : 'Listening...'}</span>
+                  {[...Array(6)].map((_, i) => (
                     <div 
-                      ref={placeholderRef}
-                      className="w-full h-full text-gray-400 font-medium overflow-hidden"
-                      style={{ scrollBehavior: 'smooth', wordBreak: 'break-word' }}
-                    >
-                      {placeholderText}
-                    </div>
-                  </div>
-                )}
+                      key={i} 
+                      className="w-1.5 h-4 bg-blue-500/60 rounded-full"
+                      style={{ 
+                        animation: `fluid-wave-1 1s ease-in-out infinite`,
+                        animationDelay: `${i * 0.15}s`
+                      }}
+                    />
+                  ))}
+               </div>
+            ) : !input && !selectedImage && !isInputFocused && (
+              <div className={`absolute top-0 left-[48px] right-0 h-full pointer-events-none py-3 px-2 flex items-center ${
+                (isLoading)
+                  ? 'pr-[60px] sm:pr-[70px]' 
+                  : 'pr-[110px] sm:pr-[120px]'
+              }`}>
+                <div 
+                  ref={placeholderRef}
+                  className="w-full text-gray-400 font-medium overflow-visible"
+                  style={{ scrollBehavior: 'smooth', wordBreak: 'break-word' }}
+                >
+                  {placeholderText}
+                </div>
+              </div>
+            )}
 
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
-                  placeholder=""
-                  className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-2 focus:outline-none resize-none min-h-[56px] max-h-32 font-medium ${
-                    (isLoading || input.trim() || selectedImage || isVoiceTyping)
-                      ? 'pr-[60px] sm:pr-[70px]' 
-                      : 'pr-[110px] sm:pr-[120px]'
-                  }`}
-                  rows={1}
-                  disabled={isLoading}
-                />
-                <div className="absolute right-2 bottom-2 flex gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+              placeholder=""
+              className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-2 focus:outline-none resize-none min-h-[72px] max-h-32 font-medium relative z-20 ${
+                (isLoading || input.trim() || selectedImage || isVoiceTyping)
+                  ? 'pr-[60px] sm:pr-[70px]' 
+                  : 'pr-[110px] sm:pr-[120px]'
+              } ${isVoiceTyping && !input ? 'opacity-0' : 'opacity-100'}`}
+              rows={1}
+              disabled={isLoading}
+            />
+            <div className="absolute right-2 bottom-2 flex gap-2 z-30">
                   {(!input.trim() && !selectedImage) && !isLoading && (
                     <button
                       onClick={toggleVoiceTyping}
