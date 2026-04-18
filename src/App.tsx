@@ -3224,6 +3224,10 @@ export default function App() {
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showLiveSubtitles, setShowLiveSubtitles] = useState(false);
+  const showLiveSubtitlesRef = useRef(false);
+  useEffect(() => {
+    showLiveSubtitlesRef.current = showLiveSubtitles;
+  }, [showLiveSubtitles]);
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>('default');
 
@@ -4497,6 +4501,24 @@ export default function App() {
       }
       liveInstruction += "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.";
 
+      const getBcp47Lang = (lang: string) => {
+        switch(lang) {
+          case 'hi': return 'hi-IN';
+          case 'bn': return 'bn-IN';
+          case 'te': return 'te-IN';
+          case 'mr': return 'mr-IN';
+          case 'ta': return 'ta-IN';
+          case 'ur': return 'ur-IN';
+          case 'gu': return 'gu-IN';
+          case 'kn': return 'kn-IN';
+          case 'ml': return 'ml-IN';
+          case 'pa': return 'pa-IN';
+          default: return 'en-US';
+        }
+      };
+      
+      const bcpLang = getBcp47Lang(uiLang);
+
       const sessionPromise = ai.live.connect({
         model: "gemini-3.1-flash-live-preview",
         config: {
@@ -4505,8 +4527,8 @@ export default function App() {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current } }
           },
-          outputAudioTranscription: {},
-          inputAudioTranscription: {}
+          outputAudioTranscription: { model: "models/gemini-2.0-flash-exp" } as any,
+          inputAudioTranscription: { model: "models/gemini-2.0-flash-exp" } as any
         },
         callbacks: {
           onopen: () => {
@@ -4541,9 +4563,6 @@ export default function App() {
              }, 500);
           },
           onmessage: async (message: LiveServerMessage) => {
-             if (message.serverContent) {
-               // console.log("Live API message received:", message);
-             }
              if (message.serverContent?.interrupted) {
                nextAudioTimeRef.current = 0;
                activeAudioSourcesRef.current.forEach(source => {
@@ -4557,14 +4576,25 @@ export default function App() {
                setIsModelSpeaking(false);
              }
              const parts = message.serverContent?.modelTurn?.parts;
+             let incomingText = "";
              if (parts) {
                for (const part of parts) {
                  if (part.inlineData?.data) {
                    playLiveAudio(part.inlineData.data);
                  }
+                 if (part.text) {
+                   incomingText += part.text;
+                 }
                }
              }
-             
+
+             const outputTranscription = message.serverContent?.outputTranscription;
+             if (outputTranscription?.text) {
+               // We don't want to duplicate if both part.text and outputTranscription are present,
+               // but typically only one is used. Let's prefer outputTranscription if part.text is empty.
+               incomingText += outputTranscription.text;
+             }
+
              const inputTranscription = message.serverContent?.inputTranscription;
              if (inputTranscription?.text) {
                setMessages(prev => {
@@ -4580,17 +4610,17 @@ export default function App() {
                  return newMessages;
                });
              }
-             
-             const outputTranscription = message.serverContent?.outputTranscription;
-             if (outputTranscription?.text) {
+
+             if (incomingText) {
                setMessages(prev => {
                  const newMessages = [...prev];
                  let lastMsg = newMessages[newMessages.length - 1];
                  if (!lastMsg || lastMsg.role !== 'model' || !lastMsg.isLive) {
-                   lastMsg = { id: Date.now().toString() + Math.random(), role: 'model', text: '', isLive: true };
+                   lastMsg = { id: Date.now().toString() + Math.random(), role: 'model', text: incomingText, isLive: true };
                    newMessages.push(lastMsg);
                  } else {
-                   lastMsg = { ...lastMsg, text: lastMsg.text + outputTranscription.text };
+                   // Append the new incoming chunk
+                   lastMsg = { ...lastMsg, text: lastMsg.text + incomingText };
                    newMessages[newMessages.length - 1] = lastMsg;
                  }
                  return newMessages;
@@ -5027,6 +5057,9 @@ export default function App() {
     }
   };
 
+  const lastModelMessage = messages.slice().reverse().find(m => m.role === 'model');
+  const liveSubtitles = isLive && lastModelMessage ? parseMessage(lastModelMessage.text).mainText : '';
+
   return (
     <div 
       className="fixed inset-0 flex flex-col overflow-hidden"
@@ -5356,8 +5389,8 @@ export default function App() {
           </AnimatePresence>
 
           {/* Chat Area */}
-          <main id="main-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col relative" style={{ overflowAnchor: 'none' }}>
-            <div id="chat-messages-container" className="max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 pb-[60vh]">
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto ${isLive ? 'p-0' : 'p-4 md:p-6'} flex flex-col relative`} style={{ overflowAnchor: 'none' }}>
+            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${!isLive ? 'pb-[60vh]' : ''}`}>
               {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 
@@ -5590,23 +5623,39 @@ export default function App() {
                     ref={visualizerCanvasRef} 
                     className="w-full h-full absolute inset-0 z-10"
                   />
-                  {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="absolute top-4 right-4 max-w-[80vw] z-[60] bg-black/60 backdrop-blur-sm p-4 rounded-2xl border border-white/20 shadow-xl"
-                    >
-                      <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta">
-                        {liveSubtitles}
-                      </p>
-                    </motion.div>
-                  )}
                 </div>
 
-                <div className="relative flex flex-col items-center justify-center w-full h-full pb-40 md:pb-48 z-10">
+                {/* Subtitles Toggle Button */}
+                <button
+                  onClick={() => {
+                    setShowLiveSubtitles(prev => !prev);
+                  }}
+                  className={`absolute top-20 sm:top-4 right-4 z-[70] p-3 rounded-full backdrop-blur-md transition-all duration-300 pointer-events-auto border ${
+                    showLiveSubtitles 
+                      ? 'bg-white/20 text-white border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                      : 'bg-black/40 text-gray-400 border-gray-600/50 hover:bg-black/60'
+                  }`}
+                  title={showLiveSubtitles ? "Hide Subtitles" : "Show Subtitles"}
+                >
+                  <MessageSquare size={20} />
+                </button>
+
+                {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="absolute top-[136px] sm:top-20 right-4 max-w-[80vw] md:max-w-[60vw] lg:max-w-[40vw] z-[60] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl pointer-events-none"
+                  >
+                    <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta">
+                      {liveSubtitles}
+                    </p>
+                  </motion.div>
+                )}
+
+                <div className="relative flex flex-col items-center justify-center w-[100vw] h-[100vh] pb-40 md:pb-48 z-10 pointer-events-none">
                   {/* Status Indicator */}
-                  <div className="absolute bottom-4 flex flex-col items-center z-30 w-full px-4">
+                  <div className="absolute top-8 flex flex-col items-center z-30 w-full px-4 pointer-events-none">
                     <style>{`
                       @keyframes siri-gradient {
                         0% { background-position: 0% 50%; }
@@ -5659,7 +5708,7 @@ export default function App() {
           </main>
 
           {/* Input Area */}
-          <footer className="p-4 pb-5 sm:pb-6 relative z-20">
+          <footer className={`${isLive ? 'p-0 h-0 hidden' : 'p-4 pb-5 sm:pb-6'} relative z-20`}>
             {isLoading && !isLive && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
@@ -5860,12 +5909,14 @@ export default function App() {
             </div>
           </div>
         )}
-        <div className="max-w-3xl mx-auto mt-2 text-center">
-          <p className="text-xs text-blue-700/80 flex items-center justify-center gap-1">
-            <Info size={12} />
-            {t.poweredBy}
-          </p>
-        </div>
+        {!isLive && (
+          <div className="max-w-3xl mx-auto mt-2 text-center">
+            <p className="text-xs text-blue-700/80 flex items-center justify-center gap-1">
+              <Info size={12} />
+              {t.poweredBy}
+            </p>
+          </div>
+        )}
       </footer>
 
       {/* Save Chat Modal */}
