@@ -5630,14 +5630,14 @@ export default function App() {
                   onClick={() => {
                     setShowLiveSubtitles(prev => !prev);
                   }}
-                  className={`absolute top-20 sm:top-4 right-4 z-[70] p-3 rounded-full backdrop-blur-md transition-all duration-300 pointer-events-auto border ${
+                  className={`absolute top-20 sm:top-4 right-4 z-[70] p-3 transition-all duration-300 pointer-events-auto ${
                     showLiveSubtitles 
-                      ? 'bg-white/20 text-white border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                      : 'bg-black/40 text-gray-400 border-gray-600/50 hover:bg-black/60'
+                      ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
+                      : 'text-gray-400 hover:text-white'
                   }`}
                   title={showLiveSubtitles ? "Hide Subtitles" : "Show Subtitles"}
                 >
-                  <MessageSquare size={20} />
+                  <MessageSquare size={24} />
                 </button>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
