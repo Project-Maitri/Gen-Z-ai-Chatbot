@@ -4791,6 +4791,21 @@ export default function App() {
     isMicMutedRef.current = false;
   };
 
+  const handleInterruption = () => {
+    if (isLive && isModelSpeakingRef.current) {
+      nextAudioTimeRef.current = 0;
+      activeAudioSourcesRef.current.forEach(source => {
+        try { source.stop(); } catch (e) {}
+      });
+      activeAudioSourcesRef.current = [];
+      if ((window as any).speakingTimeout) {
+        clearTimeout((window as any).speakingTimeout);
+      }
+      isModelSpeakingRef.current = false;
+      setIsModelSpeaking(false);
+    }
+  };
+
   // Visualizer Animation Effect
   useEffect(() => {
     if (!isLive) return;
@@ -5606,7 +5621,8 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-black"
+                onClick={handleInterruption}
+                className="absolute inset-0 flex flex-col items-center justify-center z-50 overflow-hidden bg-black cursor-pointer"
               >
                 {/* Frequency Visualizer (Full Screen Background) */}
                 <div className="absolute inset-0 w-full h-full z-0 pointer-events-none flex items-center justify-center">
