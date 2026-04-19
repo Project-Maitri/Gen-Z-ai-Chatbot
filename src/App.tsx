@@ -4911,7 +4911,7 @@ export default function App() {
           const timeSec = Date.now() / 1000;
           
           // Dynamically adjust ocean base height based on speaking state
-          const targetOceanHeight = (isSpeaking && !showLiveSubtitlesRef.current) ? height * 0.5 : height * 0.15;
+          const targetOceanHeight = (isSpeaking && !showLiveSubtitlesRef.current) ? height * 0.5 : (isSpeaking ? height * 0.2 : height * 0.28);
           if (smoothedOceanHeight === -1) smoothedOceanHeight = targetOceanHeight;
           smoothedOceanHeight += (targetOceanHeight - smoothedOceanHeight) * 0.04;
           
@@ -5625,37 +5625,49 @@ export default function App() {
                   />
                 </div>
 
-                {/* Subtitles Toggle Button */}
-                <button
-                  onClick={() => {
-                    setShowLiveSubtitles(prev => !prev);
-                  }}
-                  className={`absolute top-20 sm:top-4 right-4 z-[70] p-3 transition-all duration-300 pointer-events-auto ${
-                    showLiveSubtitles 
-                      ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  title={showLiveSubtitles ? "Hide Subtitles" : "Show Subtitles"}
-                >
-                  <MessageSquare size={24} />
-                </button>
+                {/* Top Header */}
+                <div className="absolute top-8 left-0 right-0 flex items-center justify-center z-[70] px-6 pointer-events-none">
+                  {/* Left spacer for balance */}
+                  <div className="hidden sm:block w-12 h-12" />
+                  
+                  {/* Live Status Indicator (Center) */}
+                  <div className="flex items-center gap-2 bg-red-600/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] pointer-events-none">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    <span className="text-white text-sm font-mukta font-bold tracking-widest uppercase">Live</span>
+                  </div>
+
+                  {/* Subtitles Toggle Button (Right) */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto">
+                    <button
+                      onClick={() => setShowLiveSubtitles(prev => !prev)}
+                      className={`p-3 transition-all duration-300 ${
+                        showLiveSubtitles 
+                          ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                      title={showLiveSubtitles ? "Hide Subtitles" : "Show Subtitles"}
+                    >
+                      <MessageSquare size={28} />
+                    </button>
+                  </div>
+                </div>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="absolute top-[136px] sm:top-20 right-4 max-w-[80vw] md:max-w-[60vw] lg:max-w-[40vw] z-[60] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl pointer-events-none"
+                    className="absolute top-28 sm:top-24 right-4 max-w-[80vw] md:max-w-[60vw] lg:max-w-[40vw] z-[60] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl pointer-events-none"
                   >
-                    <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta">
+                    <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta text-right">
                       {liveSubtitles}
                     </p>
                   </motion.div>
                 )}
 
-                <div className="relative flex flex-col items-center justify-center w-[100vw] h-[100vh] pb-40 md:pb-48 z-10 pointer-events-none">
-                  {/* Status Indicator */}
-                  <div className="absolute top-8 flex flex-col items-center z-30 w-full px-4 pointer-events-none">
+                <div className="relative flex flex-col items-center justify-center w-[100vw] h-[100vh] pb-0 z-10 pointer-events-none">
+                  {/* Status Indicator (Pinned to Bottom Edge - FULL WIDTH) */}
+                  <div className="absolute bottom-0 flex flex-col items-center z-30 w-full pointer-events-auto">
                     <style>{`
                       @keyframes siri-gradient {
                         0% { background-position: 0% 50%; }
@@ -5663,46 +5675,52 @@ export default function App() {
                         100% { background-position: 0% 50%; }
                       }
                     `}</style>
-                    <div className="relative w-full max-w-[280px] sm:max-w-xs flex justify-center">
-                      {/* Colorful glow */}
-                      <div 
-                        id="listening-indicator-glow"
-                        className="absolute -inset-1.5 rounded-full blur-md opacity-0"
-                        style={{
-                          background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
-                          backgroundSize: '200% 100%',
-                          animation: 'siri-gradient 2s linear infinite',
-                          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out',
-                          willChange: 'opacity, transform'
-                        }}
-                      />
-                      {/* Colorful sharp border line */}
-                      <div 
-                        id="listening-indicator-border"
-                        className="absolute -inset-[2px] rounded-full opacity-0"
-                        style={{
-                          background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
-                          backgroundSize: '200% 100%',
-                          animation: 'siri-gradient 2s linear infinite',
-                          transition: 'opacity 0.1s ease-out, transform 0.1s ease-out',
-                          willChange: 'opacity, transform'
-                        }}
-                      />
+                    <button 
+                      onClick={toggleLiveAudio}
+                      className="relative w-full flex justify-center group active:scale-[0.99] transition-all"
+                    >
                       <motion.div 
-                        animate={{ opacity: [0.85, 1, 0.85] }}
+                        animate={{ opacity: [0.9, 1, 0.9] }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className="relative w-full flex items-center justify-center gap-3 bg-gray-950/80 backdrop-blur-xl px-8 py-3 rounded-full border border-gray-700/50 shadow-2xl"
+                        className="relative w-full flex items-center justify-center gap-4 bg-gray-950/90 backdrop-blur-3xl px-8 py-8 md:py-10 rounded-t-[40px] border-t border-gray-800 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
                       >
-                        <div className={`w-3 h-3 flex-shrink-0 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_10px_#facc15]' : 'bg-blue-400 shadow-[0_0_10px_#60a5fa] animate-pulse'}`}></div>
-                        <span className="text-white font-mukta font-bold text-xl md:text-2xl tracking-wide drop-shadow-sm truncate">
+                        {/* Siri Glow Indicator Wrapper */}
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                          <div 
+                            id="listening-indicator-glow"
+                            className="absolute -inset-x-40 -inset-y-16 rounded-full blur-2xl opacity-0 transition-opacity duration-300"
+                            style={{
+                              background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
+                              backgroundSize: '200% 100%',
+                              animation: 'siri-gradient 2s linear infinite'
+                            }}
+                          />
+                          <div 
+                            id="listening-indicator-border"
+                            className="absolute -inset-x-24 -inset-y-8 rounded-full blur-md opacity-0 transition-opacity duration-300"
+                            style={{
+                              background: 'linear-gradient(90deg, #00aaff, #8400ff, #ff00aa, #ff5e00, #ff00aa, #8400ff, #00aaff)',
+                              backgroundSize: '200% 100%',
+                              animation: 'siri-gradient 2s linear infinite'
+                            }}
+                          />
+                        </div>
+
+                        <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_15px_#facc15]' : 'bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-pulse'}`}></div>
+                        <span className="text-white font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
                           {isModelSpeaking 
                             ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
                             : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
                         </span>
+                        <div className="flex flex-col items-center ml-4 border-l border-gray-800 pl-4 py-1 relative z-10">
+                          <X size={24} className="text-gray-500 group-hover:text-red-500 transition-colors" />
+                          <span className="text-[10px] text-gray-500 mt-1 uppercase font-black tracking-widest hidden sm:block">STOP</span>
+                        </div>
                       </motion.div>
-                    </div>
+                    </button>
                   </div>
                 </div>
+
               </motion.div>
             )}
           </main>
