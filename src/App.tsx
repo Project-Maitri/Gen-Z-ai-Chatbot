@@ -5626,7 +5626,7 @@ export default function App() {
                 </div>
 
                 {/* Top Header */}
-                <div className="absolute top-8 left-0 right-0 flex items-center justify-center z-[70] px-6 pointer-events-none">
+                <div className="absolute top-4 sm:top-6 left-0 right-0 flex items-center justify-center z-[70] px-6 pointer-events-none">
                   {/* Left spacer for balance */}
                   <div className="hidden sm:block w-12 h-12" />
                   
@@ -5653,16 +5653,25 @@ export default function App() {
                 </div>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="absolute top-28 sm:top-24 right-4 max-w-[80vw] md:max-w-[60vw] lg:max-w-[40vw] z-[60] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl pointer-events-none"
-                  >
-                    <p className="text-white text-base md:text-lg font-medium leading-relaxed font-mukta text-right">
-                      {liveSubtitles}
-                    </p>
-                  </motion.div>
+                  <div className="absolute inset-0 z-[60] overflow-hidden pointer-events-none h-full w-full">
+                    <motion.div
+                      key={isModelSpeaking ? 'rise' : 'none'}
+                      initial={{ opacity: 0, y: 100 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: -350 // Float upwards further over time
+                      }}
+                      transition={{ 
+                        y: { duration: 25, ease: "linear" }, 
+                        opacity: { duration: 1.5 } 
+                      }}
+                      className="absolute bottom-[28%] left-8 right-8 flex items-center justify-center p-4"
+                    >
+                      <p className="text-white text-3xl md:text-5xl lg:text-6xl font-bold leading-tight font-mukta text-center drop-shadow-[0_4px_20px_rgba(0,0,0,1)] max-w-4xl">
+                        {liveSubtitles}
+                      </p>
+                    </motion.div>
+                  </div>
                 )}
 
                 <div className="relative flex flex-col items-center justify-center w-[100vw] h-[100vh] pb-0 z-10 pointer-events-none">
