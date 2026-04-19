@@ -2658,6 +2658,7 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<{data: string, mimeType: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
+  const liveSubtitlesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (placeholderRef.current) {
@@ -5060,6 +5061,12 @@ export default function App() {
   const lastModelMessage = messages.slice().reverse().find(m => m.role === 'model');
   const liveSubtitles = isLive && lastModelMessage ? parseMessage(lastModelMessage.text).mainText : '';
 
+  useEffect(() => {
+    if (liveSubtitlesRef.current) {
+      liveSubtitlesRef.current.scrollTop = liveSubtitlesRef.current.scrollHeight;
+    }
+  }, [liveSubtitles]);
+
   return (
     <div 
       className="fixed inset-0 flex flex-col overflow-hidden"
@@ -5444,7 +5451,7 @@ export default function App() {
                       </div>
                     )}
                     <div 
-                      className={`prose max-w-none text-gray-900 prose-p:text-[448px] md:prose-p:text-[576px] prose-li:text-[448px] md:prose-li:text-[576px] prose-strong:text-[448px] md:prose-strong:text-[576px] prose-headings:text-[512px] md:prose-headings:text-[640px] font-bold leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
+                      className={`prose max-w-none text-gray-900 prose-p:text-5xl md:prose-p:text-7xl prose-li:text-5xl md:prose-li:text-7xl prose-strong:text-5xl md:prose-strong:text-7xl prose-headings:text-6xl md:prose-headings:text-8xl font-bold font-mukta leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
                     >
                       {msg.image && (
                         <div className="mb-3 flex justify-end">
@@ -5653,24 +5660,25 @@ export default function App() {
                 </div>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
-                  <div className="absolute inset-0 z-[60] overflow-hidden pointer-events-none h-full w-full">
-                    <motion.div
-                      key={isModelSpeaking ? 'rise' : 'none'}
-                      initial={{ opacity: 0, y: 100 }}
-                      animate={{ 
-                        opacity: 1, 
-                        y: -350 // Float upwards further over time
+                  <div className="absolute top-24 bottom-[32%] left-8 right-8 z-[60] py-4 pointer-events-none">
+                    <div 
+                      ref={liveSubtitlesRef}
+                      className="h-full w-full overflow-hidden flex flex-col justify-start"
+                      style={{
+                        maskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)',
+                        WebkitMaskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)'
                       }}
-                      transition={{ 
-                        y: { duration: 25, ease: "linear" }, 
-                        opacity: { duration: 1.5 } 
-                      }}
-                      className="absolute bottom-[28%] left-8 right-8 flex items-center justify-center p-4"
                     >
-                      <p className="text-white text-3xl md:text-5xl lg:text-6xl font-bold leading-tight font-mukta text-center drop-shadow-[0_4px_20px_rgba(0,0,0,1)] max-w-4xl">
-                        {liveSubtitles}
-                      </p>
-                    </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="p-4"
+                      >
+                        <p className="text-white text-3xl md:text-5xl lg:text-6xl font-bold leading-tight font-mukta text-center drop-shadow-[0_4px_20px_rgba(0,0,0,1)] max-w-4xl mx-auto">
+                          {liveSubtitles}
+                        </p>
+                      </motion.div>
+                    </div>
                   </div>
                 )}
 
