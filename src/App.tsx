@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions, MousePointer2 } from 'lucide-react';
+import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions, MousePointer2, Radio } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -5770,10 +5770,26 @@ export default function App() {
                   <div className="hidden sm:block w-12 h-12" />
                   
                   {/* Live Status Indicator (Center) */}
-                  <div className="flex items-center gap-2 bg-red-600/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.4)] pointer-events-none">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    <span className="text-white text-sm font-mukta font-bold tracking-widest uppercase">Live</span>
-                  </div>
+                  <motion.div 
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="flex items-center gap-2.5 bg-black/40 backdrop-blur-xl px-4 py-1.5 rounded-full border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)] pointer-events-none group"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                      <motion.div 
+                        animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="absolute w-2 h-2 bg-red-400 rounded-full"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <Radio size={14} className="text-red-400 animate-pulse" />
+                      <span className="text-white text-xs font-mono font-black tracking-[0.2em] uppercase bg-gradient-to-r from-red-200 to-white bg-clip-text text-transparent">
+                        LIVE
+                      </span>
+                    </div>
+                  </motion.div>
 
                   {/* Subtitles Toggle Button (Right) */}
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto">
@@ -6067,13 +6083,20 @@ export default function App() {
                   {!input.trim() && !selectedImage && !isVoiceTyping && !isLoading && (
                     <button
                       onClick={toggleLiveAudio}
-                      className="relative overflow-hidden flex items-center justify-center w-11 h-11 bg-[#e83e8c] text-white rounded-full hover:bg-[#d6337f] transition-all transform active:scale-95 shadow-[0_0_15px_rgba(232,62,140,0.5)] border border-[#e83e8c]/30 group"
+                      className="relative overflow-hidden flex items-center justify-center w-11 h-11 bg-black text-white rounded-full hover:bg-black/90 transition-all transform active:scale-95 shadow-[0_0_20px_rgba(232,62,140,0.3)] border border-[#e83e8c]/50 group"
                       title={t.startVoiceChat}
                     >
-                      <span className="absolute inset-0 w-full h-full bg-white/60 rounded-full animate-ping" style={{ animationDuration: '3s' }}></span>
-                      <span className="absolute inset-0 w-full h-full bg-white/40 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></span>
-                      <div className="relative flex items-center justify-center z-10">
-                        <AudioLines size={22} className="group-hover:scale-110 transition-transform" />
+                      <div className="absolute inset-0 bg-gradient-to-tr from-[#e83e8c]/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                      
+                      {/* Pulse Animations */}
+                      <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/40 rounded-full animate-ping" style={{ animationDuration: '3s' }}></span>
+                      <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/20 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></span>
+                      
+                      {/* Digital Frame */}
+                      <div className="absolute inset-0 border border-[#e83e8c]/20 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                      
+                      <div className="relative z-10 flex flex-col items-center">
+                        <Radio size={22} className="text-[#e83e8c] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_8px_rgba(232,62,140,0.8)]" />
                       </div>
                     </button>
                   )}
