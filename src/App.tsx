@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
-import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions } from 'lucide-react';
+import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions, MousePointer2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -3219,7 +3219,11 @@ export default function App() {
 
   // Live API Refs
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
+  const [isSessionActive, setIsSessionActive] = useState(false);
   const isSessionActiveRef = useRef(false);
+  useEffect(() => {
+    isSessionActiveRef.current = isSessionActive;
+  }, [isSessionActive]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -3233,11 +3237,12 @@ export default function App() {
   const isMicMutedRef = useRef(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
-  const [showLiveSubtitles, setShowLiveSubtitles] = useState(false);
-  const showLiveSubtitlesRef = useRef(false);
+  const [showLiveSubtitles, setShowLiveSubtitles] = useState(true);
+  const showLiveSubtitlesRef = useRef(true);
   useEffect(() => {
     showLiveSubtitlesRef.current = showLiveSubtitles;
   }, [showLiveSubtitles]);
+  const [isLiveConnecting, setIsLiveConnecting] = useState(false);
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [selectedAudioInput, setSelectedAudioInput] = useState<string>('default');
 
@@ -3576,7 +3581,7 @@ export default function App() {
         }
 
         const fetchPromise = ai.models.generateContent({
-          model: "gemini-2.5-flash-preview-tts",
+          model: "gemini-3.1-flash-tts-preview",
           contents: [{ parts: [{ text: nextToFetch.text }] }],
           config: {
             responseModalities: [Modality.AUDIO],
@@ -3869,7 +3874,7 @@ export default function App() {
       if (!ai) {
         throw new Error("AI service is not initialized. Please ensure your Gemini API key is correctly configured in the environment.");
       }
-      const modelName = useFastModel ? "gemini-1.5-flash-lite-preview" : "gemini-1.5-pro-preview";
+      const modelName = useFastModel ? "gemini-3-flash-preview" : "gemini-3.1-pro-preview";
       
       // Build contents array from history
       const contents: any[] = [];
@@ -3993,12 +3998,8 @@ export default function App() {
           if (!token) continue;
           if (abortController.signal.aborted) return;
           
-          // If it's a pure word (no markdown symbols), wrap it in the animation span
-          const isPlainWord = /^[a-zA-Z0-9\u0900-\u097F]+$/.test(token);
-          const displayToken = isPlainWord ? `<span class="manifest-word">${token}</span>` : token;
-          
-          fullText += displayToken;
-          currentChunk += token; // Keep currentChunk clean for TTS
+          fullText += token;
+          currentChunk += token;
           
           setMessages(prev => prev.map(m => m.id === newModelMsgId ? { ...m, text: fullText } : m));
           
@@ -4043,9 +4044,8 @@ export default function App() {
             }
           }
           
-          // Full speed appearance (10ms per word)
-          const delay = isPlainWord ? 10 : 5;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          // Full speed appearance (5ms delay per token for smoothness)
+          await new Promise(resolve => setTimeout(resolve, 5));
         }
       }
       
@@ -4096,13 +4096,6 @@ export default function App() {
       }
     } finally {
       if (abortControllerRef.current === abortController) {
-        // Clean up the animation spans from the final message text so TTS doesn't read them
-        setMessages(prev => prev.map(m => {
-          if (m.id === newModelMsgId) {
-            return { ...m, text: m.text.replace(/<span class="manifest-word">/g, '').replace(/<\/span>/g, '') };
-          }
-          return m;
-        }));
         setIsLoading(false);
         setIsStreaming(false);
         setIsGeneratingAudio(null);
@@ -4241,6 +4234,7 @@ export default function App() {
       return;
     }
 
+    setIsLiveConnecting(true);
     stopMessageAudio();
 
     if (isVoiceTyping && recognitionRef.current) {
@@ -4400,6 +4394,7 @@ export default function App() {
                       console.warn("Failed to send audio input:", err);
                     } else {
                       isSessionActiveRef.current = false;
+                      setIsSessionActive(false);
                     }
                   }
                 }).catch(() => {});
@@ -4469,6 +4464,7 @@ export default function App() {
                     console.warn("Failed to send audio input:", err);
                   } else {
                     isSessionActiveRef.current = false;
+                    setIsSessionActive(false);
                   }
                 }
               }).catch(() => {});
@@ -4538,13 +4534,15 @@ export default function App() {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: premiumVoiceRef.current } }
           },
-          outputAudioTranscription: { model: "models/gemini-2.0-flash-exp" } as any,
-          inputAudioTranscription: { model: "models/gemini-2.0-flash-exp" } as any
+          outputAudioTranscription: { model: "gemini-2.0-flash-exp" } as any,
+          inputAudioTranscription: { model: "gemini-2.0-flash-exp" } as any
         },
         callbacks: {
           onopen: () => {
              console.log("Live API connected successfully. Session active.");
+             setIsLiveConnecting(false);
              isSessionActiveRef.current = true;
+             setIsSessionActive(true);
              nextAudioTimeRef.current = 0;
              // Add a small delay before sending the initial message to ensure the connection is fully stable
              setTimeout(() => {
@@ -4646,6 +4644,7 @@ export default function App() {
                event: event
              });
              isSessionActiveRef.current = false;
+             setIsSessionActive(false);
              stopLiveAudio();
           },
           onerror: (err: any) => {
@@ -4654,7 +4653,9 @@ export default function App() {
                stack: err?.stack,
                error: err
              });
+             setIsLiveConnecting(false);
              isSessionActiveRef.current = false;
+             setIsSessionActive(false);
              stopLiveAudio();
           }
         }
@@ -4663,6 +4664,7 @@ export default function App() {
       setIsLive(true);
     } catch (e: any) {
       console.warn("Live Audio Error:", e);
+      setIsLiveConnecting(false);
       let errorMsg = t.errorTech;
       
       if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
@@ -4749,6 +4751,8 @@ export default function App() {
 
   const stopLiveAudio = () => {
     isSessionActiveRef.current = false;
+    setIsSessionActive(false);
+    setIsLiveConnecting(false);
     activeAudioSourcesRef.current.forEach(source => {
       try { source.stop(); } catch (e) {}
     });
@@ -5494,39 +5498,21 @@ export default function App() {
                           />
                         </div>
                       )}
-                      {playingMessageId === msg.id ? (
-                        <ReactMarkdown 
-                          rehypePlugins={[rehypeRaw]}
-                          components={{
-                            p: ({ children }) => <p className="text-[24px] mb-1 leading-snug">{children}</p>,
-                            h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
-                            h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
-                            li: ({ children }) => <li className="text-[24px] mb-0.5 leading-snug">{children}</li>,
-                            strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
-                          }}
-                        >
-                          {highlightMarkdown(mainText, playingTextIndex)}
-                        </ReactMarkdown>
-                      ) : (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <ReactMarkdown 
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
-                              p: ({ children }) => <p className="text-[24px] mb-1 leading-snug">{children}</p>,
-                              h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
-                              li: ({ children }) => <li className="text-[24px] mb-0.5 leading-snug">{children}</li>,
-                              strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
-                            }}
-                          >
-                            {mainText}
-                          </ReactMarkdown>
-                        </motion.div>
-                      )}
+                      <ReactMarkdown 
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          p: ({ children }) => <p className="text-[24px] mb-0.5 leading-tight">{children}</p>,
+                          h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
+                          li: ({ children }) => <li className="text-[24px] mb-0.5 leading-tight">{children}</li>,
+                          strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
+                        }}
+                      >
+                        {playingMessageId === msg.id 
+                          ? highlightMarkdown(mainText, playingTextIndex) 
+                          : mainText
+                        }
+                      </ReactMarkdown>
                     </div>
                     {msg.role === 'model' && (
                       <>
@@ -5682,6 +5668,101 @@ export default function App() {
                     className="w-full h-full absolute inset-0 z-10"
                   />
                 </div>
+
+                {/* Click to Start Animation Overlay */}
+                {!isSessionActive && !isLiveConnecting && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center z-[80] pointer-events-none"
+                  >
+                    {/* Modern Digital Core */}
+                    <div className="relative flex items-center justify-center">
+                      {/* Pulse Rings */}
+                      {[...Array(3)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            scale: [1, 2],
+                            opacity: [0.5, 0] 
+                          }}
+                          transition={{ 
+                            repeat: Infinity, 
+                            duration: 3,
+                            delay: i * 1,
+                            ease: "easeOut"
+                          }}
+                          className="absolute w-32 h-32 md:w-48 md:h-48 rounded-full border border-sky-400/30"
+                        />
+                      ))}
+                      
+                      {/* Inner Glowing Hexagon/Circle */}
+                      <motion.div
+                        animate={{ 
+                          scale: [0.95, 1.05, 0.95]
+                        }}
+                        transition={{ 
+                          scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                        }}
+                        className="relative w-32 h-32 md:w-48 md:h-48 rounded-2xl md:rounded-[2.5rem] border-2 border-sky-400/50 flex items-center justify-center bg-sky-900/10 backdrop-blur-md shadow-[0_0_30px_rgba(56,189,248,0.2)]"
+                      >
+                        <motion.div
+                          animate={{ 
+                            opacity: [0.4, 1, 0.4],
+                          }}
+                          transition={{ 
+                            repeat: Infinity, 
+                            duration: 1.5,
+                            ease: "easeInOut"
+                          }}
+                          className="text-sky-400 flex flex-col items-center relative overflow-hidden"
+                        >
+                           <Mic size={48} className="md:size-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.8)]" />
+                           
+                           {/* Scan Line Effect */}
+                           <motion.div 
+                             animate={{ top: ['0%', '100%', '0%'] }}
+                             transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+                             className="absolute left-0 right-0 h-[2px] bg-sky-400/50 shadow-[0_0_10px_#38bdf8] pointer-events-none"
+                           />
+
+                           <div className="mt-2 flex gap-1">
+                             {[...Array(3)].map((_, i) => (
+                               <motion.div 
+                                 key={i}
+                                 animate={{ height: [4, 12, 4] }}
+                                 transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.1 }}
+                                 className="w-1 bg-sky-400 rounded-full"
+                               />
+                             ))}
+                           </div>
+                        </motion.div>
+                      </motion.div>
+                    </div>
+
+                    {/* Text Element */}
+                    <motion.div
+                      animate={{ y: [0, 5, 0], opacity: [0.8, 1, 0.8] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="mt-12 text-center px-6"
+                    >
+                      <div className="inline-block px-4 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 mb-3">
+                        <span className="text-sky-400 text-xs font-black tracking-widest uppercase">Action Required</span>
+                      </div>
+                      <h2 className="text-white font-mukta font-black text-3xl md:text-5xl tracking-tight leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                        {uiLang === 'hi' ? 'बातचीत शुरू करने के लिए' : 'To Start Conversation'}
+                      </h2>
+                      <div className="flex items-center justify-center gap-3 mt-4 group">
+                        <div className="h-[1px] w-8 md:w-16 bg-gradient-to-r from-transparent to-yellow-400 opacity-50" />
+                        <p className="text-yellow-400 font-mukta font-black text-4xl md:text-6xl tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(253,224,71,0.6)] animate-pulse">
+                          {uiLang === 'hi' ? 'यहाँ टच करें' : 'Tap Here'}
+                        </p>
+                        <div className="h-[1px] w-8 md:w-16 bg-gradient-to-l from-transparent to-yellow-400 opacity-50" />
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
 
                 {/* Top Header */}
                 <div className="absolute top-4 sm:top-6 left-0 right-0 flex items-center justify-center z-[70] px-6 pointer-events-none">
