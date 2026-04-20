@@ -6081,24 +6081,62 @@ export default function App() {
                     </button>
                   )}
                   {!input.trim() && !selectedImage && !isVoiceTyping && !isLoading && (
-                    <button
-                      onClick={toggleLiveAudio}
-                      className="relative overflow-hidden flex items-center justify-center w-11 h-11 bg-black text-white rounded-full hover:bg-black/90 transition-all transform active:scale-95 shadow-[0_0_20px_rgba(232,62,140,0.3)] border border-[#e83e8c]/50 group"
-                      title={t.startVoiceChat}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-tr from-[#e83e8c]/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-                      
-                      {/* Pulse Animations */}
-                      <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/40 rounded-full animate-ping" style={{ animationDuration: '3s' }}></span>
-                      <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/20 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></span>
-                      
-                      {/* Digital Frame */}
-                      <div className="absolute inset-0 border border-[#e83e8c]/20 rounded-full group-hover:scale-110 transition-transform duration-500" />
-                      
-                      <div className="relative z-10 flex flex-col items-center">
-                        <Radio size={22} className="text-[#e83e8c] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_8px_rgba(232,62,140,0.8)]" />
-                      </div>
-                    </button>
+                    <div className="relative w-11 h-11 group">
+                      {/* Rotating Digital Ring */}
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                        className="absolute -inset-1.5 border border-dashed border-[#e83e8c]/40 rounded-full z-20 pointer-events-none"
+                      />
+
+                      {/* Edge Indicators / Glowing Sensor Dots */}
+                      {[0, 90, 180, 270].map((angle) => (
+                        <motion.div
+                          key={angle}
+                          animate={{ 
+                            opacity: [0.4, 1, 0.4],
+                            scale: [1, 1.5, 1],
+                            boxShadow: [
+                              '0 0 5px rgba(232, 62, 140, 0.5)',
+                              '0 0 15px rgba(232, 62, 140, 0.9)',
+                              '0 0 5px rgba(232, 62, 140, 0.5)'
+                            ]
+                          }}
+                          transition={{ 
+                            repeat: Infinity, 
+                            duration: 1.5, 
+                            delay: angle / 360 
+                          }}
+                          className="absolute w-1.5 h-1.5 bg-[#e83e8c] rounded-full z-[35]"
+                          style={{
+                            top: '50%',
+                            left: '50%',
+                            marginTop: '-3px',
+                            marginLeft: '-3px',
+                            transform: `rotate(${angle}deg) translate(28px, 0)`
+                          }}
+                        />
+                      ))}
+
+                      <button
+                        onClick={toggleLiveAudio}
+                        className="relative overflow-hidden flex items-center justify-center w-full h-full bg-black text-white rounded-full hover:bg-black/90 transition-all transform active:scale-95 shadow-[0_0_25px_rgba(232,62,140,0.4)] border border-[#e83e8c]/60 z-30"
+                        title={t.startVoiceChat}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-[#e83e8c]/30 to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                        
+                        {/* Pulse Animations */}
+                        <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/30 rounded-full animate-ping" style={{ animationDuration: '3s' }}></span>
+                        <span className="absolute inset-0 w-full h-full bg-[#e83e8c]/15 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '1.5s' }}></span>
+                        
+                        {/* Digital Frame Effect */}
+                        <div className="absolute inset-1 border border-[#e83e8c]/30 rounded-full group-hover:scale-110 transition-transform duration-500" />
+                        
+                        <div className="relative z-10 flex flex-col items-center">
+                          <Radio size={22} className="text-[#e83e8c] group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_10px_rgba(232,62,140,0.9)]" />
+                        </div>
+                      </button>
+                    </div>
                   )}
                   {isLoading ? (
                     <button
