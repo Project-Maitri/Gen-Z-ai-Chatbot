@@ -355,6 +355,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "Start Live Voice Chat",
     voiceTyping: "Voice Typing",
     stopVoiceTyping: "Stop Voice Typing",
+    tapToStart: "Tap here to start conversation",
     speechNotSupported: "Speech recognition is not supported in this browser.",
     liveChat: "Live Chat",
     typeMessage: "Type a message or use the mic! Talk directly to Nard using the last voice chat button!",
@@ -439,6 +440,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "लाइव वॉइस चैट शुरू करें",
     voiceTyping: "बोलकर टाइप करें",
     stopVoiceTyping: "बोलना बंद करें",
+    tapToStart: "बातचीत शुरू करने के लिए यहाँ टच करें",
     speechNotSupported: "आपके ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नहीं है।",
     liveChat: "लाइव चैट",
     typeMessage: "संदेश टाइप करें या माइक से बोलकर टाइप करें! आप आखिरी वाइस चैट बटन से नॉर्ड से सीधी बातचीत करें!",
@@ -523,6 +525,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "लाइव वॉइस चैट शुरू करीं",
     voiceTyping: "बोल के टाइप करीं",
     stopVoiceTyping: "बोलल बंद करीं",
+    tapToStart: "बातचीत शुरू करे खातिर इहाँ टच करीं",
     speechNotSupported: "रउआ ब्राउज़र में स्पीच रिकग्निशन सपोर्ट नइखे।",
     liveChat: "लाइव चैट",
     typeMessage: "संदेश टाइप करीं...",
@@ -603,6 +606,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "লাইভ ভয়েস চ্যাট শুরু করুন",
     voiceTyping: "ভয়েস টাইপিং",
     stopVoiceTyping: "ভয়েস টাইপিং বন্ধ করুন",
+    tapToStart: "কথোপকথন শুরু করতে এখানে আলতো চাপুন",
     liveChat: "লাইভ চ্যাট",
     typeMessage: "একটি বার্তা লিখুন...",
     typeMessages: [
@@ -682,6 +686,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "நேரலை குரல் அரட்டையைத் தொடங்கு",
     voiceTyping: "குரல் தட்டச்சு",
     stopVoiceTyping: "குரல் தட்டச்சு நிறுத்து",
+    tapToStart: "உரையாடலைத் தொடங்க இங்கே தட்டவும்",
     liveChat: "நேரலை அரட்டை",
     typeMessage: "ஒரு செய்தியை தட்டச்சு செய்யவும்...",
     typeMessages: [
@@ -761,6 +766,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "లైవ్ వాయిస్ చాట్ ప్రారంభించండి",
     voiceTyping: "వాయిస్ టైపింగ్",
     stopVoiceTyping: "వాయిస్ టైపింగ్ ఆపండి",
+    tapToStart: "సంభాషణను ప్రారంభించడానికి ఇక్కడ నొక్కండి",
     liveChat: "లైవ్ చాట్",
     typeMessage: "సందేశాన్ని టైప్ చేయండి...",
     typeMessages: [
@@ -840,6 +846,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "लाइव्ह व्हॉइस चॅट सुरू करा",
     voiceTyping: "व्हॉइस टायपिंग",
     stopVoiceTyping: "व्हॉइस टायपिंग थांबवा",
+    tapToStart: "संभाषण सुरू करण्यासाठी येथे टॅप करा",
     liveChat: "लाइव्ह चॅट",
     typeMessage: "संदेश टाइप करा...",
     typeMessages: [
@@ -998,6 +1005,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "ಲೈವ್ ವಾಯ್ಸ್ ಚಾಟ್ ಪ್ರಾರಂಭಿಸಿ",
     voiceTyping: "ಧ್ವನಿ ಟೈಪಿಂಗ್",
     stopVoiceTyping: "ಧ್ವನಿ ಟೈಪಿಂಗ್ ನಿಲ್ಲಿಸಿ",
+    tapToStart: "ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಲು ಇಲ್ಲಿ ಟ್ಯಾಪ್ ಮಾಡಿ",
     speechNotSupported: "ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ.",
     liveChat: "ಲೈವ್ ಚಾಟ್",
     typeMessage: "ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ...",
@@ -1078,6 +1086,7 @@ const translations: Record<string, any> = {
     startVoiceChat: "ലൈവ് വോയ്‌സ് ചാറ്റ് ആരംഭിക്കുക",
     voiceTyping: "വോയ്‌സ് ടൈപ്പിംഗ്",
     stopVoiceTyping: "വോയ്‌സ് ടൈപ്പിംഗ് നിർത്തുക",
+    tapToStart: "സംഭാഷണം ആരംഭിക്കാൻ ഇവിടെ ടാപ്പ് ചെയ്യുക",
     speechNotSupported: "നിങ്ങളുടെ ബ്രൗസറിൽ സ്പീച്ച് റെക്കഗ്നിഷൻ പിന്തുണയ്ക്കുന്നില്ല.",
     liveChat: "ലൈവ് ചാറ്റ്",
     typeMessage: "ഒരു സന്ദേശം ടൈപ്പ് ചെയ്യുക...",
@@ -2717,8 +2726,8 @@ export default function App() {
     }
   }, [messages, currentChatId]);
 
-  const [isLive, setIsLive] = useState(false);
-  const isLiveRef = useRef(false);
+  const [isLive, setIsLive] = useState(true);
+  const isLiveRef = useRef(true);
   useEffect(() => {
     isLiveRef.current = isLive;
   }, [isLive]);
@@ -3860,7 +3869,7 @@ export default function App() {
       if (!ai) {
         throw new Error("AI service is not initialized. Please ensure your Gemini API key is correctly configured in the environment.");
       }
-      const modelName = useFastModel ? "gemini-3.1-flash-lite-preview" : "gemini-3.1-pro-preview";
+      const modelName = useFastModel ? "gemini-1.5-flash-lite-preview" : "gemini-1.5-pro-preview";
       
       // Build contents array from history
       const contents: any[] = [];
@@ -4225,8 +4234,9 @@ export default function App() {
     setIsMicMuted(newMutedState);
   };
 
-  const toggleLiveAudio = async () => {
-    if (isLive) {
+  const toggleLiveAudio = async (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (isSessionActiveRef.current) {
       stopLiveAudio();
       return;
     }
@@ -4792,7 +4802,14 @@ export default function App() {
   };
 
   const handleInterruption = () => {
-    if (isLive && isModelSpeakingRef.current) {
+    if (!isLive) return;
+
+    if (!isSessionActiveRef.current) {
+      toggleLiveAudio();
+      return;
+    }
+
+    if (isModelSpeakingRef.current) {
       nextAudioTimeRef.current = 0;
       activeAudioSourcesRef.current.forEach(source => {
         try { source.stop(); } catch (e) {}
@@ -5466,7 +5483,7 @@ export default function App() {
                       </div>
                     )}
                     <div 
-                      className={`prose max-w-none text-gray-900 prose-p:text-5xl md:prose-p:text-7xl prose-li:text-5xl md:prose-li:text-7xl prose-strong:text-5xl md:prose-strong:text-7xl prose-headings:text-6xl md:prose-headings:text-8xl font-bold font-mukta leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
+                      className={`max-w-none text-gray-900 font-bold font-mukta leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
                     >
                       {msg.image && (
                         <div className="mb-3 flex justify-end">
@@ -5478,7 +5495,16 @@ export default function App() {
                         </div>
                       )}
                       {playingMessageId === msg.id ? (
-                        <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                        <ReactMarkdown 
+                          rehypePlugins={[rehypeRaw]}
+                          components={{
+                            p: ({ children }) => <p className="text-[24px] mb-1 leading-snug">{children}</p>,
+                            h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
+                            li: ({ children }) => <li className="text-[24px] mb-0.5 leading-snug">{children}</li>,
+                            strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
+                          }}
+                        >
                           {highlightMarkdown(mainText, playingTextIndex)}
                         </ReactMarkdown>
                       ) : (
@@ -5487,7 +5513,16 @@ export default function App() {
                           animate={{ opacity: 1 }}
                           transition={{ duration: 0.5 }}
                         >
-                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                          <ReactMarkdown 
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                              p: ({ children }) => <p className="text-[24px] mb-1 leading-snug">{children}</p>,
+                              h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
+                              li: ({ children }) => <li className="text-[24px] mb-0.5 leading-snug">{children}</li>,
+                              strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
+                            }}
+                          >
                             {mainText}
                           </ReactMarkdown>
                         </motion.div>
@@ -5662,7 +5697,10 @@ export default function App() {
                   {/* Subtitles Toggle Button (Right) */}
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-auto">
                     <button
-                      onClick={() => setShowLiveSubtitles(prev => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowLiveSubtitles(prev => !prev);
+                      }}
                       className={`p-3 transition-all duration-300 ${
                         showLiveSubtitles 
                           ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
@@ -5676,10 +5714,10 @@ export default function App() {
                 </div>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
-                  <div className="absolute top-24 bottom-[32%] left-8 right-8 z-[60] py-4 pointer-events-none">
+                  <div className="absolute top-24 bottom-[32%] left-4 right-4 z-[60] pointer-events-none flex flex-col items-center justify-center">
                     <div 
                       ref={liveSubtitlesRef}
-                      className="h-full w-full overflow-hidden flex flex-col justify-start"
+                      className="h-full w-full overflow-y-auto custom-scrollbar p-4 flex flex-col justify-start"
                       style={{
                         maskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)',
                         WebkitMaskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)'
@@ -5690,9 +5728,20 @@ export default function App() {
                         animate={{ opacity: 1 }}
                         className="p-4"
                       >
-                        <p className="text-white text-3xl md:text-5xl lg:text-6xl font-bold leading-tight font-mukta text-center drop-shadow-[0_4px_20px_rgba(0,0,0,1)] max-w-4xl mx-auto">
-                          {liveSubtitles}
-                        </p>
+                        <div className="max-w-none text-white font-bold font-mukta leading-none text-center drop-shadow-[0_4px_30px_rgba(0,0,0,1)] max-w-7xl mx-auto">
+                          <ReactMarkdown 
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                              p: ({ children }) => <p className="text-[30px] md:text-[130px] mb-5">{children}</p>,
+                              h1: ({ children }) => <h1 className="text-[42px] md:text-[160px] mb-7">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-[36px] md:text-[145px] mb-6">{children}</h2>,
+                              strong: ({ children }) => <strong className="font-extrabold text-yellow-400">{children}</strong>,
+                              li: ({ children }) => <li className="text-[30px] md:text-[130px] mb-3 list-none">{children}</li>
+                            }}
+                          >
+                            {liveSubtitles}
+                          </ReactMarkdown>
+                        </div>
                       </motion.div>
                     </div>
                   </div>
@@ -5709,7 +5758,7 @@ export default function App() {
                       }
                     `}</style>
                     <button 
-                      onClick={toggleLiveAudio}
+                      onClick={(e) => toggleLiveAudio(e)}
                       className="relative w-full flex justify-center group active:scale-[0.99] transition-all"
                     >
                       <motion.div 
@@ -5739,13 +5788,21 @@ export default function App() {
                           />
                         </div>
 
-                        <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_15px_#facc15]' : 'bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-pulse'}`}></div>
+                        <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isSessionActiveRef.current ? (isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_15px_#facc15]' : 'bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-pulse') : 'bg-gray-600 shadow-none'}`}></div>
                         <span className="text-white font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
-                          {isModelSpeaking 
-                            ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
-                            : getGenderAdjustedText(t.listening, uiLang, displayBotName)}
+                          {!isSessionActiveRef.current 
+                            ? (t.tapToStart || "Tap to Start")
+                            : (isModelSpeaking 
+                              ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
+                              : getGenderAdjustedText(t.listening, uiLang, displayBotName))}
                         </span>
-                        <div className="flex flex-col items-center ml-4 border-l border-gray-800 pl-4 py-1 relative z-10">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stopLiveAudio();
+                          }}
+                          className="flex flex-col items-center ml-4 border-l border-gray-800 pl-4 py-1 relative z-10 cursor-pointer"
+                        >
                           <X size={24} className="text-gray-500 group-hover:text-red-500 transition-colors" />
                           <span className="text-[10px] text-gray-500 mt-1 uppercase font-black tracking-widest hidden sm:block">STOP</span>
                         </div>
