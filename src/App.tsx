@@ -435,7 +435,7 @@ const translations: Record<string, any> = {
     listenAgain: "फिर से सुनें",
     speaking: "नॉर्ड बोल रहे हैं...",
     listening: "नॉर्ड सुन रहे हैं...",
-    ready: "नॉर्ड तैयार हैं",
+    ready: "नॉर्ड तैयार है",
     thinking: "सोच रहे हैं...",
     liveChatOn: "लाइव वॉइस चैट चालू है: कृपया बोलें",
     stopVoiceChat: "वॉइस चैट बंद करें",
@@ -5772,7 +5772,7 @@ export default function App() {
                       <div className="flex items-center justify-center gap-3 mt-4 group">
                         <div className="h-[1px] w-8 md:w-16 bg-gradient-to-r from-transparent to-yellow-400 opacity-50" />
                         <p className="text-yellow-400 font-mukta font-black text-4xl md:text-6xl tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(253,224,71,0.6)] animate-pulse">
-                          {uiLang === 'hi' ? 'यहाँ टच करें' : 'Tap Here'}
+                          {uiLang === 'hi' ? 'क्लिक करें' : 'CLICK HERE'}
                         </p>
                         <div className="h-[1px] w-8 md:w-16 bg-gradient-to-l from-transparent to-yellow-400 opacity-50" />
                       </div>
@@ -5902,14 +5902,12 @@ export default function App() {
                         </div>
 
                         <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isSessionActiveRef.current ? (isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_15px_#facc15]' : 'bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-pulse') : 'bg-gray-600 shadow-none'}`}></div>
-                        <span className="text-white font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
-                          {!isSessionActiveRef.current 
-                            ? (t.tapToStart || "Tap to Start")
-                            : (isModelSpeaking 
-                              ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
-                              : (!hasLiveStarted 
-                                ? getGenderAdjustedText(t.ready, uiLang, displayBotName)
-                                : getGenderAdjustedText(t.listening, uiLang, displayBotName)))}
+                         <span className="text-white font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
+                          {isModelSpeaking 
+                            ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
+                            : (!hasLiveStarted 
+                              ? getGenderAdjustedText(t.ready, uiLang, displayBotName)
+                              : getGenderAdjustedText(t.listening, uiLang, displayBotName))}
                         </span>
                         <div 
                           onClick={(e) => {
