@@ -349,6 +349,7 @@ const translations: Record<string, any> = {
     listenAgain: "Listen again",
     speaking: "Nard is speaking...",
     listening: "Nard is listening...",
+    ready: "Nard is ready...",
     thinking: "is thinking...",
     liveChatOn: "Live Voice Chat is on: Please speak",
     stopVoiceChat: "Stop Voice Chat",
@@ -434,6 +435,7 @@ const translations: Record<string, any> = {
     listenAgain: "फिर से सुनें",
     speaking: "नॉर्ड बोल रहे हैं...",
     listening: "नॉर्ड सुन रहे हैं...",
+    ready: "नॉर्ड तैयार हैं",
     thinking: "सोच रहे हैं...",
     liveChatOn: "लाइव वॉइस चैट चालू है: कृपया बोलें",
     stopVoiceChat: "वॉइस चैट बंद करें",
@@ -519,6 +521,7 @@ const translations: Record<string, any> = {
     listenAgain: "फेरु से सुनीं",
     speaking: "नॉर्ड बोल रहल बाड़े...",
     listening: "नॉर्ड सुन रहल बाड़े...",
+    ready: "नॉर्ड तैयार बाड़े",
     thinking: "सोच रहल बाड़े...",
     liveChatOn: "लाइव वॉइस चैट चालू बा: कृपया बोलीं",
     stopVoiceChat: "वॉइस चैट बंद करीं",
@@ -600,6 +603,7 @@ const translations: Record<string, any> = {
     listenAgain: "আবার শুনুন",
     speaking: "নর্ড কথা বলছে...",
     listening: "নর্ড শুনছে...",
+    ready: "নর্ড প্রস্তুত",
     thinking: "চিন্তা করছে...",
     liveChatOn: "লাইভ ভয়েস চ্যাট চালু আছে: দয়া করে কথা বলুন",
     stopVoiceChat: "ভয়েস চ্যাট বন্ধ করুন",
@@ -680,6 +684,7 @@ const translations: Record<string, any> = {
     listenAgain: "மீண்டும் கேட்க",
     speaking: "நார்ட் பேசுகிறார்...",
     listening: "நார்ட் கேட்கிறார்...",
+    ready: "நார்ட் தயாராக உள்ளது",
     thinking: "யோசிக்கிறார்...",
     liveChatOn: "நேரலை குரல் அரட்டை இயக்கத்தில் உள்ளது: தயவுசெய்து பேசவும்",
     stopVoiceChat: "குரல் அரட்டையை நிறுத்து",
@@ -760,6 +765,7 @@ const translations: Record<string, any> = {
     listenAgain: "మళ్ళీ వినండి",
     speaking: "నార్డ్ మాట్లాడుతున్నారు...",
     listening: "నార్డ్ వింటున్నారు...",
+    ready: "నార్డ్ సిద్ధంగా ఉంది",
     thinking: "ఆలోచిస్తున్నారు...",
     liveChatOn: "లైవ్ వాయిస్ చాట్ ఆన్‌లో ఉంది: దయచేసి మాట్లాడండి",
     stopVoiceChat: "వాయిస్ చాట్‌ను ఆపండి",
@@ -840,6 +846,7 @@ const translations: Record<string, any> = {
     listenAgain: "पुन्हा ऐका",
     speaking: "नॉर्ड बोलत आहेत...",
     listening: "नॉर्ड ऐकत आहेत...",
+    ready: "नॉर्ड तयार आहे",
     thinking: "विचार करत आहेत...",
     liveChatOn: "लाइव्ह व्हॉइस चॅट चालू आहे: कृपया बोला",
     stopVoiceChat: "व्हॉइस चॅट थांबवा",
@@ -920,6 +927,7 @@ const translations: Record<string, any> = {
     listenAgain: "ફરી સાંભળો",
     speaking: "જેન-જી બોલી રહ્યા છે...",
     listening: "જેન-જી સાંભળી રહ્યા છે...",
+    ready: "જેન-જી તૈયાર છે",
     thinking: "વિચારી રહ્યા છે...",
     liveChatOn: "લાઇવ વૉઇસ ચેટ ચાલુ છે: કૃપા કરીને બોલો",
     stopVoiceChat: "વૉઇસ ચેટ બંધ કરો",
@@ -1241,6 +1249,7 @@ const translations: Record<string, any> = {
     listenAgain: "ਦੁਬਾਰਾ ਸੁਣੋ",
     speaking: "ਜੇਨ-ਜੀ ਬੋਲ ਰਹੇ ਹਨ...",
     listening: "ਜੇਨ-ਜੀ ਸੁਣ ਰਹੇ ਹਨ...",
+    ready: "ਜੇਨ-ਜੀ ਤਿਆਰ ਹੈ",
     thinking: "ਸੋਚ ਰਹੇ ਹਨ...",
     liveChatOn: "ਲਾਈਵ ਵੌਇਸ ਚੈਟ ਚਾਲੂ ਹੈ: ਕਿਰਪਾ ਕਰਕੇ ਬੋਲੋ",
     stopVoiceChat: "ਵੌਇਸ ਚੈਟ ਬੰਦ ਕਰੋ",
@@ -1321,6 +1330,7 @@ const translations: Record<string, any> = {
     listenAgain: "دوبارہ سنیں",
     speaking: "نارڈ بول رہے ہیں...",
     listening: "نارڈ سن رہے ہیں...",
+    ready: "نارڈ تیار ہے",
     thinking: "سوچ رہے ہیں...",
     liveChatOn: "لائیو وائس چیٹ آن ہے: براہ کرم بولیں",
     stopVoiceChat: "وائس چیٹ بند کریں",
@@ -2728,6 +2738,7 @@ export default function App() {
 
   const [isLive, setIsLive] = useState(true);
   const isLiveRef = useRef(true);
+  const [hasLiveStarted, setHasLiveStarted] = useState(false);
   useEffect(() => {
     isLiveRef.current = isLive;
   }, [isLive]);
@@ -4605,6 +4616,10 @@ export default function App() {
              }
 
              const inputTranscription = message.serverContent?.inputTranscription;
+             if (incomingText || inputTranscription?.text || parts) {
+               setHasLiveStarted(true);
+             }
+
              if (inputTranscription?.text) {
                setMessages(prev => {
                  const newMessages = [...prev];
@@ -4801,6 +4816,7 @@ export default function App() {
       animationFrameRef.current = null;
     }
     setIsLive(false);
+    setHasLiveStarted(false);
     setIsMicMuted(false);
     isMicMutedRef.current = false;
   };
@@ -5891,7 +5907,9 @@ export default function App() {
                             ? (t.tapToStart || "Tap to Start")
                             : (isModelSpeaking 
                               ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
-                              : getGenderAdjustedText(t.listening, uiLang, displayBotName))}
+                              : (!hasLiveStarted 
+                                ? getGenderAdjustedText(t.ready, uiLang, displayBotName)
+                                : getGenderAdjustedText(t.listening, uiLang, displayBotName)))}
                         </span>
                         <div 
                           onClick={(e) => {
