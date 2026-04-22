@@ -4997,7 +4997,7 @@ export default function App() {
             if (glowEl && borderEl) {
               let opacity = 0;
               if (react > 0.05) {
-                 opacity = Math.min(1, (react - 0.05) * 5);
+                 opacity = Math.min(0.5, (react - 0.05) * 5);
               }
               const scale = 1 + (opacity * 0.02);
               glowEl.style.opacity = opacity.toString();
@@ -5193,7 +5193,7 @@ export default function App() {
   };
 
   const lastModelMessage = messages.slice().reverse().find(m => m.role === 'model');
-  const liveSubtitles = isLive && lastModelMessage ? parseMessage(lastModelMessage.text).mainText : '';
+  const liveSubtitles = (isLive && lastModelMessage && lastModelMessage.isLive) ? parseMessage(lastModelMessage.text).mainText : '';
 
   // Dynamic subtitle configuration based on message length
   const subtitleConfig = useMemo(() => {
@@ -5995,7 +5995,7 @@ export default function App() {
                       <motion.div 
                         animate={{ opacity: [0.9, 1, 0.9] }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className="relative w-full flex items-center justify-center gap-4 bg-gray-900 px-8 py-8 md:py-10 rounded-t-[40px] border-t border-gray-800 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
+                        className="relative w-full flex items-center justify-center gap-4 bg-black px-8 py-8 md:py-10 rounded-t-[40px] border-t border-gray-800 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
                       >
                         {/* Siri Glow Indicator Wrapper */}
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
