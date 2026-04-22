@@ -2311,29 +2311,29 @@ const translations: Record<string, any> = {
 
 const VirtualNetworkBackground = () => {
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-[#fdfbf7]">
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-black">
       {/* Base Tech Image */}
       <div 
         className="absolute inset-0 opacity-100"
         style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, #f9f8f6 100%)',
+          background: 'linear-gradient(135deg, #000000 0%, #0a0a0a 100%)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       />
       
       {/* Network Nodes & Lines */}
-      <div className="absolute inset-0 opacity-40">
+      <div className="absolute inset-0 opacity-20">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="1"/>
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1"/>
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
           
           {/* Animated connection lines */}
-          <g stroke="rgba(59, 130, 246, 0.4)" strokeWidth="2" fill="none">
+          <g stroke="rgba(59, 130, 246, 0.5)" strokeWidth="2" fill="none">
             <path d="M 10 150 Q 150 200 300 100 T 600 300" className="animate-pulse" />
             <path d="M 800 100 Q 600 250 400 400 T 100 600" className="animate-pulse" style={{ animationDelay: '1s' }} />
             <path d="M 200 800 Q 400 600 700 700 T 1000 500" className="animate-pulse" style={{ animationDelay: '2s' }} />
@@ -5249,10 +5249,10 @@ export default function App() {
       <VirtualNetworkBackground />
 
       {/* Inner App Container */}
-      <div className="flex flex-col h-full w-full bg-transparent font-mukta text-gray-900 overflow-hidden relative">
+      <div className="flex flex-col h-full w-full bg-transparent font-mukta text-gray-200 overflow-hidden relative">
         {/* Header */}
         {!isLive && (
-          <header className="text-gray-900 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
+          <header className="text-gray-200 p-2 pt-3 sm:pt-4 flex justify-between items-center z-10">
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="flex flex-col items-center">
                 <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center mt-1.5">
@@ -5261,11 +5261,11 @@ export default function App() {
                     <Sparkles size={14} className="text-blue-400 animate-pulse drop-shadow-sm" />
                   </div>
                 </div>
-                <span className="text-[10px] font-bold text-gray-600 leading-none mt-0.5">Nard</span>
+                <span className="text-[10px] font-bold text-gray-400 leading-none mt-0.5">Nard</span>
               </div>
               <div className="flex flex-col">
                 <h1 className="text-2xl sm:text-3xl font-mukta font-bold tracking-wider text-yellow-500 drop-shadow-sm leading-none">YOU🫵🏽</h1>
-                <p className="text-[10px] text-green-600 font-sans font-medium leading-none mt-0.5">{t.subtitle}</p>
+                <p className="text-[10px] text-green-400 font-sans font-medium leading-none mt-0.5">{t.subtitle}</p>
               </div>
               
               {currentChatId && (
@@ -5281,7 +5281,7 @@ export default function App() {
             <div className="flex items-center gap-1.5 relative" ref={moreMenuRef}>
               <button 
                 onClick={handleNewChat}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md transition-all"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-800 border border-gray-700 text-gray-300 hover:text-white hover:bg-gray-700 shadow-md transition-all"
                 title={t.newChat}
               >
                 <MessageSquare size={18} />
@@ -5295,7 +5295,7 @@ export default function App() {
                     setShowMoreMenu(!showMoreMenu);
                   }
                 }}
-                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-200 text-sky-600 border-sky-400' : 'bg-white shadow-sm border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white shadow-md'} border`}
+                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${showMoreMenu ? 'bg-sky-900/50 text-sky-400 border-sky-600' : 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white hover:bg-gray-700 shadow-md'} border`}
                 title={t.moreOptions}
               >
                 <Menu size={18} />
@@ -5307,7 +5307,7 @@ export default function App() {
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-48 bg-white/95 backdrop-blur-xl border border-gray-300 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-48 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-2xl shadow-2xl z-[100] overflow-hidden"
                   >
                     <div className="p-1.5 flex flex-col gap-1">
                       <button 
@@ -5315,12 +5315,12 @@ export default function App() {
                           setIsHistoryOpen(true);
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-gray-800 shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600 group-hover:bg-sky-200 transition-colors">
+                        <div className="p-2 bg-sky-900/40 rounded-lg text-sky-400 group-hover:bg-sky-800 transition-colors">
                           <MessageSquare size={16} />
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{t.chatHistory}</span>
+                        <span className="text-sm font-medium text-gray-300 group-hover:text-gray-100">{t.chatHistory}</span>
                       </button>
                       
                       <button 
@@ -5328,12 +5328,12 @@ export default function App() {
                           handleAppShare();
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-gray-800 shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600 group-hover:bg-emerald-200 transition-colors">
+                        <div className="p-2 bg-emerald-900/40 rounded-lg text-emerald-400 group-hover:bg-emerald-800 transition-colors">
                           <Share2 size={16} />
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{t.share}</span>
+                        <span className="text-sm font-medium text-gray-300 group-hover:text-gray-100">{t.share}</span>
                       </button>
                       
                       <button 
@@ -5341,12 +5341,12 @@ export default function App() {
                           setShowSettings(!showSettings);
                           setShowMoreMenu(false);
                         }}
-                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white shadow-md transition-colors text-left group"
+                        className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-gray-800 shadow-md transition-colors text-left group"
                       >
-                        <div className="p-2 bg-amber-100 rounded-lg text-amber-600 group-hover:bg-amber-200 transition-colors">
+                        <div className="p-2 bg-amber-900/40 rounded-lg text-amber-400 group-hover:bg-amber-800 transition-colors">
                           <Settings2 size={16} />
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{t.settings}</span>
+                        <span className="text-sm font-medium text-gray-300 group-hover:text-gray-100">{t.settings}</span>
                       </button>
                     </div>
                   </motion.div>
@@ -5372,14 +5372,14 @@ export default function App() {
               >
                 <div className="p-4 max-w-3xl mx-auto grid grid-cols-1 gap-4 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar">
                   {/* User Name Setting */}
-                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                      <div className="p-2 bg-indigo-900/40 rounded-lg text-indigo-400">
                         <User size={20} />
                       </div>
                       <div>
-                        <h3 className="text-gray-900 font-medium">{t.userNameLabel}</h3>
-                        <p className="text-gray-500 text-xs">{t.userNamePlaceholder}</p>
+                        <h3 className="text-gray-200 font-medium">{t.userNameLabel}</h3>
+                        <p className="text-gray-400 text-xs">{t.userNamePlaceholder}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -5390,7 +5390,7 @@ export default function App() {
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
                             placeholder={t.userNamePlaceholder}
-                            className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors flex-1 sm:w-48"
+                            className="bg-gray-900 text-gray-200 border border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors flex-1 sm:w-48"
                             autoFocus
                             onBlur={() => setIsEditingBotName(false)}
                             onKeyDown={(e) => {
@@ -5406,14 +5406,14 @@ export default function App() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end bg-gray-50 px-4 py-2 rounded-lg border border-transparent hover:border-gray-200 transition-colors group">
-                          <span className="text-gray-900 font-medium truncate max-w-[150px]">
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end bg-gray-900/60 px-4 py-2 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors group">
+                          <span className="text-gray-200 font-medium truncate max-w-[150px]">
                             {userName || (uiLang === 'hi' ? 'नॉर्ड' : 'Nard')}
                           </span>
                           <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button 
                               onClick={() => setIsEditingBotName(true)}
-                              className="p-1.5 text-sky-600 hover:bg-sky-100 rounded-md transition-colors"
+                              className="p-1.5 text-sky-400 hover:bg-sky-900/40 rounded-md transition-colors"
                               title="Edit Name"
                             >
                               <Edit2 size={16} />
@@ -5421,7 +5421,7 @@ export default function App() {
                             {userName && (
                               <button 
                                 onClick={() => setUserName('')}
-                                className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-md transition-colors"
                                 title="Delete/Reset Name"
                               >
                                 <Trash2 size={16} />
@@ -5432,20 +5432,20 @@ export default function App() {
                       )}
                     </div>
                   </div>
-                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                      <div className="p-2 bg-sky-900/40 rounded-lg text-sky-400">
                         <Globe size={20} />
                       </div>
                       <div>
-                        <h3 className="text-gray-900 font-medium">{t.language}</h3>
-                        <p className="text-gray-500 text-xs">{t.chooseLanguage}</p>
+                        <h3 className="text-gray-200 font-medium">{t.language}</h3>
+                        <p className="text-gray-400 text-xs">{t.chooseLanguage}</p>
                       </div>
                     </div>
                     <select
                       value={uiLang}
                       onChange={(e) => setUiLang(e.target.value)}
-                      className="bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
+                      className="bg-gray-900 text-gray-200 border border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-sky-400 transition-colors"
                     >
                       <option value="en">English</option>
                       <option value="hi">हिन्दी (Hindi)</option>
@@ -5474,19 +5474,19 @@ export default function App() {
                     </select>
                   </div>
                   
-                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex flex-col gap-4">
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                        <div className="p-2 bg-sky-900/40 rounded-lg text-sky-400">
                           <Users size={16} />
                         </div>
                         <div>
-                          <h3 className="text-gray-900 font-medium">{t.premium} Voice</h3>
-                          <p className="text-gray-500 text-xs">{t.selectPremiumVoice}</p>
+                          <h3 className="text-white font-medium">{t.premium} Voice</h3>
+                          <p className="text-gray-400 text-xs">{t.selectPremiumVoice}</p>
                         </div>
                       </div>
                       <select 
-                        className="w-full bg-white shadow-md border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full bg-gray-900 shadow-md border border-gray-700 rounded-lg p-2 text-gray-200 outline-none focus:ring-2 focus:ring-sky-500"
                         value={premiumVoice}
                         onChange={(e) => {
                           setPremiumVoice(e.target.value);
@@ -5502,15 +5502,15 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                        <div className="p-2 bg-sky-900/40 rounded-lg text-sky-400">
                           <Zap size={20} />
                         </div>
                         <div>
-                          <h3 className="text-gray-900 font-medium">{t.speechRate || "Speech Rate"}</h3>
-                          <p className="text-gray-500 text-xs">{t.adjustRate || "Adjust voice speed"}</p>
+                          <h3 className="text-gray-200 font-medium">{t.speechRate || "Speech Rate"}</h3>
+                          <p className="text-gray-400 text-xs">{t.adjustRate || "Adjust voice speed"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -5523,26 +5523,26 @@ export default function App() {
                           onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                           className="w-24 md:w-32 accent-sky-500"
                         />
-                        <span className="text-gray-700 w-8 text-right">{speechRate.toFixed(1)}x</span>
+                        <span className="text-gray-400 w-8 text-right">{speechRate.toFixed(1)}x</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Audio Input Settings */}
-                  <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                        <div className="p-2 bg-sky-900/40 rounded-lg text-sky-400">
                           <Mic size={20} />
                         </div>
                         <div>
-                          <h3 className="text-gray-900 font-medium">{uiLang === 'hi' ? 'ऑडियो इनपुट' : 'Audio Input'}</h3>
-                          <p className="text-gray-500 text-xs">{uiLang === 'hi' ? 'अपना माइक्रोफ़ोन चुनें' : 'Select your microphone'}</p>
+                          <h3 className="text-gray-200 font-medium">{uiLang === 'hi' ? 'ऑडियो इनपुट' : 'Audio Input'}</h3>
+                          <p className="text-gray-400 text-xs">{uiLang === 'hi' ? 'अपना माइक्रोफ़ोन चुनें' : 'Select your microphone'}</p>
                         </div>
                       </div>
                       <button
                         onClick={connectBluetooth}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-900/40 text-blue-400 hover:bg-blue-800/50 rounded-lg transition-colors text-sm font-medium"
                       >
                         <Bluetooth size={16} />
                         {uiLang === 'hi' ? 'ब्लूटूथ कनेक्ट करें' : 'Connect Bluetooth'}
@@ -5553,7 +5553,7 @@ export default function App() {
                         value={selectedAudioInput}
                         onChange={(e) => setSelectedAudioInput(e.target.value)}
                         onClick={fetchAudioDevices}
-                        className="w-full bg-white shadow-sm border border-gray-300 rounded-lg p-2 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500"
+                        className="w-full bg-gray-900 shadow-sm border border-gray-700 rounded-lg p-2 text-gray-200 outline-none focus:ring-2 focus:ring-sky-500"
                       >
                         <option value="default">{uiLang === 'hi' ? 'डिफ़ॉल्ट माइक्रोफ़ोन' : 'Default Microphone'}</option>
                         {audioInputs.map((device) => (
@@ -5586,7 +5586,7 @@ export default function App() {
                   key={msg.id} 
                   className={`flex scroll-mt-20 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-white shadow-md backdrop-blur-md border border-gray-300 shadow-[0_4px_15px_rgba(0,0,0,0.1)]' : ''}`}>
+                  <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-gray-800/80 text-white shadow-lg backdrop-blur-md border border-gray-700 shadow-[0_4px_15px_rgba(0,0,0,0.4)]' : 'text-white'}`}>
                     {msg.role === 'model' && (
                       <div id={`message-header-${msg.id}`} className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 text-xs font-semibold text-yellow-500 drop-shadow-sm">
@@ -5628,7 +5628,7 @@ export default function App() {
                       </div>
                     )}
                     <div 
-                      className={`max-w-none text-gray-900 font-bold font-mukta leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
+                      className={`max-w-none text-gray-400 font-bold font-mukta leading-tight ${msg.role === 'user' ? 'text-right' : 'text-left ai-message-content'}`}
                     >
                       {msg.image && (
                         <div className="mb-3 flex justify-end">
@@ -5642,11 +5642,11 @@ export default function App() {
                       <ReactMarkdown 
                         rehypePlugins={[rehypeRaw]}
                         components={{
-                          p: ({ children }) => <p className="text-[24px] mb-0.5 leading-tight">{children}</p>,
-                          h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight">{children}</h1>,
-                          h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight">{children}</h2>,
-                          li: ({ children }) => <li className="text-[24px] mb-0.5 leading-tight">{children}</li>,
-                          strong: ({ children }) => <strong className="font-extrabold">{children}</strong>
+                          p: ({ children }) => <p className="text-[24px] mb-0.5 leading-tight text-gray-400/90">{children}</p>,
+                          h1: ({ children }) => <h1 className="text-[27px] mb-1 leading-tight text-gray-300">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-[27px] mb-1 leading-tight text-gray-300">{children}</h2>,
+                          li: ({ children }) => <li className="text-[24px] mb-0.5 leading-tight text-gray-400/90">{children}</li>,
+                          strong: ({ children }) => <strong className="font-bold text-gray-200">{children}</strong>
                         }}
                       >
                         {playingMessageId === msg.id 
@@ -5662,16 +5662,16 @@ export default function App() {
                             {msg.id === '1' && !currentChatId && (
                               <button
                                 onClick={() => setIsSaveModalOpen(true)}
-                                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 hover:text-sky-800 rounded-lg transition-colors mr-auto text-sm font-medium border border-sky-200"
+                                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-900/40 hover:bg-sky-800/50 text-sky-300 hover:text-sky-200 rounded-lg transition-colors mr-auto text-sm font-bold border border-sky-800/50 group active:scale-95 shadow-lg"
                                 title={t.saveChat}
                               >
-                                <Bookmark size={14} />
-                                <span>{t.saveChat}</span>
+                                <Bookmark size={14} className="group-hover:scale-110 transition-transform" />
+                                <span className="font-mukta">{t.saveChat}</span>
                               </button>
                             )}
                             <button
                               onClick={() => handleCopy(msg.text, msg.id)}
-                              className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
+                              className="flex items-center justify-center p-2 bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50 shadow-sm text-gray-400 hover:text-gray-200 rounded-lg transition-colors"
                               title={t.copy}
                             >
                               {copiedMessageId === msg.id ? (
@@ -5682,7 +5682,7 @@ export default function App() {
                             </button>
                             <button
                               onClick={() => handleShare(msg.text)}
-                              className="flex items-center justify-center p-2 bg-white shadow-sm hover:bg-white shadow-md text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
+                              className="flex items-center justify-center p-2 bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50 shadow-sm text-gray-400 hover:text-gray-200 rounded-lg transition-colors"
                               title={t.share}
                             >
                               <Share2 size={16} />
@@ -5696,7 +5696,7 @@ export default function App() {
                                 key={`${msg.id}-q-${idx}`}
                                 onClick={() => handleSend(q)}
                                 disabled={isLoading}
-                                className="text-xs md:text-sm bg-white hover:bg-white border border-sky-300 text-sky-800 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
+                                className="text-xs md:text-sm bg-gray-800/50 hover:bg-gray-700/50 border border-sky-900/50 text-sky-400 px-3 py-2 rounded-full transition-colors shadow-sm disabled:opacity-50"
                               >
                                 {q}
                               </button>
@@ -5716,13 +5716,13 @@ export default function App() {
                   transition={{ delay: 0.3 }}
                   className="flex justify-start mt-4"
                 >
-                  <div className="max-w-[95%] md:max-w-[85%] p-4 sm:p-5 rounded-2xl bg-white border border-sky-100 shadow-sm text-gray-800">
-                    <div className="flex items-center gap-2 mb-3 text-sky-600">
+                  <div className="max-w-[95%] md:max-w-[85%] p-4 sm:p-5 rounded-2xl bg-gray-900/60 backdrop-blur-md border border-gray-800 shadow-xl text-gray-200">
+                    <div className="flex items-center gap-2 mb-3 text-sky-400 font-bold">
                       <Bot size={20} />
-                      <h3 className="font-medium">{uiLang === 'hi' ? 'अपने सहायक का नाम रखें' : 'Name Your Assistant'}</h3>
+                      <h3 className="font-mukta">{uiLang === 'hi' ? 'अपने सहायक का नाम रखें' : 'Name Your Assistant'}</h3>
                     </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      {uiLang === 'hi' ? 'आप मुझे क्या बुलाना चाहेंगे? आप अपने AI सहायक के लिए एक कस्टम नाम सेट कर सकते हैं। आप अपना नाम भी आजमा सकते हैं।' : 'What would you like to call me? You can set a custom name for your AI assistant. You can also try your own name.'}
+                    <p className="text-sm text-gray-400 mb-4 font-mukta">
+                      {uiLang === 'hi' ? 'आप मुझे क्या बुलाना चाहेंगे? आप अपने AI सहायक के लिए एक कस्टम नाम सेट कर सकते हैं।' : 'What would you like to call me? You can set a custom name for your AI assistant.'}
                     </p>
                     <div className="flex flex-col gap-3">
                       <input
@@ -5730,7 +5730,7 @@ export default function App() {
                         value={setupName}
                         onChange={(e) => setSetupName(e.target.value)}
                         placeholder={t.userNamePlaceholder}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 h-8 text-sm outline-none focus:border-sky-400 transition-colors"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 h-10 text-gray-200 outline-none focus:border-sky-500 transition-colors placeholder-gray-500"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && setupName.trim()) {
                             const newName = setupName.trim();
@@ -5743,7 +5743,7 @@ export default function App() {
                           const newName = setupName.trim();
                           setUserName(newName);
                         }}
-                        className="w-1/2 mx-auto bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        className="w-1/2 mx-auto bg-sky-900/50 hover:bg-sky-800/60 text-sky-300 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-sky-800 active:scale-95"
                       >
                         {setupName.trim() ? (uiLang === 'hi' ? 'सुरक्षित करें' : 'Save') : (uiLang === 'hi' ? 'कस्टम नाम सेव करें' : 'Save Custom Name')}
                       </button>
@@ -5768,7 +5768,7 @@ export default function App() {
                     <button
                       key={`initial-q-${idx}`}
                       onClick={() => handleSend(question)}
-                      className="text-xs md:text-sm bg-white hover:bg-white border border-sky-300 text-sky-800 px-3 py-2 rounded-full transition-colors shadow-sm"
+                      className="text-xs md:text-sm bg-gray-800/50 hover:bg-gray-700/50 border border-sky-900/50 text-sky-400 px-3 py-2 rounded-full transition-colors shadow-sm"
                     >
                       {question}
                     </button>
@@ -5967,7 +5967,7 @@ export default function App() {
                         animate={{ opacity: 1 }}
                         className="p-4"
                       >
-                        <div className={`max-w-none text-white font-bold font-mukta leading-none text-center drop-shadow-[0_4px_30px_rgba(0,0,0,1)] max-w-7xl mx-auto ${subtitleConfig.tracking}`}>
+                        <div className={`max-w-none text-gray-400 font-bold font-mukta leading-none text-center drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] max-w-7xl mx-auto ${subtitleConfig.tracking}`}>
                           {/* Use direct word renderer instead of ReactMarkdown for the live stream to ensure component identity stability and prevent flickering */}
                           <div className={`${subtitleConfig.fontSize} mb-5 transition-all duration-700 ease-in-out`}>
                             <AnimatedSubtitleWords text={liveSubtitles} />
@@ -6055,9 +6055,9 @@ export default function App() {
                 exit={{ opacity: 0, y: 10 }}
                 className="max-w-3xl mx-auto flex justify-start mb-2 px-2"
               >
-                <div className="px-4 py-2 flex items-center gap-3 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200">
-                  <Loader2 size={16} className="animate-spin text-yellow-500" />
-                  <span className="text-sm text-gray-600"><span className="text-yellow-500 font-semibold drop-shadow-sm">{displayBotName}</span> {getGenderAdjustedText(t.thinking, uiLang, displayBotName)}</span>
+                <div className="px-4 py-2 flex items-center gap-3 bg-gray-900/60 backdrop-blur-md rounded-2xl shadow-sm border border-gray-800">
+                  <Loader2 size={16} className="animate-spin text-yellow-600" />
+                  <span className="text-sm text-gray-400"><span className="text-yellow-600 font-semibold drop-shadow-sm">{displayBotName}</span> {getGenderAdjustedText(t.thinking, uiLang, displayBotName)}</span>
                 </div>
               </motion.div>
             )}
@@ -6093,10 +6093,10 @@ export default function App() {
             100% { background-position: 0% 50%; }
           }
         `}</style>
-        <div className={`w-full relative flex flex-col shadow-md backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-[2rem] p-2 transition-all duration-500 focus-within:shadow-lg ${
+        <div className={`w-full relative flex flex-col shadow-md backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-[2rem] p-2 transition-all duration-500 focus-within:shadow-lg ${
           isVoiceTyping 
             ? 'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-blue-400 outline-none ring-2 ring-blue-300/50 scale-[1.02]' 
-            : 'bg-white border-gray-200 focus-within:bg-gray-50 focus-within:border-gray-300'
+            : 'bg-gray-900/80 border-gray-700 text-white focus-within:bg-gray-900 focus-within:border-gray-600'
         }`}
         style={isVoiceTyping ? { animation: 'fluid-gradient 3s ease infinite', backgroundSize: '200% 200%' } : {}}
         >
@@ -6182,7 +6182,7 @@ export default function App() {
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
               placeholder=""
-              className={`w-full bg-transparent text-gray-900 placeholder-gray-400 py-3 px-2 focus:outline-none resize-none min-h-[72px] max-h-32 font-medium relative z-20 ${
+              className={`w-full bg-transparent text-white placeholder-gray-500 py-3 px-2 focus:outline-none resize-none min-h-[72px] max-h-32 font-medium relative z-20 ${
                 (isLoading || input.trim() || selectedImage || isVoiceTyping)
                   ? 'pr-[60px] sm:pr-[70px]' 
                   : 'pr-[110px] sm:pr-[120px]'
@@ -6197,7 +6197,7 @@ export default function App() {
                       className={`flex items-center justify-center w-11 h-11 rounded-full transition-all transform active:scale-95 border group ${
                         isVoiceTyping 
                           ? 'bg-gradient-to-r from-pink-500 via-purple-500 to-sky-500 text-white border-transparent shadow-[0_0_15px_rgba(168,85,247,0.6)] animate-pulse' 
-                          : 'bg-white shadow-md text-gray-800 hover:bg-gray-100 shadow-md hover:text-gray-900 border-gray-300'
+                          : 'bg-gray-800/50 shadow-md text-gray-400 hover:bg-gray-700/50 shadow-md hover:text-gray-200 border-gray-700'
                       }`}
                       title={isVoiceTyping ? t.stopVoiceTyping : t.voiceTyping}
                     >
@@ -6316,15 +6316,15 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-gray-300 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl"
             >
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{t.saveChat}</h2>
+              <h2 className="text-xl font-bold text-gray-200 mb-4">{t.saveChat}</h2>
               <input
                 type="text"
                 value={chatNameInput}
                 onChange={(e) => setChatNameInput(e.target.value)}
                 placeholder={t.enterChatName}
-                className="w-full bg-white shadow-md border border-gray-300 rounded-xl p-3 text-gray-900 outline-none focus:ring-2 focus:ring-sky-500 mb-6"
+                className="w-full bg-gray-800 shadow-md border border-gray-700 rounded-xl p-3 text-gray-200 outline-none focus:ring-2 focus:ring-sky-500 mb-6 placeholder-gray-500"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveChat();
@@ -6333,14 +6333,14 @@ export default function App() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white shadow-md hover:bg-gray-100 shadow-md text-gray-900 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-gray-800 shadow-md hover:bg-gray-700 shadow-md text-gray-400 hover:text-gray-200 transition-colors border border-gray-700"
                 >
                   {t.cancel}
                 </button>
                 <button
                   onClick={handleSaveChat}
                   disabled={!chatNameInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-sky-900/50 hover:bg-sky-800/60 text-sky-300 transition-colors disabled:opacity-50 border border-sky-800"
                 >
                   {t.save}
                 </button>
@@ -6366,16 +6366,16 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white border-r border-gray-200 shadow-2xl flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 shadow-2xl flex flex-col"
             >
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-white">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <MessageSquare size={20} className="text-sky-600" />
+              <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900">
+                <h2 className="text-lg font-bold text-gray-200 flex items-center gap-2">
+                  <MessageSquare size={20} className="text-sky-400" />
                   {t.chatHistory}
                 </h2>
                 <button
                   onClick={() => setIsHistoryOpen(false)}
-                  className="p-2 hover:bg-white shadow-md rounded-full transition-colors text-gray-600 hover:text-gray-900"
+                  className="p-2 hover:bg-gray-800 shadow-md rounded-full transition-colors text-gray-400 hover:text-gray-200"
                 >
                   <X size={20} />
                 </button>
@@ -6384,7 +6384,7 @@ export default function App() {
               <div className="p-4">
                 <button
                   onClick={handleNewChat}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-100 hover:bg-sky-200 text-sky-600 border border-sky-300 rounded-xl transition-colors font-medium"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-sky-900/50 hover:bg-sky-800/60 text-sky-300 border border-sky-800 rounded-xl transition-colors font-bold shadow-lg active:scale-95 transition-all"
                 >
                   <MessageSquare size={18} />
                   {t.newChat}
@@ -6444,8 +6444,8 @@ export default function App() {
                       }}
                       className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors border relative ${
                         currentChatId === chat.id 
-                          ? 'bg-sky-100 border-sky-400 text-sky-800' 
-                          : 'bg-white shadow-sm border-transparent hover:bg-white shadow-md text-gray-700 hover:text-gray-900'
+                          ? 'bg-sky-900/30 border-sky-600 text-sky-300' 
+                          : 'bg-gray-800/50 border-gray-700 hover:bg-gray-700/50 text-gray-300 hover:text-white'
                       }`}
                     >
                       {editingChatId === chat.id ? (
@@ -6458,7 +6458,7 @@ export default function App() {
                               if (e.key === 'Enter') handleSaveRename();
                               if (e.key === 'Escape') handleCancelRename();
                             }}
-                            className="flex-1 min-w-0 bg-white border-gray-300 border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 outline-none focus:border-sky-500"
+                            className="flex-1 min-w-0 bg-gray-800 border-gray-700 border rounded px-2 py-1 text-sm text-gray-200 outline-none focus:border-sky-500"
                             autoFocus
                           />
                           <button onClick={handleSaveRename} className="p-1 text-green-400 hover:bg-green-400/20 rounded" title={t.save}>
@@ -6488,7 +6488,7 @@ export default function App() {
                           <div className={`items-center gap-1 transition-opacity ${showOptionsId === chat.id ? 'flex opacity-100' : 'hidden sm:flex opacity-0 sm:group-hover:opacity-100'}`}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleTogglePin(e, chat.id); setShowOptionsId(null); }}
-                              className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-600 hover:bg-sky-400/10' : 'text-gray-400 hover:text-gray-900 hover:bg-white shadow-md'}`}
+                              className={`p-1.5 rounded-lg transition-colors ${chat.isPinned ? 'text-sky-400 hover:bg-sky-900/40' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
                               title={chat.isPinned ? t.unpinChat : t.pinChat}
                             >
                               <Pin size={14} className={chat.isPinned ? "fill-current" : ""} />
