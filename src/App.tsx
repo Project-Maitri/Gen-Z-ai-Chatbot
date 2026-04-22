@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { GoogleGenAI, ThinkingLevel, LiveServerMessage, Modality } from '@google/genai';
 import { Send, ArrowUp, ArrowLeft, Mic, MicOff, Volume2, Square, VolumeX, BrainCircuit, Zap, MessageSquare, Info, Loader2, Users, Settings2, Play, Pause, Copy, Check, Globe, Share2, AudioLines, X, Bookmark, Pin, Edit2, Trash2, MoreVertical, Menu, MonitorUp, MonitorOff, Image as ImageIcon, Plus, Bot, Sparkles, Flame, User, Bluetooth, Captions, MousePointer2, Radio } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -5195,10 +5195,50 @@ export default function App() {
   const lastModelMessage = messages.slice().reverse().find(m => m.role === 'model');
   const liveSubtitles = isLive && lastModelMessage ? parseMessage(lastModelMessage.text).mainText : '';
 
+  // Dynamic subtitle configuration based on message length
+  const subtitleConfig = useMemo(() => {
+    const len = liveSubtitles.length;
+    if (len < 50) {
+      return {
+        fontSize: 'text-[50px] md:text-[150px]',
+        justify: 'justify-center',
+        tracking: 'tight'
+      };
+    } else if (len < 150) {
+      return {
+        fontSize: 'text-[40px] md:text-[110px]',
+        justify: 'justify-center',
+        tracking: 'tight'
+      };
+    } else if (len < 350) {
+      return {
+        fontSize: 'text-[30px] md:text-[80px]',
+        justify: 'justify-center',
+        tracking: 'normal'
+      };
+    } else if (len < 800) {
+      return {
+        fontSize: 'text-[24px] md:text-[55px]',
+        justify: 'justify-center',
+        tracking: 'normal'
+      };
+    } else {
+      // Very long messages - shrink further but keep readable
+      return {
+        fontSize: 'text-[20px] md:text-[42px]',
+        justify: 'justify-end', // Switch to bottom-anchored for stable growth once it exceeds screen
+        tracking: 'normal'
+      };
+    }
+  }, [liveSubtitles]);
+
   useEffect(() => {
-    // When using justify-end with overflow-y-auto, modern browsers 
-    // naturally anchor content to the bottom as it grows.
-    // Manual scrollTop setting often conflicts and causes the "shaking" jitter.
+    // For long scrolling messages, ensure we stay at the bottom
+    // We only force scroll if it's long enough to likely overflow
+    if (liveSubtitlesRef.current && liveSubtitles.length >= 350) {
+      const el = liveSubtitlesRef.current;
+      el.scrollTop = el.scrollHeight;
+    }
   }, [liveSubtitles]);
 
   return (
@@ -5915,11 +5955,10 @@ export default function App() {
                   <div className="absolute top-10 bottom-[110px] left-4 right-4 z-[60] pointer-events-none flex flex-col items-center">
                     <div 
                       ref={liveSubtitlesRef}
-                      className="h-full w-full overflow-y-auto custom-scrollbar p-4 flex flex-col justify-end"
+                      className={`h-full w-full overflow-y-auto custom-scrollbar p-4 flex flex-col ${subtitleConfig.justify}`}
                       style={{
                         maskImage: 'none',
                         WebkitMaskImage: 'none',
-                        // Enable standard browser optimizations for pinned-to-bottom feel
                         overflowAnchor: 'auto'
                       }}
                     >
@@ -5928,9 +5967,9 @@ export default function App() {
                         animate={{ opacity: 1 }}
                         className="p-4"
                       >
-                        <div className="max-w-none text-white font-bold font-mukta leading-none text-center drop-shadow-[0_4px_30px_rgba(0,0,0,1)] max-w-7xl mx-auto">
+                        <div className={`max-w-none text-white font-bold font-mukta leading-none text-center drop-shadow-[0_4px_30px_rgba(0,0,0,1)] max-w-7xl mx-auto ${subtitleConfig.tracking}`}>
                           {/* Use direct word renderer instead of ReactMarkdown for the live stream to ensure component identity stability and prevent flickering */}
-                          <div className="text-[30px] md:text-[130px] mb-5">
+                          <div className={`${subtitleConfig.fontSize} mb-5 transition-all duration-700 ease-in-out`}>
                             <AnimatedSubtitleWords text={liveSubtitles} />
                           </div>
                         </div>
