@@ -181,6 +181,34 @@ const safeStorage = {
   }
 };
 
+/**
+ * Helper component to animate words appearing in live subtitles.
+ * Defined outside App to prevent unmounting and flickering on every re-render.
+ */
+const AnimatedSubtitleWords = ({ text }: { text: string }) => {
+  if (!text) return null;
+  // Use a cleaner regex to split words but keep logic simple for stability
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  return (
+    <>
+      {words.map((word, i) => (
+        <motion.span
+          key={`${i}`} 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 3.2, 
+            ease: "linear"
+          }}
+          className="inline-block whitespace-pre-wrap mr-[0.25em]"
+        >
+          {word}
+        </motion.span>
+      ))}
+    </>
+  );
+};
+
 // Initial load
 try {
   initAI(getApiKey());
@@ -435,7 +463,7 @@ const translations: Record<string, any> = {
     listenAgain: "फिर से सुनें",
     speaking: "नॉर्ड बोल रहे हैं...",
     listening: "नॉर्ड सुन रहे हैं...",
-    ready: "नॉर्ड तैयार है",
+    ready: "नॉर्ड तैयार हैं",
     thinking: "सोच रहे हैं...",
     liveChatOn: "लाइव वॉइस चैट चालू है: कृपया बोलें",
     stopVoiceChat: "वॉइस चैट बंद करें",
@@ -1330,7 +1358,7 @@ const translations: Record<string, any> = {
     listenAgain: "دوبارہ سنیں",
     speaking: "نارڈ بول رہے ہیں...",
     listening: "نارڈ سن رہے ہیں...",
-    ready: "نارڈ تیار ہے",
+    ready: "نارڈ تیار ہیں",
     thinking: "سوچ رہے ہیں...",
     liveChatOn: "لائیو وائس چیٹ آن ہے: براہ کرم بولیں",
     stopVoiceChat: "وائس چیٹ بند کریں",
@@ -3201,12 +3229,29 @@ export default function App() {
   };
   
   const parseMessage = (text: string) => {
-    if (!text) return { mainText: '', questions: [] };
+    if (!text || typeof text !== 'string') return { mainText: '', questions: [] };
     const adjustedText = getGenderAdjustedText(text, uiLang, displayBotName);
     const parts = adjustedText.split('---SUGGESTED_QUESTIONS---');
-    // Ensure all single newlines become double newlines to force proper paragraph breaks,
-    // but don't add extra newlines if there are already multiple.
-    const mainText = parts[0].trim().replace(/(?<!\n)\r?\n(?!\r?\n)/g, '\n\n');
+    // Strip any hidden recap blocks used for history reminders
+    // We use a multi-stage regex to catch both finished and ongoing blocks
+    let strippedText = parts[0];
+    // 1. Strip full recap blocks (support newlines with [^])
+    strippedText = strippedText.replace(/\[\[RECAP\]\][^]*?\[\[ENDRECAP\]\](---RECAP_SPLIT---)?/gi, '');
+    // 2. If the model missed [[RECAP]] but has [[ENDRECAP]], strip everything before it
+    if (strippedText.toUpperCase().includes('[[ENDRECAP]]')) {
+      const endMarker = '[[ENDRECAP]]';
+      const index = strippedText.toUpperCase().lastIndexOf(endMarker);
+      strippedText = strippedText.substring(index + endMarker.length);
+      // Also strip any partial markers that might be left
+      strippedText = strippedText.replace(/^---RECAP_SPLIT---/gi, '');
+    }
+    // 3. Strip ongoing/broken blocks
+    strippedText = strippedText.replace(/\[\[RECAP\]\][^]*?$/gi, '');
+    strippedText = strippedText.replace(/\[\[RECAP\]\]/gi, '');
+    strippedText = strippedText.replace(/\[\[ENDRECAP\]\]/gi, '');
+    strippedText = strippedText.replace(/---RECAP_SPLIT---/gi, '');
+    
+    const mainText = strippedText.trim().replace(/(?<!\n)\r?\n(?!\r?\n)/g, '\n\n');
     const questions: string[] = [];
     
     if (parts.length > 1) {
@@ -3231,7 +3276,9 @@ export default function App() {
   // Live API Refs
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const isInitialResumeTurnRef = useRef(false);
   const isSessionActiveRef = useRef(false);
+  const liveRecapBufferRef = useRef('');
   useEffect(() => {
     isSessionActiveRef.current = isSessionActive;
   }, [isSessionActive]);
@@ -3669,6 +3716,7 @@ export default function App() {
 
   const queuePremiumAudioChunk = (chunkText: string, messageId: string, globalStartIndex: number) => {
     const cleanText = chunkText
+      .replace(/\[\[RECAP\]\]|\[\[ENDRECAP\]\]|---RECAP_SPLIT---/gi, '')
       .replace(/<[^>]+>/g, match => ' '.repeat(match.length))
       .replace(/[*_#`\-<>]/g, ' ')
       .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, match => ' '.repeat(match.length));
@@ -4518,6 +4566,7 @@ export default function App() {
         }
       }
       liveInstruction += "\n\nCRITICAL FOR LIVE VOICE CONVERSATION: DO NOT output the ---SUGGESTED_QUESTIONS--- section or any suggested questions at all. Just answer the user directly.";
+      liveInstruction += "\n\nCRITICAL RESUME MODE: If the user provides a 'transcript of our previous conversation', you MUST briefly summarize or acknowledge it first. In your TEXT output, you MUST strictly wrap this history reminder inside [[RECAP]] and [[ENDRECAP]] markers. Example: '[[RECAP]] Last time we discussed the election. [[ENDRECAP]] Hello!'. The UI will hide the bracketed text, but it is necessary for context preservation. Both [[RECAP]] and [[ENDRECAP]] tags MUST be present and capitalized.";
 
       const getBcp47Lang = (lang: string) => {
         switch(lang) {
@@ -4567,7 +4616,8 @@ export default function App() {
                        } else {
                          const recentMessages = messages.slice(-10);
                          const historyText = recentMessages.map((m: any) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${parseMessage(m.text).mainText}`).join('\n');
-                         s.sendRealtimeInput({ text: `Here is the transcript of our previous conversation:\n\n${historyText}\n\nPlease greet the user in ${currentLanguageName}, briefly remind them of the last topic we were discussing based on the transcript, and ask how they would like to continue.` });
+                         isInitialResumeTurnRef.current = true;
+                         s.sendRealtimeInput({ text: `Here is the transcript of our previous conversation:\n\n${historyText}\n\nPlease greet the user in ${currentLanguageName}. START your response with the history reminder. You MUST strictly wrap this entire history reminder like this: '[[RECAP]] brief summary here [[ENDRECAP]]'. Only after [[ENDRECAP]] should you say anything else. Important: The text inside [[RECAP]] and [[ENDRECAP]] markers will be completely hidden from the UI, but you MUST still speak it out loud.` });
                        }
                        console.log("Initial message sent to Live API.");
                      }
@@ -4594,6 +4644,8 @@ export default function App() {
                }
                isModelSpeakingRef.current = false;
                setIsModelSpeaking(false);
+               isInitialResumeTurnRef.current = false;
+               liveRecapBufferRef.current = '';
              }
              const parts = message.serverContent?.modelTurn?.parts;
              let incomingText = "";
@@ -4610,9 +4662,10 @@ export default function App() {
 
              const outputTranscription = message.serverContent?.outputTranscription;
              if (outputTranscription?.text) {
-               // We don't want to duplicate if both part.text and outputTranscription are present,
-               // but typically only one is used. Let's prefer outputTranscription if part.text is empty.
-               incomingText += outputTranscription.text;
+               // Duplication fix: prefer text from parts if available.
+               if (!incomingText) {
+                 incomingText = outputTranscription.text;
+               }
              }
 
              const inputTranscription = message.serverContent?.inputTranscription;
@@ -4636,38 +4689,67 @@ export default function App() {
              }
 
              if (incomingText) {
+               // Isolated Buffer Tracking: Zero UI Leakage Strategy
+               if (isInitialResumeTurnRef.current) {
+                 liveRecapBufferRef.current += incomingText;
+                 const bStr = liveRecapBufferRef.current;
+                 const hasEndTag = bStr.toUpperCase().includes('[[ENDRECAP]]');
+                 
+                 if (hasEndTag) {
+                   isInitialResumeTurnRef.current = false;
+                   const splitMarker = '[[ENDRECAP]]';
+                   const splitIndex = bStr.toUpperCase().indexOf(splitMarker) + splitMarker.length;
+                   
+                   let recapPart = bStr.substring(0, splitIndex);
+                   if (!recapPart.toUpperCase().includes('[[RECAP]]')) {
+                     recapPart = '[[RECAP]]' + recapPart;
+                   }
+                   recapPart += '---RECAP_SPLIT---';
+                   const responsePart = bStr.substring(splitIndex);
+                   
+                   setMessages(prev => [
+                     ...prev,
+                     { id: Date.now().toString() + 'rcp', role: 'model', text: recapPart, isLive: true },
+                     { id: Date.now().toString() + 'ans', role: 'model', text: responsePart, isLive: true }
+                   ]);
+                   liveRecapBufferRef.current = '';
+                 } else if (bStr.length > 1000) {
+                   isInitialResumeTurnRef.current = false;
+                   setMessages(prev => [...prev, { id: Date.now().toString() + 'flb', role: 'model', text: bStr, isLive: true }]);
+                   liveRecapBufferRef.current = '';
+                 }
+                 return;
+               }
+
                setMessages(prev => {
                  const newMessages = [...prev];
                  let lastMsg = newMessages[newMessages.length - 1];
-                 if (!lastMsg || lastMsg.role !== 'model' || !lastMsg.isLive) {
-                   lastMsg = { id: Date.now().toString() + Math.random(), role: 'model', text: incomingText, isLive: true };
-                   newMessages.push(lastMsg);
+                 const isOngoingModelMsg = lastMsg && lastMsg.role === 'model' && lastMsg.isLive;
+                 
+                 if (!isOngoingModelMsg) {
+                   return [...prev, { id: Date.now().toString() + '-' + Math.random(), role: 'model', text: incomingText, isLive: true }];
                  } else {
-                   // Append the new incoming chunk
-                   lastMsg = { ...lastMsg, text: lastMsg.text + incomingText };
-                   newMessages[newMessages.length - 1] = lastMsg;
+                   const newMessages = [...prev];
+                   newMessages[newMessages.length - 1] = { ...lastMsg, text: lastMsg.text + incomingText };
+                   return newMessages;
                  }
-                 return newMessages;
                });
              }
           },
           onclose: (event?: any) => {
-             console.log("Live API connection closed.", {
-               wasClean: event?.wasClean,
-               code: event?.code,
-               reason: event?.reason,
-               event: event
-             });
+             console.log("Live API connection closed.", event);
+             if (event && event.code && event.code !== 1000) {
+               const reason = event.reason || "Connection lost";
+               setError(`Voice Session Closed: ${reason} (Code: ${event.code})`);
+             }
              isSessionActiveRef.current = false;
              setIsSessionActive(false);
              stopLiveAudio();
           },
           onerror: (err: any) => {
-             console.error("Live API critical error:", {
-               message: err?.message,
-               stack: err?.stack,
-               error: err
-             });
+             console.error("Live API critical error:", err);
+             const msg = err?.message || String(err) || "Unknown Live API Error";
+             setError("Live Voice Critical Error: " + msg);
              setIsLiveConnecting(false);
              isSessionActiveRef.current = false;
              setIsSessionActive(false);
@@ -5114,9 +5196,9 @@ export default function App() {
   const liveSubtitles = isLive && lastModelMessage ? parseMessage(lastModelMessage.text).mainText : '';
 
   useEffect(() => {
-    if (liveSubtitlesRef.current) {
-      liveSubtitlesRef.current.scrollTop = liveSubtitlesRef.current.scrollHeight;
-    }
+    // When using justify-end with overflow-y-auto, modern browsers 
+    // naturally anchor content to the bottom as it grows.
+    // Manual scrollTop setting often conflicts and causes the "shaking" jitter.
   }, [liveSubtitles]);
 
   return (
@@ -5452,6 +5534,9 @@ export default function App() {
             <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${!isLive ? 'pb-[60vh]' : ''}`}>
               {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
+                
+                // Hide messages that are just a recap which should only be spoken
+                if (!mainText && msg.role === 'model' && (msg.text.includes('[[RECAP]]') || msg.text.includes('[[ENDRECAP]]'))) return null;
                 
                 return (
                 <motion.div 
@@ -5827,13 +5912,15 @@ export default function App() {
                 </div>
 
                 {showLiveSubtitles && isModelSpeaking && liveSubtitles && (
-                  <div className="absolute top-24 bottom-[32%] left-4 right-4 z-[60] pointer-events-none flex flex-col items-center justify-center">
+                  <div className="absolute top-10 bottom-[110px] left-4 right-4 z-[60] pointer-events-none flex flex-col items-center">
                     <div 
                       ref={liveSubtitlesRef}
-                      className="h-full w-full overflow-y-auto custom-scrollbar p-4 flex flex-col justify-start"
+                      className="h-full w-full overflow-y-auto custom-scrollbar p-4 flex flex-col justify-end"
                       style={{
-                        maskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)',
-                        WebkitMaskImage: 'linear-gradient(to top, transparent, black 15%, black 85%, transparent)'
+                        maskImage: 'none',
+                        WebkitMaskImage: 'none',
+                        // Enable standard browser optimizations for pinned-to-bottom feel
+                        overflowAnchor: 'auto'
                       }}
                     >
                       <motion.div
@@ -5842,18 +5929,10 @@ export default function App() {
                         className="p-4"
                       >
                         <div className="max-w-none text-white font-bold font-mukta leading-none text-center drop-shadow-[0_4px_30px_rgba(0,0,0,1)] max-w-7xl mx-auto">
-                          <ReactMarkdown 
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
-                              p: ({ children }) => <p className="text-[30px] md:text-[130px] mb-5">{children}</p>,
-                              h1: ({ children }) => <h1 className="text-[42px] md:text-[160px] mb-7">{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-[36px] md:text-[145px] mb-6">{children}</h2>,
-                              strong: ({ children }) => <strong className="font-extrabold text-yellow-400">{children}</strong>,
-                              li: ({ children }) => <li className="text-[30px] md:text-[130px] mb-3 list-none">{children}</li>
-                            }}
-                          >
-                            {liveSubtitles}
-                          </ReactMarkdown>
+                          {/* Use direct word renderer instead of ReactMarkdown for the live stream to ensure component identity stability and prevent flickering */}
+                          <div className="text-[30px] md:text-[130px] mb-5">
+                            <AnimatedSubtitleWords text={liveSubtitles} />
+                          </div>
                         </div>
                       </motion.div>
                     </div>
