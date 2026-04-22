@@ -5941,8 +5941,8 @@ export default function App() {
                       }}
                       className={`p-3 transition-all duration-300 ${
                         showLiveSubtitles 
-                          ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]' 
-                          : 'text-gray-400 hover:text-white'
+                          ? 'text-sky-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.6)]' 
+                          : 'text-gray-400 hover:text-gray-200'
                       }`}
                       title={showLiveSubtitles ? "Hide Subtitles" : "Show Subtitles"}
                     >
@@ -5995,7 +5995,7 @@ export default function App() {
                       <motion.div 
                         animate={{ opacity: [0.9, 1, 0.9] }}
                         transition={{ repeat: Infinity, duration: 2 }}
-                        className="relative w-full flex items-center justify-center gap-4 bg-gray-950/90 backdrop-blur-3xl px-8 py-8 md:py-10 rounded-t-[40px] border-t border-gray-800 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
+                        className="relative w-full flex items-center justify-center gap-4 bg-gray-900 px-8 py-8 md:py-10 rounded-t-[40px] border-t border-gray-800 shadow-[0_-15px_50px_rgba(0,0,0,0.6)]"
                       >
                         {/* Siri Glow Indicator Wrapper */}
                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
@@ -6019,8 +6019,8 @@ export default function App() {
                           />
                         </div>
 
-                        <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isSessionActiveRef.current ? (isModelSpeaking ? 'bg-yellow-400 shadow-[0_0_15px_#facc15]' : 'bg-blue-400 shadow-[0_0_15px_#60a5fa] animate-pulse') : 'bg-gray-600 shadow-none'}`}></div>
-                         <span className="text-white font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
+                        <div className={`w-4 h-4 flex-shrink-0 rounded-full ${isSessionActiveRef.current ? (isModelSpeaking ? 'bg-yellow-600/80 shadow-[0_0_15px_rgba(202,138,4,0.5)]' : 'bg-blue-600/80 shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse') : 'bg-gray-700 shadow-none'}`}></div>
+                         <span className="text-gray-400 font-mukta font-bold text-2xl md:text-3xl tracking-wide drop-shadow-sm truncate relative z-10">
                           {isModelSpeaking 
                             ? getGenderAdjustedText(t.speaking, uiLang, displayBotName) 
                             : (!hasLiveStarted 
