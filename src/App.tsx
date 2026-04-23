@@ -3318,116 +3318,108 @@ export default function App() {
   const prevIsLoadingRef = useRef<boolean>(isLoading);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressFiredRef = useRef<boolean>(false);
+  const hasSnappedRef = useRef(false);
 
-  // Track previous playing message ID and scroll to top of message when audio finishes
+  // Reset snapping flag when loading starts
+  useEffect(() => {
+    if (isLoading && !isStreaming) {
+      hasSnappedRef.current = false;
+    }
+  }, [isLoading, isStreaming]);
+
+  // Track previous playing message ID and handle scroll stabilization
   useEffect(() => {
     if (prevPlayingMessageIdRef.current !== null && playingMessageId === null) {
       const msgId = prevPlayingMessageIdRef.current;
-      const container = document.getElementById('main-scroll-container');
       const msgEl = document.getElementById(`message-${msgId}`);
-      if (container && msgEl) {
-        setTimeout(() => {
-          msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+      if (msgEl) {
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
     prevPlayingMessageIdRef.current = playingMessageId;
   }, [playingMessageId]);
 
-  // Scroll to top of last message when generation finishes
-  useEffect(() => {
-    if (prevIsLoadingRef.current === true && isLoading === false) {
-      // Do not force scroll to top if audio is currently playing, 
-      // as it has its own scroll tracking logic.
-      if (!playingMessageIdRef.current) {
-        const container = document.getElementById('main-scroll-container');
-        if (container && messages.length > 0) {
-          const lastMsg = messages[messages.length - 1];
-          const msgEl = document.getElementById(`message-${lastMsg.id}`);
-          if (msgEl) {
-            setTimeout(() => {
-              msgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-          }
-        }
-      }
-    }
-    prevIsLoadingRef.current = isLoading;
-  }, [isLoading, messages]);
-
-  // Scroll to bottom when exiting live chat
-  useEffect(() => {
-    if (!isLive) {
-      const container = document.getElementById('main-scroll-container');
-      if (container) {
-        setTimeout(() => {
-          if (messages.length <= 1) {
-            container.scrollTo({ top: 0, behavior: 'smooth' });
-          } else {
-            const lastMsg = messages[messages.length - 1];
-            const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
-            if (lastMsgEl) {
-              // Always scroll to start so it flows downwards
-              lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-            }
-          }
-        }, 100);
-      }
-    }
-  }, [isLive]); // Only run when isLive changes, NOT on every message chunk!
-
-  // Scroll logic
+  // Scroll logic for generation and message changes
   useLayoutEffect(() => {
     if (!playingMessageId) {
       const container = document.getElementById('main-scroll-container');
       if (container) {
         const isNewMessage = messages.length > lastMessageCountRef.current;
         const isNewChat = messages.length < lastMessageCountRef.current;
+        const generationStarted = prevIsLoadingRef.current === false && isLoading === true;
+        const generationFinished = prevIsLoadingRef.current === true && isLoading === false;
+        
         lastMessageCountRef.current = messages.length;
+        prevIsLoadingRef.current = isLoading;
 
-        if (isNewMessage || isNewChat) {
-          // When a chat is loaded or a non-streaming message arrives
-          setTimeout(() => {
-            if (messages.length <= 1) {
-              container.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-              const lastMsg = messages[messages.length - 1];
-              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
-              if (lastMsgEl) {
-                // Always scroll to the start of the message so it flows downwards from the top
-                lastMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              } else {
-                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-              }
-            }
-          }, 100);
-        } else if (isLoading) {
-          // Do nothing while loading to keep the screen completely stable.
-          // This prevents the shaking effect caused by continuous scrolling.
-        } else if (isLive || isStreaming) {
-          setTimeout(() => {
-            if (messages.length > 0) {
-              const lastMsg = messages[messages.length - 1];
-              const lastMsgEl = document.getElementById(`message-${lastMsg.id}`);
-              if (lastMsgEl && container) {
-                const msgRect = lastMsgEl.getBoundingClientRect();
-                const containerRect = container.getBoundingClientRect();
+        if (isNewMessage || generationStarted || (isStreaming && !hasSnappedRef.current)) {
+          const lastMsg = messages[messages.length - 1];
+          const prevMsg = messages.length > 1 ? messages[messages.length - 2] : null;
+          
+          let targetId: string | undefined;
+          let isUserSend = false;
+          if (lastMsg?.role === 'user') {
+            targetId = lastMsg.id;
+            isUserSend = true;
+          } else if (lastMsg?.role === 'model') {
+            targetId = (prevMsg && prevMsg.role === 'user') ? prevMsg.id : lastMsg.id;
+          }
+
+          if (targetId) {
+            const snapToTop = (behavior: ScrollBehavior = 'auto') => {
+              const el = document.getElementById(`message-${targetId}`);
+              const scrollBox = document.getElementById('main-scroll-container');
+              if (el && scrollBox) {
+                const boxRect = scrollBox.getBoundingClientRect();
+                const elRect = el.getBoundingClientRect();
+                const currentY = scrollBox.scrollTop;
                 
-                // If the message has grown taller than the visible container,
-                // or its bottom is extending below the visible area, scroll to follow it.
-                // Otherwise, let it stay anchored at the top.
-                if (msgRect.bottom > containerRect.bottom) {
-                  container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-                }
+                // Calculate exact top position relative to container
+                const absoluteTop = elRect.top - boxRect.top + currentY;
+                
+                scrollBox.scrollTo({ 
+                  top: Math.max(0, absoluteTop - 2), 
+                  behavior 
+                });
+                
+                if (lastMsg?.role === 'model') hasSnappedRef.current = true;
+                return true;
               }
+              return false;
+            };
+
+            if (isUserSend) {
+              snapToTop('auto');
+              requestAnimationFrame(() => snapToTop('auto'));
+              setTimeout(() => snapToTop('auto'), 10);
+            } else {
+              snapToTop('auto');
+              const pollTimes = [10, 30, 60, 100, 200, 400];
+              pollTimes.forEach(delay => {
+                setTimeout(() => snapToTop(delay < 100 ? 'auto' : 'smooth'), delay);
+              });
+              requestAnimationFrame(() => snapToTop('auto'));
             }
-          }, 100);
+          }
+        } else if (generationFinished) {
+          const lastMsg = messages[messages.length - 1];
+          const prevMsg = messages.length > 1 ? messages[messages.length - 2] : null;
+          const targetId = (lastMsg?.role === 'model' && prevMsg?.role === 'user') 
+            ? prevMsg.id 
+            : lastMsg?.id;
+          
+          if (targetId) {
+            setTimeout(() => {
+              const el = document.getElementById(`message-${targetId}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
+          }
+        } else if (isNewChat) {
+          container.scrollTo({ top: 0, behavior: 'auto' });
         }
       }
     }
-  }, [messages, playingMessageId, isLoading, isModelSpeaking, isLive, isStreaming]);
+  }, [messages, playingMessageId, isLoading, isModelSpeaking, isLive, isStreaming, currentChatId]);
 
   // Initialize Chat (removed as we use generateContent directly now)
   useEffect(() => {
@@ -5570,8 +5562,8 @@ export default function App() {
           </AnimatePresence>
 
           {/* Chat Area */}
-          <main id="main-scroll-container" className={`flex-1 overflow-y-auto ${isLive ? 'p-0' : 'p-4 md:p-6'} flex flex-col relative`} style={{ overflowAnchor: 'none' }}>
-            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${!isLive ? 'pb-[60vh]' : ''}`}>
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto ${isLive ? 'p-0' : 'px-4 py-2 md:px-6 md:py-4'} flex flex-col relative`} style={{ overflowAnchor: 'none' }}>
+            <div id="chat-messages-container" className={`max-w-3xl mx-auto w-full space-y-6 relative transition-opacity duration-300 opacity-100 ${!isLive ? 'pb-10' : ''}`}>
               {!isLive && messages.map((msg, index) => {
                 const { mainText, questions } = parseMessage(msg.text);
                 
@@ -5584,7 +5576,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={msg.id} 
-                  className={`flex scroll-mt-20 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[95%] md:max-w-[85%] p-3 rounded-[2rem] ${msg.role === 'user' ? 'bg-gray-800/80 text-white shadow-lg backdrop-blur-md border border-gray-700 shadow-[0_4px_15px_rgba(0,0,0,0.4)]' : 'text-white'}`}>
                     {msg.role === 'model' && (
@@ -6047,13 +6039,13 @@ export default function App() {
           </main>
 
           {/* Input Area */}
-          <footer className={`${isLive ? 'p-0 h-0 hidden' : 'p-4 pb-5 sm:pb-6'} relative z-20`}>
+          <footer className={`${isLive ? 'p-0 h-0 hidden' : 'p-0'} relative z-20 w-full`}>
             {isLoading && !isLive && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="max-w-3xl mx-auto flex justify-start mb-2 px-2"
+                className="w-full flex justify-start mb-0 px-4 py-2 bg-gray-900/40 backdrop-blur-md"
               >
                 <div className="px-4 py-2 flex items-center gap-3 bg-gray-900/60 backdrop-blur-md rounded-2xl shadow-sm border border-gray-800">
                   <Loader2 size={16} className="animate-spin text-yellow-600" />
@@ -6067,7 +6059,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2 }}
-                className="max-w-3xl mx-auto mb-2 bg-red-500/95 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-medium flex items-start gap-2 backdrop-blur-md border border-red-400/50"
+                className="w-full bg-red-500/95 text-white px-6 py-3 shadow-xl text-sm font-medium flex items-start gap-2 backdrop-blur-md border-t border-red-400/50"
               >
                 <Info size={18} className="mt-0.5 shrink-0" />
                 <p className="flex-1">{error}</p>
@@ -6080,7 +6072,7 @@ export default function App() {
               </motion.div>
             )}
         {!isLive && (
-      <div className="max-w-3xl mx-auto relative flex items-end gap-2">
+      <div className="w-full relative flex items-end">
         <style>{`
           @keyframes fluid-wave-1 {
             0% { transform: scaleY(0.3); }
@@ -6093,10 +6085,10 @@ export default function App() {
             100% { background-position: 0% 50%; }
           }
         `}</style>
-        <div className={`w-full relative flex flex-col shadow-md backdrop-blur-xl border shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-[2rem] p-2 transition-all duration-500 focus-within:shadow-lg ${
+        <div className={`w-full relative flex flex-col shadow-md backdrop-blur-xl border-t transition-all duration-500 focus-within:shadow-lg rounded-t-[2.5rem] md:rounded-t-[3rem] ${
           isVoiceTyping 
-            ? 'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-blue-400 outline-none ring-2 ring-blue-300/50 scale-[1.02]' 
-            : 'bg-gray-900/80 border-gray-700 text-white focus-within:bg-gray-900 focus-within:border-gray-600'
+            ? 'bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-blue-400 outline-none scale-[1.0]' 
+            : 'bg-gray-900 border-gray-800 text-white focus-within:bg-gray-950 focus-within:border-gray-700'
         }`}
         style={isVoiceTyping ? { animation: 'fluid-gradient 3s ease infinite', backgroundSize: '200% 200%' } : {}}
         >
@@ -6182,15 +6174,15 @@ export default function App() {
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
               placeholder=""
-              className={`w-full bg-transparent text-white placeholder-gray-500 py-3 px-2 focus:outline-none resize-none min-h-[72px] max-h-32 font-medium relative z-20 ${
+              className={`w-full bg-transparent text-white placeholder-gray-500 py-4 px-4 sm:px-6 focus:outline-none resize-none min-h-[72px] max-h-32 font-medium relative z-20 ${
                 (isLoading || input.trim() || selectedImage || isVoiceTyping)
-                  ? 'pr-[60px] sm:pr-[70px]' 
-                  : 'pr-[110px] sm:pr-[120px]'
+                  ? 'pr-[70px] sm:pr-[80px]' 
+                  : 'pr-[120px] sm:pr-[130px]'
               } ${isVoiceTyping && !input ? 'opacity-0' : 'opacity-100'}`}
               rows={1}
               disabled={isLoading}
             />
-            <div className="absolute right-2 bottom-2 flex gap-2 z-30">
+            <div className="absolute right-4 bottom-3 flex gap-2 z-30">
                   {(!input.trim() && !selectedImage) && !isLoading && (
                     <button
                       onClick={toggleVoiceTyping}
@@ -6291,14 +6283,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-        {!isLive && (
-          <div className="max-w-3xl mx-auto mt-2 text-center">
-            <p className="text-xs text-blue-700/80 flex items-center justify-center gap-1">
-              <Info size={12} />
-              {t.poweredBy}
-            </p>
           </div>
         )}
       </footer>
